@@ -1,0 +1,18 @@
+{
+  "name": "carlostech-device-agent",
+  "version": "1.0.1",
+  "private": true,
+  "description": "Agente local seguro para ADB y Fastboot de CARLOSTECH AI",
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test",
+    "test:exe": "node scripts/smoke-exe.mjs",
+    "build:exe": "node scripts/build-exe.mjs",
+    "build:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File installer/build-installer.ps1"
+  },
+  "dependencies": { "ws": "^8.18.3" },
+  "devDependencies": { "esbuild": "0.25.9", "@yao-pkg/pkg": "6.12.0" }
+}
