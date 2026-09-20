@@ -42,6 +42,11 @@ app.use(express.json())
 app.use('/api/health', healthRoutes)
 app.use('/health', healthRoutes)
 app.use('/api/auth', authRoutes)
+// El endpoint de actualización del agente es público para que el instalador
+// pueda consultar la descarga antes de que exista una sesión en la aplicación.
+// Debe montarse antes del router genérico de tracking (`/api`), que protege
+// todas las rutas restantes con autenticación.
+app.use('/api/device-agent', deviceAgentRoutes)
 app.use('/api', trackingRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/inventory', inventoryRoutes)
@@ -55,7 +60,6 @@ app.use('/api/reports', reportsRoutes)
 app.use('/api/notifications', notificationsRoutes)
 app.use('/api/whatsapp', whatsappRoutes)
 app.use('/api/device-tools', deviceToolsRoutes)
-app.use('/api/device-agent', deviceAgentRoutes)
 app.use('/api', operationsRoutes)
 
 // Servir archivos compilados del frontend cuando existan (producción).
