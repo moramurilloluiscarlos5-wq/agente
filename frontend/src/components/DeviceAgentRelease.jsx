@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Download, LoaderCircle, RefreshCw } from 'lucide-react'
 import { api } from '../services/api.js'
-import { isNewerAgentVersion, validateAgentRelease } from '../utils/deviceAgentRelease.js'
+import { isNewerAgentVersion, validateAgentRelease, validateExternalAgentRelease } from '../utils/deviceAgentRelease.js'
 
 export default function DeviceAgentRelease({ installedVersion }) {
   const [release, setRelease] = useState(null)
@@ -22,7 +22,9 @@ export default function DeviceAgentRelease({ installedVersion }) {
       timeout = setTimeout(() => controller.abort(), 15000)
       try {
         const response = await api.get('/device-tools/release', { signal: controller.signal })
-        const latest = validateAgentRelease(response.data)
+        const latest = response.data?.source === 'external'
+          ? validateExternalAgentRelease(response.data)
+          : validateAgentRelease(response.data)
         if (active) { setRelease(latest); setError('') }
       } catch (err) {
         if (active) {
@@ -61,6 +63,7 @@ export default function DeviceAgentRelease({ installedVersion }) {
       <button className="ct-btn ct-btn-secondary" disabled={loading} onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Reintentar descarga</button>
     </div>}
     {release && <>
+      {release.source === 'external' && <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100">Descarga de prueba externa. MediaFire no es una release oficial verificada por GitHub.</p>}
       {updateAvailable && <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
         <p className="text-sm text-cyan-100">Nueva versión disponible: {release.version}</p>
         <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Actualizar</a>

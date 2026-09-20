@@ -51,3 +51,13 @@ export function validateAgentRelease(release) {
   if (!path || path[3] !== release.tag || downloadUrl.pathname !== `/${path[1]}/${path[2]}/releases/download/${release.tag}/${INSTALLER}`) invalid()
   return { ...release, downloadUrl: downloadUrl.href, releaseUrl: releaseUrl.href }
 }
+
+export function validateExternalAgentRelease(release) {
+  if (!release || release.source !== 'external' || !STABLE_VERSION.test(release.version) ||
+      release.tag !== `device-agent-v${release.version}` || release.platform !== 'windows-x64' ||
+      release.installer !== INSTALLER || release.signed !== false) throw new Error('La descarga externa del agente no es válida.')
+  let url
+  try { url = new URL(release.downloadUrl) } catch { throw new Error('La descarga externa del agente no es válida.') }
+  if (url.protocol !== 'https:' || !['mediafire.com', 'www.mediafire.com'].includes(url.hostname) || url.username || url.password) throw new Error('La descarga externa del agente no es válida.')
+  return { ...release, downloadUrl: url.href, releaseUrl: url.href }
+}

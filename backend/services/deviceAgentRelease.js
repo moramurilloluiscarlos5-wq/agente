@@ -5,6 +5,7 @@ export const DEVICE_AGENT_INSTALLER = 'CarlosTechDeviceAgentSetup.exe'
 const TAG = /^device-agent-v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/
 const HASH = /^[a-f0-9]{64}$/i
 const API = 'https://api.github.com'
+const EXTERNAL_HOSTS = new Set(['www.mediafire.com', 'mediafire.com'])
 
 function unavailable(message = 'No se pudo verificar la publicación oficial de CarlosTech Device Agent. Intenta nuevamente.') {
   return Object.assign(new Error(message), { status: 503, publicMessage: message })
@@ -65,6 +66,22 @@ export function createDeviceAgentReleaseResolver({
   let inflight = null
   let configurationKey = null
 
+  function externalRelease() {
+    const value = env.DEVICE_AGENT_EXTERNAL_RELEASE_URL?.trim()
+    if (!value) return null
+    let url
+    try { url = new URL(value) } catch { throw unavailable('La URL externa del instalador no es válida.') }
+    if (url.protocol !== 'https:' || !EXTERNAL_HOSTS.has(url.hostname) || url.username || url.password) throw unavailable('La URL externa del instalador no es válida.')
+    const version = env.DEVICE_AGENT_EXTERNAL_VERSION?.trim()
+    if (!version || !TAG.test(`device-agent-v${version}`)) throw unavailable('La versión del instalador externo no está configurada.')
+    return Object.freeze({
+      version, tag: `device-agent-v${version}`, platform: 'windows-x64',
+      installer: DEVICE_AGENT_INSTALLER, file: DEVICE_AGENT_INSTALLER,
+      signed: false, source: 'external', sha256: null, size: null,
+      downloadUrl: url.href, releaseUrl: url.href, releaseDate: null,
+    })
+  }
+
   async function resolve(repository, token) {
     const signal = AbortSignal.timeout(timeoutMs)
     const headers = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'CarlosTech-Device-Agent-Releases' }
@@ -112,6 +129,8 @@ export function createDeviceAgentReleaseResolver({
   }
 
   return async function getRelease() {
+    const external = externalRelease()
+    if (external) return external
     const repository = env.DEVICE_AGENT_GITHUB_REPOSITORY?.trim()
     if (!repository || !/^[A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9_.-]+$/.test(repository) || repository.endsWith('/.') || repository.endsWith('/..')) {
       throw unavailable('La publicación oficial del agente no está configurada: falta DEVICE_AGENT_GITHUB_REPOSITORY (owner/repo).')
