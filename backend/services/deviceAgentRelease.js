@@ -6,6 +6,7 @@ const TAG = /^device-agent-v((?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*))$/
 const HASH = /^[a-f0-9]{64}$/i
 const API = 'https://api.github.com'
 const EXTERNAL_HOSTS = new Set(['www.mediafire.com', 'mediafire.com'])
+const PRODUCTION_EXTERNAL_URL = 'https://www.mediafire.com/file/nwvhtqjjd71utth/CarlosTechDeviceAgentSetup.exe/file'
 
 function unavailable(message = 'No se pudo verificar la publicación oficial de CarlosTech Device Agent. Intenta nuevamente.') {
   return Object.assign(new Error(message), { status: 503, publicMessage: message })
@@ -67,12 +68,12 @@ export function createDeviceAgentReleaseResolver({
   let configurationKey = null
 
   function externalRelease() {
-    const value = env.DEVICE_AGENT_EXTERNAL_RELEASE_URL?.trim()
+    const value = env.DEVICE_AGENT_EXTERNAL_RELEASE_URL?.trim() || (env.NODE_ENV === 'production' ? PRODUCTION_EXTERNAL_URL : '')
     if (!value) return null
     let url
     try { url = new URL(value) } catch { throw unavailable('La URL externa del instalador no es válida.') }
     if (url.protocol !== 'https:' || !EXTERNAL_HOSTS.has(url.hostname) || url.username || url.password) throw unavailable('La URL externa del instalador no es válida.')
-    const version = env.DEVICE_AGENT_EXTERNAL_VERSION?.trim()
+    const version = env.DEVICE_AGENT_EXTERNAL_VERSION?.trim() || (env.NODE_ENV === 'production' ? '1.0.1' : '')
     if (!version || !TAG.test(`device-agent-v${version}`)) throw unavailable('La versión del instalador externo no está configurada.')
     return Object.freeze({
       version, tag: `device-agent-v${version}`, platform: 'windows-x64',
