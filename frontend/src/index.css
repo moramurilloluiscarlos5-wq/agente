@@ -76,7 +76,6 @@
 .ct-login-panel {
   position: relative;
   overflow: hidden;
-  animation: ct-login-rise 500ms ease-out both;
 }
 
 .ct-login-panel::before {

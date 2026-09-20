@@ -47,7 +47,7 @@ export default function Dashboard() {
     <div className="ct-page space-y-6">
       <PageHeader
         eyebrow="Operación"
-        title="Dashboard"
+        title="Panel de control"
         description={welcome}
         actions={<>
           <button type="button" onClick={() => { setLoading(true); setError(''); setRevision((value) => value + 1) }} disabled={loading} className="ct-btn ct-btn-secondary"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} />Actualizar</button>
