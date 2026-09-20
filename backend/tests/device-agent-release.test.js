@@ -4,6 +4,7 @@ import express from 'express'
 import { createDeviceAgentRouter } from '../routes/deviceAgent.routes.js'
 import { createDeviceToolsRouter } from '../routes/deviceTools.routes.js'
 import { createDeviceAgentReleaseResolver, DEVICE_AGENT_INSTALLER } from '../services/deviceAgentRelease.js'
+import { createTrackingRouter } from '../routes/tracking.routes.js'
 
 const repository = 'carlostech/device-agent'
 const sha256 = 'abc01234'.repeat(8)
@@ -79,6 +80,22 @@ test('official metadata, public download redirect and authenticated web release 
   assert.equal(calls.length, 3, 'all routes share the validated cache')
   assert.equal(calls[0].init.headers.Authorization, 'Bearer test-api-token')
   assert.ok(calls.slice(1).every(({ init }) => !init.headers?.Authorization), 'public metadata requests do not carry API credentials')
+})
+
+test('public agent route is mounted before the generic protected /api router', async (t) => {
+  const { getRelease } = mockGitHub(fixture())
+  const app = express()
+  const protectedTracking = createTrackingRouter({
+    db: {},
+    authenticate: [(_req, res) => res.status(401).json({ message: 'session required' })],
+  })
+  // This is the ordering used by server.js: public agent first, generic /api after.
+  app.use('/api/device-agent', createDeviceAgentRouter({ getRelease }))
+  app.use('/api', protectedTracking)
+  const server = await new Promise((resolve) => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)) })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/device-agent/latest-version`)
+  assert.equal(response.status, 200)
 })
 
 test('missing repository fails closed even when old download variables are set', async (t) => {

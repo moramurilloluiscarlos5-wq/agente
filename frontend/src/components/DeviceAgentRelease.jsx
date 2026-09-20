@@ -29,7 +29,7 @@ export default function DeviceAgentRelease({ installedVersion }) {
       } catch (err) {
         if (active) {
           setRelease(null)
-          setError(`No se pudo consultar la descarga oficial. ${err.message}`)
+          setError(`No se pudo consultar la descarga del agente. ${err.message}`)
         }
       } finally {
         clearTimeout(timeout)
@@ -70,7 +70,7 @@ export default function DeviceAgentRelease({ installedVersion }) {
       </div>}
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Descargar CarlosTech Device Agent</a>
-        <a className="text-sm text-cyan-300 underline underline-offset-4" href={release.releaseUrl} target="_blank" rel="noreferrer">Ver release v{release.version}</a>
+        <a className="text-sm text-cyan-300 underline underline-offset-4" href={release.releaseUrl} target="_blank" rel="noreferrer">{release.source === 'external' ? 'Abrir página de descarga' : `Ver release v${release.version}`}</a>
       </div>
     </>}
   </section>

@@ -17,8 +17,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState(null)
   const [resending, setResending] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const [confirmationMessage, setConfirmationMessage] = useState(null)
-  const [rememberMe, setRememberMe] = useState(false)
 
   useEffect(() => {
     const previousTitle = document.title
@@ -55,6 +55,29 @@ export default function Login() {
       setFormError('No se pudo conectar. Revisa tu conexión e intenta de nuevo.')
     } finally {
       setResending(false)
+    }
+  }
+
+  const sendPasswordReset = async () => {
+    if (!supabase || resetting || loading) return
+    setFormError(null)
+    setConfirmationMessage(null)
+    const normalizedEmail = email.trim()
+    if (!normalizedEmail) {
+      setFormError('Ingresa tu correo para recuperar la contraseña.')
+      return
+    }
+    setResetting(true)
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/restablecer-contrasena`,
+      })
+      if (resetError) throw resetError
+      setConfirmationMessage('Te enviamos un enlace para restablecer tu contraseña. Revisa también la carpeta de spam.')
+    } catch {
+      setFormError('No se pudo enviar el enlace. Verifica el correo e inténtalo de nuevo.')
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -114,7 +137,7 @@ export default function Login() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div><label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400" htmlFor="login-email">Correo electrónico</label><div className="ct-login-input-wrap"><Mail size={17} aria-hidden="true" /><input id="login-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="correo@ejemplo.com" className="ct-login-input" /></div></div>
                 <div><label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400" htmlFor="login-password">Contraseña</label><div className="ct-login-input-wrap"><LockKeyhole size={17} aria-hidden="true" /><input id="login-password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" className="ct-login-input pr-10" /><button type="button" onClick={() => setShowPassword((prev) => !prev)} className="absolute right-3 text-slate-500 transition hover:text-cyan-300" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></div>
-                <div className="flex items-center justify-between gap-3"><label className="flex items-center gap-2 text-xs text-slate-400"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} className="h-4 w-4 rounded border-slate-700 bg-slate-900 accent-cyan-400" />Recordarme</label><button type="button" disabled className="text-xs text-slate-600" title="La recuperación de contraseña aún no está habilitada">¿Olvidaste tu contraseña?</button></div>
+                <div className="flex items-center justify-end gap-3"><button type="button" onClick={sendPasswordReset} disabled={resetting || loading || !isConfigured} className="text-xs text-cyan-300 transition hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-50">{resetting ? 'Enviando enlace…' : '¿Olvidaste tu contraseña?'}</button></div>
                 {friendlyError && <p role="alert" className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/[0.08] px-3 py-3 text-xs leading-relaxed text-red-300"><LockKeyhole size={14} className="mt-0.5 shrink-0" />{friendlyError}</p>}
                 <button type="submit" disabled={loading || resending} className="ct-login-submit group inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-semibold text-white transition duration-200 disabled:cursor-not-allowed disabled:opacity-60">{loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/90 border-t-transparent" />}{loading ? 'Iniciando sesión...' : 'Iniciar sesión'}{!loading && <ArrowRight size={17} className="transition-transform group-hover:translate-x-0.5" />}</button>
                 <p className="ct-login-secure-note flex items-center justify-center gap-2 text-[11px] text-slate-500"><LockKeyhole size={13} className="text-cyan-300/70" /> Acceso seguro para personal autorizado</p>

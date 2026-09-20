@@ -19,6 +19,7 @@ import Settings from './pages/Settings.jsx'
 import Staff from './pages/Staff.jsx'
 import SearchResults from './pages/SearchResults.jsx'
 import Login from './pages/Login.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
 import NotFound from './pages/NotFound.jsx'
 import Audit from './pages/Audit.jsx'
 import Roles from './pages/Roles.jsx'
@@ -32,6 +33,7 @@ export default function App() {
     <Routes>
       {/* Público */}
       <Route path="/login" element={<Login />} />
+      <Route path="/restablecer-contrasena" element={<ResetPassword />} />
       <Route path="/registro" element={<RegisterWorkshop />} />
       <Route path="/seguimiento/:token" element={<PublicTracking />} />
 
