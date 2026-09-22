@@ -3,15 +3,18 @@ import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { requireRole } from '../middleware/roles.js'
+import { rateLimit } from '../middleware/security.js'
 import { databaseError, fail, uuid } from '../utils/operations.js'
 import { scopeToWorkshop } from '../utils/workshop.js'
 import { auditSafe, writeAudit } from '../services/auditService.js'
-import { createDeviceAgentToken } from '../services/deviceAgentToken.js'
+import { createDeviceAgentToken, deriveDeviceAgentSecret } from '../services/deviceAgentToken.js'
 import { getDeviceAgentRelease } from '../services/deviceAgentRelease.js'
 
 const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next)
 const DEVICE_ROLES = requireRole('ADMINISTRADOR', 'TECNICO')
 const MAX_OUTPUT = 120_000
+const pairingAttemptLimit = rateLimit({ windowMs: 60_000, max: 8, keyFn: (req) => `device-agent-pair:${req.profile?.id || req.ip}` })
+const sessionIssueLimit = rateLimit({ windowMs: 60_000, max: 20, keyFn: (req) => `device-agent-session:${req.profile?.id || req.ip}` })
 
 function text(value, max, label) {
   if (value == null) return null
@@ -33,23 +36,16 @@ export function createDeviceToolsRouter({ db = supabaseAdmin, authenticate = [re
     next()
   })
 
-  // Called by the local agent during first-use pairing. The browser only relays
-  // the authenticated Supabase session to localhost; the secret is returned to
-  // the agent over its HTTPS connection and is never rendered in the web UI.
-  router.post('/pairing/exchange', asyncRoute(async (req, res) => {
+  // Pairing returns only a per-agent key derived from the backend master secret.
+  // The master secret is never returned to the browser or local agent.
+  router.post('/pairing/exchange', pairingAttemptLimit, asyncRoute(async (req, res) => {
     const agentId = text(req.body?.agent_id, 160, 'Agente')
     const pairingCode = text(req.body?.pairing_code, 32, 'Código de pairing')
     if (!agentId || !pairingCode) fail('Faltan datos de pairing')
     if (!/^\d{6}$/.test(pairingCode)) fail('El código de pairing debe tener seis dígitos')
-    const secret = process.env.DEVICE_AGENT_SECRET
-    if (!secret || secret.length < 32) {
-      const error = new Error('El servidor no tiene configurado el secreto del agente.')
-      error.status = 503
-      error.publicMessage = error.message
-      throw error
-    }
+    const secret = deriveDeviceAgentSecret({ workshopId: req.profile.workshop_id, agentId, pairingCode })
     await auditSafe(writeAudit({ db, req, action: 'DEVICE_AGENT_PAIRED', entity: 'device_agent', entityId: agentId, description: `Agente local vinculado al taller (${agentId})` }))
-    res.json({ data: { secret, workshop_id: req.profile.workshop_id, user_id: req.profile.id, agent_id: agentId } })
+    res.json({ data: { secret, workshop_id: req.profile.workshop_id, agent_id: agentId } })
   }))
 
   router.get('/release', asyncRoute(async (_req, res) => {
@@ -58,8 +54,12 @@ export function createDeviceToolsRouter({ db = supabaseAdmin, authenticate = [re
     res.json({ data: { ...release, download_url: release.downloadUrl, release_page: release.releaseUrl } })
   }))
 
-  router.get('/session', asyncRoute(async (req, res) => {
-    res.json({ data: createDeviceAgentToken({ workshopId: req.profile.workshop_id, userId: req.profile.id }) })
+  router.post('/session', sessionIssueLimit, asyncRoute(async (req, res) => {
+    const agentId = text(req.body?.agent_id, 160, 'Agente')
+    const pairingCode = text(req.body?.pairing_code, 32, 'CÃ³digo de pairing')
+    if (!agentId || !pairingCode) fail('Falta la identidad vinculada del agente')
+    res.setHeader('Cache-Control', 'no-store')
+    res.json({ data: createDeviceAgentToken({ workshopId: req.profile.workshop_id, userId: req.profile.id, agentId, pairingCode }) })
   }))
 
   // The browser reports the result after the local agent executes a command.

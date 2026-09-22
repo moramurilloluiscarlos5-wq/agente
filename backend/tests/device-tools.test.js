@@ -1,7 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import crypto from 'node:crypto'
 import express from 'express'
 import { createDeviceToolsRouter } from '../routes/deviceTools.routes.js'
+import { deriveDeviceAgentSecret } from '../services/deviceAgentToken.js'
 
 const ID = '11111111-1111-4111-8111-111111111111'
 const WORKSHOP = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -20,17 +22,22 @@ async function serve(t, router) {
 test('Device Tools emite sesión firmada por taller y usuario', async (t) => {
   process.env.DEVICE_AGENT_SECRET = '12345678901234567890123456789012'
   const request = await serve(t, createDeviceToolsRouter({ db: {}, authenticate: [pass] }))
-  const response = await request('/session')
+  const response = await request('/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agent_id: 'agent-test', pairing_code: '123456' }) })
   assert.equal(response.status, 200)
   const body = await response.json()
   const [encoded] = body.data.token.split('.')
   const claims = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'))
   assert.equal(claims.workshop_id, WORKSHOP)
   assert.equal(claims.user_id, ID)
+  assert.equal(claims.agent_id, 'agent-test')
   assert.ok(claims.exp > claims.iat)
+  const expectedSecret = deriveDeviceAgentSecret({ workshopId: WORKSHOP, agentId: 'agent-test', pairingCode: '123456' })
+  const expectedSignature = crypto.createHmac('sha256', expectedSecret).update(encoded).digest('base64url')
+  assert.equal(body.data.token.split('.')[1], expectedSignature)
+  assert.notEqual(expectedSecret, process.env.DEVICE_AGENT_SECRET)
 })
 
-test('Device Tools entrega secreto solo al pairing autenticado', async (t) => {
+test('Device Tools devuelve una clave derivada en el pairing autenticado', async (t) => {
   process.env.DEVICE_AGENT_SECRET = '12345678901234567890123456789012'
   const request = await serve(t, createDeviceToolsRouter({ db: {}, authenticate: [pass] }))
   const response = await request('/pairing/exchange', {
@@ -40,8 +47,10 @@ test('Device Tools entrega secreto solo al pairing autenticado', async (t) => {
   })
   assert.equal(response.status, 200)
   const body = await response.json()
-  assert.equal(body.data.secret, process.env.DEVICE_AGENT_SECRET)
+  assert.equal(body.data.secret, deriveDeviceAgentSecret({ workshopId: WORKSHOP, agentId: 'agent-test', pairingCode: '123456' }))
+  assert.notEqual(body.data.secret, process.env.DEVICE_AGENT_SECRET)
   assert.equal(body.data.workshop_id, WORKSHOP)
+  assert.equal(body.data.agent_id, 'agent-test')
 })
 
 test('Device Tools no acepta auditoría sin comando válido', async (t) => {

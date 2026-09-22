@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, AlertTriangle, Download, Info, LoaderCircle, MonitorDown, RefreshCw, RotateCcw, ShieldCheck, Smartphone, Terminal, Usb, Zap } from 'lucide-react'
-import { api } from '../services/api.js'
+import { api, API_BASE_URL } from '../services/api.js'
 import { openDeviceAgent } from '../services/deviceAgent.js'
 import DeviceAgentRelease from '../components/DeviceAgentRelease.jsx'
 
@@ -36,21 +36,33 @@ export default function DeviceTools() {
   const [aiResult, setAiResult] = useState(null)
   const [agentPairing, setAgentPairing] = useState(null)
   const [agentUnavailable, setAgentUnavailable] = useState(false)
+  const [agentConnectionError, setAgentConnectionError] = useState(null)
+  const [checkingAgent, setCheckingAgent] = useState(false)
+  // False negatives: hasta que el primer chequeo termina, el estado del
+  // agente es "comprobando", nunca "sin conexión".
+  const [agentChecked, setAgentChecked] = useState(false)
   const socketRef = useRef(null)
+  const socketGeneration = useRef(0)
+  const checkingAgentRef = useRef(false)
 
   const currentList = mode === 'adb' ? devices : fastbootDevices
   const currentDevice = currentList.find((item) => item.serial === selected)
   const title = info?.model || currentDevice?.model || info?.product || 'Dispositivo Android'
   const connected = Boolean(selected && currentDevice && (mode === 'fastboot' || currentDevice.state === 'device'))
+  const agentStatus = agent ? 'Agent conectado' : agentPairing ? 'Agent detectado · pendiente de vincular' : agentConnectionError ? 'Agent detectado · conexión pendiente' : checkingAgent || !agentChecked ? 'Comprobando Agent…' : 'Agent sin conexión'
   const activateAgent = useCallback((connection) => {
+    const generation = ++socketGeneration.current
+    socketRef.current?.close()
     setAgent(connection)
     setAgentPairing(null)
     setAgentUnavailable(false)
+    setAgentConnectionError(null)
     const socket = connection.connect((message) => {
       if (message.type === 'devices.changed') { setDevices(message.data.adb || []); setFastbootDevices(message.data.fastboot || []) }
       if (message.type === 'agent.log') { setLogs((current) => [...current.slice(-79), message.data]); if (message.data.level === 'error') setError(message.data.message) }
       if (message.type === 'agent.ready') (message.data.logs || []).forEach((entry) => setLogs((current) => [...current.slice(-79), entry]))
     }, () => {
+      if (generation !== socketGeneration.current) return
       setAgent(null)
       setAgentUnavailable(true)
       setLogs((current) => [...current.slice(-79), { at: new Date().toISOString(), level: 'warn', message: 'Device Agent desconectado.' }])
@@ -59,12 +71,33 @@ export default function DeviceTools() {
   }, [])
 
   const checkConnection = useCallback(async () => {
+    if (checkingAgentRef.current) return 'checking'
+    checkingAgentRef.current = true
+    setCheckingAgent(true)
     try {
       const connection = await openDeviceAgent()
-      if (connection.pairingRequired) { setAgent(null); setAgentPairing(connection); setAgentUnavailable(false); return }
+      setError('')
+      setAgentConnectionError(null)
+      if (connection.pairingRequired) { socketGeneration.current += 1; socketRef.current?.close(); socketRef.current = null; setAgent(null); setAgentPairing(connection); setAgentUnavailable(false); return 'pairing' }
       activateAgent(connection)
-    } catch (err) { setAgent(null); setAgentUnavailable(true); setAgentPairing(null); setError(err.message) }
+      return 'connected'
+    } catch (err) {
+      socketGeneration.current += 1; socketRef.current?.close(); socketRef.current = null
+      setAgent(null); setAgentPairing(null); setError(err.message)
+      setAgentConnectionError(err.agentHealth ? err : null)
+      setAgentUnavailable(!err.agentHealth)
+      return err.agentHealth ? 'session-error' : 'unavailable'
+    }
+    finally { checkingAgentRef.current = false; setCheckingAgent(false); setAgentChecked(true) }
   }, [activateAgent])
+
+  const recoverAgentAuthorization = useCallback(async (error) => {
+    if (error?.status !== 401) return false
+    const state = await checkConnection()
+    if (state === 'pairing') setNotice('El agente necesita volver a vincularse. Confirma el código mostrado abajo.')
+    else if (state === 'connected') setNotice('Se renovó la sesión del agente. Vuelve a intentar la operación.')
+    return true
+  }, [checkConnection])
 
   const refresh = useCallback(async () => {
     if (!agent) return
@@ -74,19 +107,19 @@ export default function DeviceTools() {
       setLocalFiles(files.files || [])
       if (mode === 'adb' && !selected && adb.devices?.[0]) setSelected(adb.devices[0].serial)
       if (mode === 'fastboot' && !selected && fastboot.devices?.[0]) setSelected(fastboot.devices[0].serial)
-    } catch (err) { setError(err.message) }
-  }, [agent, mode, selected])
+    } catch (err) { if (!(await recoverAgentAuthorization(err))) setError(err.message) }
+  }, [agent, mode, selected, recoverAgentAuthorization])
 
   useEffect(() => {
     checkConnection()
-    return () => socketRef.current?.close()
+    return () => { socketGeneration.current += 1; socketRef.current?.close(); socketRef.current = null }
   }, [checkConnection])
 
   useEffect(() => {
-    if (agent || agentPairing) return undefined
-    const timer = setInterval(checkConnection, 2500)
-    return () => clearInterval(timer)
-  }, [agent, agentPairing, checkConnection])
+    if (agent || agentPairing || checkingAgent) return undefined
+    const timer = setTimeout(checkConnection, 4000)
+    return () => clearTimeout(timer)
+  }, [agent, agentPairing, checkingAgent, checkConnection])
 
   useEffect(() => { if (agent) refresh() }, [agent, mode, refresh])
   useEffect(() => { if (!selected || !agent) return; setInfo(null); setFastbootInfo(null) }, [agent, selected])
@@ -102,7 +135,7 @@ export default function DeviceTools() {
       setNotice('Operación completada.')
       await api.post('/device-tools/audit', { serial: selected, mode: commandMode, command, status: result?.code === 'TIMEOUT' ? 'timeout' : result?.ok === false ? 'error' : 'ok', stdout: result?.stdout || '', stderr: result?.stderr || '', duration_ms: result?.duration_ms ?? Date.now() - started, agent_id: agent.session.agent_id }).catch(() => null)
       return result
-    } catch (err) { setError(err.message); await api.post('/device-tools/audit', { serial: selected, mode: commandMode, command, status: 'error', stderr: err.message, duration_ms: Date.now() - started, agent_id: agent.session.agent_id }).catch(() => null) }
+    } catch (err) { if (!(await recoverAgentAuthorization(err))) setError(err.message); await api.post('/device-tools/audit', { serial: selected, mode: commandMode, command, status: 'error', stderr: err.message, duration_ms: Date.now() - started, agent_id: agent.session.agent_id }).catch(() => null) }
     finally { setBusy('') }
   }
 
@@ -113,7 +146,7 @@ export default function DeviceTools() {
       const result = await agent.request(mode === 'adb' ? `/devices/${encodeURIComponent(selected)}/info` : `/fastboot/${encodeURIComponent(selected)}/info`)
       if (mode === 'adb') setInfo(result); else setFastbootInfo(result)
       setNotice('Información real actualizada.')
-    } catch (err) { setError(err.message) } finally { setBusy('') }
+    } catch (err) { if (!(await recoverAgentAuthorization(err))) setError(err.message) } finally { setBusy('') }
   }
 
   async function saveSnapshot() {
@@ -127,7 +160,7 @@ export default function DeviceTools() {
     if (!agent) return checkConnection()
     setBusy('agent-check'); setError('')
     try { setAgentDiagnostics(await agent.request('/diagnostics')); setNotice('Autodiagnóstico del agente actualizado.') }
-    catch (err) { setError(err.message) } finally { setBusy('') }
+    catch (err) { if (!(await recoverAgentAuthorization(err))) setError(err.message) } finally { setBusy('') }
   }
 
   async function pairAgent() {
@@ -152,11 +185,14 @@ export default function DeviceTools() {
   ] : [], [info])
 
   return <div className="ct-page space-y-6">
-    <header className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">Device Tools</p><h1 className="mt-2 text-2xl font-bold tracking-tight">ADB / Fastboot real</h1><p className="mt-1 text-sm text-slate-400">El teléfono permanece conectado al PC del técnico; Railway nunca ejecuta comandos USB.</p></div><div className="flex flex-wrap items-center gap-2"><button className={button} onClick={checkAgent} disabled={!agent || Boolean(busy)}><ShieldCheck size={15} /> Comprobar instalación</button><div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-300"><Usb size={15} className={agent ? 'text-emerald-300' : 'text-amber-300'} />{agent ? 'Agent conectado' : 'Conectando Agent…'}</div></div></header>
+    <header className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">Device Tools</p><h1 className="mt-2 text-2xl font-bold tracking-tight">ADB / Fastboot real</h1><p className="mt-1 text-sm text-slate-400">El teléfono permanece conectado al PC del técnico; Railway nunca ejecuta comandos USB.</p></div><div className="flex flex-wrap items-center gap-2"><button className={button} onClick={checkAgent} disabled={checkingAgent || Boolean(busy)}><ShieldCheck size={15} /> Comprobar instalación</button><div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-300"><Usb size={15} className={agent ? 'text-emerald-300' : 'text-amber-300'} />{agentStatus}</div></div></header>
     {error && <div role="alert" className="flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200"><AlertTriangle size={18} className="mt-0.5 shrink-0" />{error}</div>}
     {notice && <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">{notice}</div>}
-    <DeviceAgentRelease installedVersion={agent?.health?.version || agentPairing?.health?.version} />
-    {agentUnavailable && !agentPairing && <section className={panel}><div className="flex items-start gap-3"><Usb size={22} className="mt-1 text-amber-300" /><div><h2 className="text-lg font-semibold">CarlosTech Device Agent no está conectado</h2><p className="mt-2 text-sm leading-6 text-slate-400">Para detectar dispositivos USB, ADB y Fastboot, CARLOSTECH necesita el agente local instalado en esta computadora.</p></div></div><div className="mt-5 flex flex-wrap gap-3"><button className={button} onClick={checkConnection} disabled={Boolean(busy)}><RefreshCw size={16} /> Ya lo instalé — comprobar nuevamente</button></div><details className="mt-5 rounded-lg border border-slate-800 bg-slate-950/40 p-4"><summary className="cursor-pointer text-sm font-medium text-slate-200">Ver instrucciones</summary><ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-400"><li>Descarga e instala CarlosTech Device Agent para Windows.</li><li>Permite que se inicie con Windows cuando el instalador lo solicite.</li><li>Regresa aquí y pulsa «Ya lo instalé».</li><li>Conecta el teléfono por USB y autoriza la depuración desde el equipo.</li></ol></details></section>}
+    {agent && !checkingAgent && !agentPairing && !currentList.length && <section className="flex items-start gap-3 rounded-xl border border-slate-700/60 bg-slate-900/60 p-4 text-sm text-slate-300"><Smartphone size={18} className="mt-0.5 shrink-0 text-slate-400" /><div><p className="font-semibold">No se detectó ningún dispositivo conectado.</p><p className="mt-1 text-slate-400">Conecta el teléfono por USB y confirma la autorización en la pantalla del equipo.</p></div></section>}
+    {checkingAgent && <p role="status" className="text-sm text-cyan-200">Comprobando conexión con el agente local…</p>}
+    <DeviceAgentRelease installedVersion={agent?.health?.version || agentPairing?.health?.version || agentConnectionError?.agentHealth?.version} />
+    {agentConnectionError && <section className={panel}><h2 className="text-lg font-semibold">El agente está activo; falta completar la conexión</h2><p className="mt-2 text-sm leading-6 text-slate-400">Esta computadora respondió, pero CARLOSTECH no pudo autorizar la sesión del agente. Comprueba tu sesión en la web y vuelve a intentarlo.</p><button className={`${button} mt-5`} onClick={checkConnection} disabled={checkingAgent || Boolean(busy)}><RefreshCw size={16} /> Reintentar conexión</button></section>}
+    {agentUnavailable && !agentPairing && <section className={panel}><div className="flex items-start gap-3"><Usb size={22} className="mt-1 text-amber-300" /><div><h2 className="text-lg font-semibold">CarlosTech Device Agent no está conectado en esta computadora.</h2><p className="mt-2 text-sm leading-6 text-slate-400">Para detectar dispositivos USB, ADB y Fastboot, CARLOSTECH necesita el agente local instalado en esta computadora.</p></div></div><div className="mt-5 flex flex-wrap gap-3"><a className={primary} href={`${API_BASE_URL}/device-agent/download`}><Download size={16} /> Descargar Agent</a><button className={button} onClick={checkConnection} disabled={Boolean(busy)}><RefreshCw size={16} /> Comprobar nuevamente</button></div><details className="mt-5 rounded-lg border border-slate-800 bg-slate-950/40 p-4"><summary className="cursor-pointer text-sm font-medium text-slate-200">Ver instrucciones</summary><ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-400"><li>Descarga e instala CarlosTech Device Agent para Windows.</li><li>Permite que se inicie con Windows cuando el instalador lo solicite.</li><li>Regresa aquí y pulsa «Comprobar nuevamente».</li><li>Conecta el teléfono por USB y autoriza la depuración desde el equipo.</li></ol></details></section>}
     {agentPairing && <section className={panel}><div className="flex items-start gap-3"><ShieldCheck size={22} className="mt-1 text-cyan-300" /><div><h2 className="text-lg font-semibold">Conectar esta computadora con CARLOSTECH AI</h2><p className="mt-2 text-sm leading-6 text-slate-400">El agente está instalado, pero todavía no está vinculado a tu taller. Confirma el código mostrado por el agente antes de continuar.</p></div></div><div className="mt-5 flex flex-wrap items-center gap-4"><div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-5 py-3 text-center"><p className="text-[11px] uppercase tracking-widest text-cyan-300">Código de pairing</p><p className="mt-1 font-mono text-2xl font-bold tracking-[0.25em] text-white">{agentPairing.pairingCode || '------'}</p></div><button className={primary} onClick={pairAgent} disabled={busy === 'pair'}>{busy === 'pair' ? <LoaderCircle size={16} className="animate-spin" /> : <ShieldCheck size={16} />} Permitir y vincular</button><button className={button} onClick={checkConnection} disabled={Boolean(busy)}><RefreshCw size={16} /> Revisar conexión</button></div>{agentPairing.rePairing && <p className="mt-4 text-xs text-amber-200">El agente respondió, pero su secreto anterior ya no coincide. Vuelve a vincularlo para actualizar la conexión.</p>}</section>}
     <section className={panel}><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><button className={`${mode === 'adb' ? primary : button}`} onClick={() => { setMode('adb'); setSelected('') }}><Smartphone size={16} /> ADB</button><button className={`${mode === 'fastboot' ? primary : button}`} onClick={() => { setMode('fastboot'); setSelected('') }}><Zap size={16} /> FASTBOOT</button></div><button className={button} onClick={refresh} disabled={!agent || Boolean(busy)}><RefreshCw size={15} className={busy === 'refresh' ? 'animate-spin' : ''} /> Buscar dispositivos</button></div><div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]"><label className="text-sm text-slate-300">Dispositivo activo<select className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-slate-100" value={selected} onChange={(event) => setSelected(event.target.value)}><option value="">{currentList.length ? 'Selecciona un dispositivo' : mode === 'adb' ? 'Sin dispositivos ADB' : 'Sin dispositivos Fastboot'}</option>{currentList.map((item) => <option key={item.serial} value={item.serial}>{item.model || item.product || item.serial} — {item.serial} ({item.state})</option>)}</select></label><div className="flex items-end"><button className={`${primary} w-full`} onClick={loadInfo} disabled={!connected || Boolean(busy)}>{busy === 'info' ? <LoaderCircle size={16} className="animate-spin" /> : <Info size={16} />} Información completa</button></div></div></section>
     {mode === 'adb' && <section className={panel}><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="flex items-center gap-2 font-semibold"><Activity size={18} className="text-cyan-300" />{title}</h2><p className="mt-1 text-xs text-slate-500">Estado: <span className={currentDevice?.state === 'device' ? 'text-emerald-300' : 'text-amber-300'}>{currentDevice?.state || 'no device'}</span> · Serial: {value(selected)}</p></div><div className="flex flex-wrap gap-2"><button className={button} disabled={!connected || Boolean(busy)} onClick={() => loadInfo()}><RefreshCw size={15} /> Actualizar</button><button className={button} disabled={!connected || Boolean(busy)} onClick={() => call(`/devices/${selected}/reboot`, { command: 'reboot' })}><RotateCcw size={15} /> Reiniciar</button><button className={button} disabled={!connected || Boolean(busy)} onClick={() => call(`/devices/${selected}/recovery`, { command: 'recovery' })}>Recovery</button><button className={button} disabled={!connected || Boolean(busy)} onClick={() => call(`/devices/${selected}/bootloader`, { command: 'bootloader' })}>Bootloader</button><button className={button} disabled={!connected || Boolean(busy)} onClick={() => call(`/devices/${selected}/fastboot`, { command: 'fastboot' })}>Fastboot</button></div></div>{info && <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{facts.map(([label, item]) => <div key={label} className="rounded-lg border border-slate-800 bg-slate-950/50 p-3"><p className="text-[11px] uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 break-all text-sm text-slate-200">{value(item)}</p></div>)}</div>}{info && <div className="mt-4 grid gap-3 border-t border-slate-800 pt-4 md:grid-cols-[180px_180px_1fr_auto]"><select value={stage} onChange={(event) => setStage(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"><option value="diagnostico">Diagnóstico inicial</option><option value="despues_reparacion">Después de reparación</option><option value="entrega">Entrega</option></select><input value={repairOrderId} onChange={(event) => setRepairOrderId(event.target.value)} placeholder="ID de orden (opcional)" className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" /><input value={customerId} onChange={(event) => setCustomerId(event.target.value)} placeholder="ID de cliente (opcional)" className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" /><input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Notas técnicas" className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm" /><button className={primary} onClick={saveSnapshot} disabled={busy === 'snapshot'}><Download size={15} /> Guardar snapshot</button><button className={button} onClick={analyzeDevice} disabled={busy === 'ai'}>{busy === 'ai' ? <LoaderCircle size={15} className="animate-spin" /> : <Activity size={15} />} Analizar dispositivo</button></div>}</section>}
@@ -167,7 +203,7 @@ export default function DeviceTools() {
     <section className={panel}><div className="flex items-center justify-between"><h2 className="flex items-center gap-2 font-semibold"><MonitorDown size={18} className="text-slate-300" />Device Log</h2><span className="text-xs text-slate-500">{logs.length} eventos</span></div><div className="mt-3 max-h-48 overflow-auto rounded-xl border border-slate-800 bg-black/30 p-3 font-mono text-xs leading-6 text-slate-400">{logs.length ? logs.map((entry, index) => <p key={`${entry.at}-${index}`}><span className="text-slate-600">{new Date(entry.at).toLocaleTimeString()}</span> <span className={entry.level === 'error' ? 'text-red-300' : entry.level === 'warn' ? 'text-amber-300' : 'text-emerald-300'}>{entry.message}</span>{entry.serial ? ` · ${entry.serial}` : ''}</p>) : <p>Esperando eventos del agente…</p>}</div></section>
     {mode === 'fastboot' && fastbootInfo && <section className={panel}><h2 className="flex items-center gap-2 font-semibold"><Zap size={18} className="text-amber-300" />Acciones Fastboot seguras</h2><div className="mt-3 flex flex-wrap items-center gap-2"><select id="fastboot-slot" defaultValue="" className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm"><option value="">Cambiar slot…</option><option value="a">Slot A</option><option value="b">Slot B</option></select><button className={button} onClick={() => { const slot = document.getElementById('fastboot-slot')?.value; if (slot && window.confirm(`¿Cambiar el slot activo a ${slot.toUpperCase()}? Confirma que el fabricante lo soporte.`)) call(`/fastboot/${selected}/set-active-slot`, { command: `fastboot set_active ${slot}`, mode: 'fastboot', body: { slot } }) }} disabled={!connected || Boolean(busy)}>Confirmar cambio de slot</button></div><details className="mt-3"><summary className="cursor-pointer text-xs text-slate-400">Variables fastboot disponibles</summary><pre className="mt-2 max-h-48 overflow-auto rounded-lg bg-black/40 p-3 text-xs text-slate-300">{value(fastbootInfo.raw_variables)}</pre></details></section>}
     {aiResult && <section className={panel}><h2 className="flex items-center gap-2 font-semibold"><Activity size={18} className="text-cyan-300" />Conclusiones de IA</h2><pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-xl border border-slate-800 bg-black/30 p-4 text-sm leading-6 text-slate-300">{typeof aiResult === 'string' ? aiResult : JSON.stringify(aiResult, null, 2)}</pre><p className="mt-3 text-xs text-slate-500">La IA recibió exclusivamente datos obtenidos por ADB. Verifica sus conclusiones con el técnico.</p></section>}
-    {mode === 'adb' && currentDevice?.state === 'unauthorized' && <section className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100"><AlertTriangle size={18} className="mt-0.5 shrink-0" /><div><p className="font-semibold">Autoriza la depuración USB desde el teléfono.</p><p className="mt-1 text-amber-200/80">No se ejecutarán acciones hasta que ADB reporte el estado <code>device</code>.</p></div></section>}
+    {mode === 'adb' && currentDevice?.state === 'unauthorized' && <section className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100"><AlertTriangle size={18} className="mt-0.5 shrink-0" /><div><p className="font-semibold">El dispositivo fue detectado, pero debes autorizar la depuración USB desde el teléfono.</p><p className="mt-1 text-amber-200/80">No se ejecutarán acciones hasta que ADB reporte el estado <code>device</code>.</p></div></section>}
     {mode === 'adb' && currentDevice?.state === 'offline' && <section className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">ADB reporta el dispositivo como offline. Revisa el cable, los drivers y vuelve a conectar el teléfono.</section>}
   </div>
 }
