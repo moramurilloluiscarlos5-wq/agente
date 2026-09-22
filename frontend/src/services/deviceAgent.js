@@ -57,17 +57,26 @@ export async function openDeviceAgent() {
   }
 
   let session
-  try {
-    const response = await api.post('/device-tools/session', {
-      agent_id: status.data?.agent_id,
-      pairing_code: status.data?.pairing_code,
-    })
-    session = response.data
-    if (!session?.token) throw new Error('El backend no entregó una sesión para el agente local.')
-  } catch (error) {
-    throw Object.assign(error, { code: 'AGENT_SESSION_ERROR', agentHealth: health })
+  let renewal
+  async function renewSession() {
+    try {
+      const response = await api.post('/device-tools/session', {
+        agent_id: status.data?.agent_id,
+        pairing_code: status.data?.pairing_code,
+      })
+      if (!response.data?.token) throw new Error('El backend no entregó una sesión para el agente local.')
+      session = response.data
+    } catch (error) {
+      throw Object.assign(error, { code: 'AGENT_SESSION_ERROR', agentHealth: health })
+    }
   }
+  await renewSession()
   async function request(path, options = {}) {
+    // Refresh before sending USB operations; concurrent reads share one renewal.
+    if (Date.parse(session.expires_at) <= Date.now() + 30_000) {
+      if (!renewal) renewal = renewSession().finally(() => { renewal = null })
+      await renewal
+    }
     let result
     try {
       result = await fetch(`${AGENT_URL}${path}`, { ...options, headers: { Authorization: `Bearer ${session.token}`, 'Content-Type': 'application/json', ...(options.headers || {}) } })

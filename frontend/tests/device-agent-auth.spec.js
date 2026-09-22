@@ -53,6 +53,64 @@ test('a rejected paired-agent token offers recovery pairing instead of a dead-en
   await expect(page.getByText('Agent detectado · pendiente de vincular', { exact: true })).toBeVisible()
 })
 
+test('expired agent sessions renew once before concurrent local requests', async ({ page }) => {
+  await setup(page)
+  let sessions = 0
+  const tokens = []
+  await page.route('**/api/dashboard', (route) => route.fulfill({ json: { data: null } }))
+  await page.route('**/api/device-tools/session', (route) => {
+    sessions += 1
+    return route.fulfill({ json: { data: {
+      token: `token-${sessions}`, agent_id: 'agent-test',
+      expires_at: new Date(Date.now() + 300_000).toISOString(),
+    } } })
+  })
+  await page.route('http://127.0.0.1:5391/devices', (route) => {
+    tokens.push(route.request().headers().authorization)
+    return route.fulfill({ json: { data: { devices: [] } } })
+  })
+  await page.goto('/')
+  await page.evaluate(async () => {
+    const { openDeviceAgent } = await import('/src/services/deviceAgent.js')
+    const agent = await openDeviceAgent()
+    agent.session.expires_at = new Date(Date.now() - 1000).toISOString()
+    await Promise.all([agent.request('/devices'), agent.request('/devices')])
+  })
+  expect(sessions).toBe(2)
+  expect(tokens).toEqual(['Bearer token-1', 'Bearer token-2', 'Bearer token-2'])
+})
+
+test('a failed renewal sends no local command and can be retried', async ({ page }) => {
+  await setup(page)
+  let sessions = 0
+  let localRequests = 0
+  await page.route('**/api/dashboard', (route) => route.fulfill({ json: { data: null } }))
+  await page.route('**/api/device-tools/session', (route) => {
+    sessions += 1
+    return route.fulfill({ json: { data: sessions === 2 ? {} : {
+      token: `token-${sessions}`, agent_id: 'agent-test',
+      expires_at: new Date(Date.now() + 300_000).toISOString(),
+    } } })
+  })
+  await page.route('http://127.0.0.1:5391/devices', (route) => {
+    localRequests += 1
+    return route.fulfill({ json: { data: { devices: [] } } })
+  })
+  await page.goto('/')
+  const outcome = await page.evaluate(async () => {
+    const { openDeviceAgent } = await import('/src/services/deviceAgent.js')
+    const agent = await openDeviceAgent()
+    agent.session.expires_at = new Date(Date.now() - 1000).toISOString()
+    let code
+    try { await agent.request('/devices') } catch (error) { code = error.code }
+    await agent.request('/devices')
+    return code
+  })
+  expect(outcome).toBe('AGENT_SESSION_ERROR')
+  expect(sessions).toBe(3)
+  expect(localRequests).toBe(2)
+})
+
 test('a backend session failure keeps the detected agent visible and allows retry', async ({ page }) => {
   const state = await setup(page)
   state.sessionStatus = 503
