@@ -26,8 +26,8 @@ export class ApiError extends Error {
 
 function friendlyNetworkError(timedOut) {
   return timedOut
-    ? 'El servidor de CARLOSTECH tardó demasiado en responder. Inténtalo de nuevo en unos segundos.'
-    : 'CARLOSTECH no pudo conectarse con el servidor. Revisa tu conexión e inténtalo de nuevo.'
+    ? 'El servidor de Taller Flow tardó demasiado en responder. Inténtalo de nuevo en unos segundos.'
+    : 'Taller Flow no pudo conectarse con el servidor. Revisa tu conexión e inténtalo de nuevo.'
 }
 
 // Obtiene el JWT actual de la sesión de Supabase para adjuntarlo al backend.
@@ -74,6 +74,9 @@ async function request(path, options = {}) {
   if (!response.ok) {
     const errorBody = await response.json().catch(() => null)
     const status = response.status
+    if (status === 402 && errorBody?.code === 'LICENSE_REQUIRED' && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('license-required', { detail: { message: errorBody.message, reason: errorBody.reason ?? null } }))
+    }
     // Clasificación mínima para que la UI distinga sesión de datos o servidor.
     const fallbackCode = status === 401 || status === 403
       ? 'AUTH_REQUIRED'

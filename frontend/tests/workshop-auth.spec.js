@@ -31,6 +31,7 @@ async function setup(page, { profile = A, signedIn = false, duplicate = false } 
       state.profile = { ...A, full_name: body.full_name || 'Owner A', workshop: { ...A.workshop, name: body.workshop_name } }
       return route.fulfill({ status: 201, json: { data: { profile: state.profile, workshop: state.profile.workshop } } })
     }
+    if (path === '/health') return route.fulfill({ json: { status: 'ok' } })
     if (path === '/auth/me') return route.fulfill({ json: { profile: state.profile, workshop: state.profile.workshop, workspace_access: state.profile.workspace_access } })
     if (path === '/dashboard') return route.fulfill({ json: { data: { stats: { pending: 0, diagnostics: 0, inRepair: 0, waitingParts: 0, ready: 0, delivered: 0 }, recentRepairs: [], recentCustomers: [], upcomingDeliveries: [] } } })
     if (path === '/customers') return route.fulfill({ json: { data: [{ id: state.profile.id, first_name: state.profile.workshop.name, last_name: 'Cliente', phone: '6140000000' }], count: 1 } })
@@ -65,9 +66,9 @@ test('sin taller va a crear taller sin consultar datos de negocio y puede comple
   expect(state.calls.filter((p) => p === '/dashboard' || p === '/customers')).toEqual([])
   await page.getByLabel('Nombre del taller').fill('Mi taller')
   await page.getByRole('button', { name: 'Crear mi taller', exact: true }).click()
-  await expect(page.getByRole('heading', { name: '¡Tu taller está listo!' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Invitar empleado' })).toBeVisible()
-  await page.getByRole('link', { name: 'Ir al Dashboard' }).click()
+  await expect(page.getByRole('heading', { name: 'Tu taller está listo', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Invitar a mi equipo' })).toBeVisible()
+  await page.getByRole('link', { name: 'Ir a mi taller' }).click()
   await expect(page.getByText('Resumen de Mi taller', { exact: true })).toBeVisible()
   expect(state.registrations).toBe(1)
 })
@@ -95,12 +96,12 @@ test('SUPER_ADMIN usa el panel existente sin onboarding', async ({ page }) => {
 
 async function registrationForm(page) {
   await page.goto('/login')
-  await page.getByRole('link', { name: 'Registra tu taller gratis' }).click()
+  await page.getByRole('link', { name: 'Registra tu taller', exact: true }).click()
   await expect(page).toHaveURL(/\/registro$/)
   await page.getByLabel('Nombre completo').fill('Nuevo Owner')
-  await page.getByLabel('Correo', { exact: true }).fill('new@example.invalid')
+  await page.getByLabel('Correo electrónico', { exact: true }).fill('new@example.invalid')
   await page.getByLabel('Contraseña', { exact: true }).fill('Example123!')
-  await page.getByLabel('Confirmar contraseña').fill('Example123!')
+  await page.getByLabel('Confirmar contraseña', { exact: true }).fill('Example123!')
   await page.getByLabel('Nombre del taller').fill('Taller nuevo')
 }
 
@@ -108,10 +109,10 @@ test('nuevo registro y doble submit crean una sola solicitud y muestran bienveni
   const state = await setup(page)
   await registrationForm(page)
   await page.locator('form').evaluate((form) => { form.requestSubmit(); form.requestSubmit() })
-  await expect(page.getByRole('heading', { name: '¡Tu taller está listo!' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Tu taller está listo', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Registrar primer cliente' })).toBeVisible()
   expect(state.registrations).toBe(1)
-  await page.getByRole('link', { name: 'Ir al Dashboard' }).click()
+  await page.getByRole('link', { name: 'Ir a mi taller' }).click()
   await expect(page.getByText('Resumen de Taller nuevo', { exact: true })).toBeVisible()
 })
 
@@ -120,7 +121,7 @@ test('correo duplicado muestra error sin sesión ni éxito falso', async ({ page
   await registrationForm(page)
   await page.getByRole('button', { name: 'Crear mi taller', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('Ya existe una cuenta')
-  await expect(page.getByRole('heading', { name: '¡Tu taller está listo!' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Tu taller está listo', exact: true })).toHaveCount(0)
   await expect(page).toHaveURL(/\/registro$/)
 })
 

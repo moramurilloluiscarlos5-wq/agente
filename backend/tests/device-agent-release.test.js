@@ -191,3 +191,18 @@ test('no published stable agent is unavailable, not an invented version', async 
   const { getRelease } = mockGitHub(fixture(), { releases: [] })
   await assert.rejects(getRelease, { status: 503 })
 })
+
+test('a valid signed GitHub release wins over a configured external download', async () => {
+  const { getRelease } = mockGitHub(fixture('1.0.2'), { env: { DEVICE_AGENT_EXTERNAL_RELEASE_URL: 'https://www.mediafire.com/file/x/CarlosTechDeviceAgentSetup.exe/file', DEVICE_AGENT_EXTERNAL_VERSION: '1.0.1' } })
+  const release = await getRelease()
+  assert.equal(release.signed, true)
+  assert.equal(release.version, '1.0.2')
+  assert.match(release.downloadUrl, /^https:\/\/github\.com\//)
+})
+
+test('the external download is only a fallback while GitHub has no valid release', async () => {
+  const { getRelease } = mockGitHub(fixture(), { releases: [], env: { DEVICE_AGENT_EXTERNAL_RELEASE_URL: 'https://www.mediafire.com/file/x/CarlosTechDeviceAgentSetup.exe/file', DEVICE_AGENT_EXTERNAL_VERSION: '1.0.1' } })
+  const release = await getRelease()
+  assert.equal(release.source, 'external')
+  assert.equal(release.signed, false)
+})

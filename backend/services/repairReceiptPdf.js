@@ -34,16 +34,16 @@ function field(doc, label, value) {
   doc.moveDown(0.15)
 }
 
-export async function generateRepairReceiptPdf({ order, history = [], qrPng = null, trackingUrl = '' }) {
+export async function generateRepairReceiptPdf({ order, history = [], qrPng = null, trackingUrl = '', workshopName = 'Taller técnico' }) {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 48, info: { Title: `Comprobante ${order?.order_number ?? ''} - CARLOSTECH`, Author: 'CARLOSTECH AI' } })
+    const doc = new PDFDocument({ size: 'A4', margin: 48, info: { Title: `Comprobante ${order?.order_number ?? ''} - ${workshopName}`, Author: workshopName } })
     const chunks = []
     doc.on('data', (chunk) => chunks.push(chunk))
     doc.on('end', () => resolve(Buffer.concat(chunks)))
     doc.on('error', reject)
 
-    doc.font('Helvetica-Bold').fontSize(20).fillColor(NAVY).text('CARLOSTECH')
-    doc.font('Helvetica').fontSize(11).fillColor(ACCENT).text('Servicio Técnico')
+    doc.font('Helvetica-Bold').fontSize(20).fillColor(NAVY).text(workshopName)
+    doc.font('Helvetica').fontSize(11).fillColor(ACCENT).text('Powered by Taller Flow')
     doc.moveDown(0.2)
     doc.font('Helvetica-Bold').fontSize(14).fillColor(NAVY).text('COMPROBANTE DE RECEPCIÓN')
     doc.font('Helvetica').fontSize(10).fillColor(MUTED).text(`Orden ${order?.order_number ?? ''} · Recibido: ${formatDate(order?.received_at)}`)
@@ -88,7 +88,7 @@ export async function generateRepairReceiptPdf({ order, history = [], qrPng = nu
     }
 
     doc.moveDown(1)
-    doc.font('Helvetica').fontSize(8).fillColor(MUTED).text('Gracias por confiar en CARLOSTECH Servicio Técnico.', { align: 'center' })
+    doc.font('Helvetica').fontSize(8).fillColor(MUTED).text('Gracias por confiar en nuestro taller.', { align: 'center' })
     doc.end()
   })
 }

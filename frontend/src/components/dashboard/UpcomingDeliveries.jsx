@@ -15,7 +15,7 @@ export default function UpcomingDeliveries({ deliveries }) {
   return (
     <ul className="divide-y divide-slate-800/70">
       {deliveries.map((delivery) => (
-        <li key={delivery.orderNumber} className="flex items-center justify-between gap-3 px-3 py-3">
+        <li key={delivery.orderNumber} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
           <div className="min-w-0">
             <Link
               to={`/reparaciones/${delivery.orderNumber}`}

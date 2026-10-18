@@ -26,22 +26,39 @@ import { supabaseAdmin } from './config/supabase.js'
 import { startWhatsAppWorker } from './services/whatsappService.js'
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js'
 import { securityHeaders } from './middleware/security.js'
+import { createBillingRouter, createBillingWebhookHandler } from './routes/billing.routes.js'
+import { assertBillingConfig, loadBillingConfig } from './config/billing.js'
 
 
 const app = express()
+// Railway (y cualquier proxy delante de Express) reenvía la IP real en
+// X-Forwarded-For. Sin esto todos los usuarios comparten la IP del proxy: los
+// límites de peticiones serían globales y la auditoría guardaría una IP falsa.
+// TRUST_PROXY permite ajustar el número de saltos; en producción se confía en 1.
+const trustProxy = process.env.TRUST_PROXY ?? (process.env.NODE_ENV === 'production' ? '1' : '')
+if (trustProxy) app.set('trust proxy', /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy)
 const PORT = process.env.PORT || 4000
 const HOST = process.env.HOST || '0.0.0.0'
 
 const defaultOrigins = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5173,http://127.0.0.1:5173'
 const allowedOrigins = (process.env.CORS_ORIGIN || defaultOrigins).split(',').map((origin) => origin.trim()).filter(Boolean)
 app.use(securityHeaders)
+// Producción no arranca sin facturación completa; fuera de producción solo se avisa.
+if (process.env.NODE_ENV === 'production') {
+  const billing = assertBillingConfig()
+  console.log(`Facturación Stripe en modo ${billing.testMode ? 'PRUEBA (test)' : 'REAL (live)'}`)
+} else if (!loadBillingConfig().ok) {
+  console.warn('Facturación Stripe sin configurar: las rutas /api/billing responderán 503 (ver README, Licencias).')
+}
 app.use(cors({ origin: (origin, callback) => callback(null, !origin || allowedOrigins.includes(origin)) }))
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), createBillingWebhookHandler())
 app.use('/api/webhooks/whatsapp', express.raw({ type: 'application/json' }), whatsappWebhookRoutes)
 app.use(express.json())
 
 app.use('/api/health', healthRoutes)
 app.use('/health', healthRoutes)
 app.use('/api/auth', authRoutes)
+app.use('/api/billing', createBillingRouter())
 // El endpoint de actualización del agente es público para que el instalador
 // pueda consultar la descarga antes de que exista una sesión en la aplicación.
 // Debe montarse antes del router genérico de tracking (`/api`), que protege
@@ -67,11 +84,26 @@ app.use('/api', operationsRoutes)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const publicDir = path.join(__dirname, 'public')
 if (fs.existsSync(publicDir)) {
-  app.use(express.static(publicDir, { index: false }))
+  app.use(express.static(publicDir, {
+    index: false,
+    setHeaders(res, filePath) {
+      // index.html SIEMPRE sin caché: si un navegador conservara el HTML viejo
+      // tras un deploy, seguiría pidiendo un bundle antiguo (404) o uno viejo
+      // con URLs horneadas incorrectas. Los assets con hash sí son inmutables.
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-store')
+        return
+      }
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      }
+    },
+  }))
 }
 // Fallback SPA para rutas que no sean API. (El 404 JSON sigue activo para el resto.)
 app.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
   if (!fs.existsSync(publicDir)) return next()
+  res.setHeader('Cache-Control', 'no-store')
   res.sendFile(path.join(publicDir, 'index.html'))
 })
 

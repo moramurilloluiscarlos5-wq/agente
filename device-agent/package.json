@@ -1,6 +1,6 @@
 {
   "name": "carlostech-device-agent",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Agente local seguro para ADB y Fastboot de CARLOSTECH AI",
   "type": "module",

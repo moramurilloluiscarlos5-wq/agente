@@ -30,6 +30,11 @@ Configurar antes del build:
 | `SUPABASE_SERVICE_ROLE_KEY` | Secreto exclusivo del backend |
 | `WHATSAPP_ENABLED` | `false` mientras no se configure Meta |
 | `WHATSAPP_SIMULATE` | `false` en producción |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `APP_PUBLIC_URL` | **Obligatorias en producción**: sin ellas el backend no arranca y el mensaje indica cuáles faltan. Ver README → Licencias |
+| `TRIAL_DAYS`, `BILLING_GRACE_DAYS` | Opcionales (14 y 7 por defecto) |
+| `TRUST_PROXY` | Opcional. En producción vale `1` por defecto (proxy de Railway) para que los límites de peticiones y la auditoría usen la IP real del usuario |
+| `DEVICE_AGENT_GITHUB_REPOSITORY` | `propietario/repositorio` con las releases firmadas del agente. Tiene prioridad sobre cualquier descarga externa |
+| `DEVICE_AGENT_EXTERNAL_RELEASE_URL` + `DEVICE_AGENT_EXTERNAL_VERSION` | Respaldo temporal sin firma (Mediafire). Solo se usa si no hay repositorio o si GitHub todavía no publica una release firmada válida. Ya no existe un valor por defecto en el código |
 
 No fijar `PORT` en Railway. Las variables VITE se incorporan al navegador.
 Las variables opcionales de WhatsApp se documentan en `backend/.env.example`.
@@ -52,6 +57,7 @@ ni `seed.sql` sobre la base existente y no hacer reset.
 9. `database/migrations/015_ai_provider.sql`
 10. `database/migrations/016_provision_workshop.sql`
 11. `database/migrations/018_device_tools.sql`
+12. `database/migrations/019_licensing.sql` (licencias; ver README → Licencias)
 
 ## Device Tools (ADB / Fastboot)
 

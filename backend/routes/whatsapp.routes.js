@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
+import { requireLicense } from '../middleware/license.js'
 import { requireRole } from '../middleware/roles.js'
 import { databaseError, fail, REPAIR_SELECT, scopeRepairs, searchTerm, uuid } from '../utils/operations.js'
 import { normalizeWhatsAppPhone } from '../services/whatsappPhone.js'
@@ -14,7 +15,7 @@ const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req,
 const staff = requireRole('ADMINISTRADOR', 'RECEPCION', 'TECNICO')
 const managers = requireRole('ADMINISTRADOR', 'RECEPCION')
 
-export function createWhatsAppRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile] } = {}) {
+export function createWhatsAppRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense] } = {}) {
   const router = Router()
   router.use(...authenticate, staff)
 
@@ -98,7 +99,7 @@ export function createWhatsAppRouter({ db = supabaseAdmin, authenticate = [requi
     if (!quote?.customer) fail('Cotización o cliente no encontrado', 404)
     const repair = quote.repair || { order_number: '', brand: quote.device?.brand, model: quote.device?.model, estimated_cost: quote.total, deposit: quote.deposit }
     const context = buildTemplateContext({ repair, customer: quote.customer, total: quote.total, paid: quote.deposit })
-    const message = renderTemplate('Hola {{cliente}}. Tenemos lista la cotización de tu {{marca}} {{modelo}}. Orden: {{orden}}. Total: ${{total}}. Por favor indícanos si deseas autorizar la reparación. CARLOSTECH', context)
+    const message = renderTemplate('Hola {{cliente}}. Tenemos lista la cotización de tu {{marca}} {{modelo}}. Orden: {{orden}}. Total: ${{total}}. Por favor indícanos si deseas autorizar la reparación.', context)
     const result = await sendWhatsAppMessage({ db, customer: quote.customer, repair: quote.repair, text: message, templateName: 'quote_ready', templateParameters: [context.cliente, context.marca, context.modelo, context.orden, context.total], sentBy: req.profile.id, idempotencyKey: `quote:${quote.id}:whatsapp:${quote.updated_at}` })
     if (result.data?.status === 'failed') return res.status(422).json({ message: result.data.error_message, data: result.data })
     res.status(201).json({ data: result.data, simulated: Boolean(result.simulated), duplicate: Boolean(result.duplicate) })

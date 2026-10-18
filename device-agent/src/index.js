@@ -72,7 +72,9 @@ function paired() {
 }
 
 function healthPayload() {
-  return { status: 'ok', agent: 'CarlosTech Device Agent', version: AGENT_VERSION }
+  // `service` es el identificador canónico pedido por la UI; `agent` se
+  // conserva por compatibilidad con instalaciones existentes del instalador.
+  return { status: 'ok', service: 'CarlosTech Device Agent', agent: 'CarlosTech Device Agent', version: AGENT_VERSION }
 }
 
 function pairingPayload() {
@@ -366,10 +368,14 @@ async function handleHttp(req, res) {
     if (!originAllowed(req)) return json(res, 403, { error: 'Origen no permitido.' })
     const headers = { 'access-control-allow-headers': 'Authorization, Content-Type', 'access-control-allow-methods': 'GET, POST, OPTIONS' }
     if (req.headers.origin) headers['access-control-allow-origin'] = req.headers.origin
+    if (req.headers['access-control-request-private-network'] === 'true') headers['access-control-allow-private-network'] = 'true'
     res.writeHead(204, headers)
     return res.end()
   }
   if (!originAllowed(req)) return json(res, 403, { error: 'Origen no permitido.' })
+  // Keep errors readable by the allowed web app too (especially expired or
+  // mismatched tokens, so the browser can offer pairing again).
+  setOriginHeader(req, res)
   if (url.pathname === '/health' && req.method === 'GET') { setOriginHeader(req, res); return json(res, 200, healthPayload()) }
   if (url.pathname === '/pairing/status' && req.method === 'GET') { setOriginHeader(req, res); return json(res, 200, { data: pairingPayload() }) }
   if (url.pathname === '/pairing/exchange' && req.method === 'POST') {
@@ -390,8 +396,6 @@ async function handleHttp(req, res) {
   }
   try {
     const data = await dispatch(req.method, url.pathname, body)
-    const responseOrigin = req.headers.origin
-    res.setHeader('access-control-allow-origin', responseOrigin || '*')
     return json(res, 200, { data })
   } catch (error) {
     const status = error.status || 500

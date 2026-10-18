@@ -35,8 +35,6 @@ export default function Communications() {
   const canManage = ['OWNER', 'ADMINISTRADOR', 'RECEPCION'].includes(profile?.role)
 
   async function load() {
-    setLoading(true)
-    setError('')
     try {
       const [statusResponse, automationResponse, messageResponse] = await Promise.all([
         api.get('/whatsapp/status'),
@@ -53,6 +51,8 @@ export default function Communications() {
     }
   }
 
+  // The initial loading state is already set; load updates it after the API responds.
+  // oxlint-disable-next-line react/set-state-in-effect
   useEffect(() => { load() }, [])
 
   async function toggleAutomation(automation) {
@@ -65,11 +65,14 @@ export default function Communications() {
   }
 
   async function retryMessage(message) {
+    setLoading(true)
+    setError('')
     try {
       await api.post(`/whatsapp/messages/${encodeURIComponent(message.id)}/retry`, {})
       await load()
     } catch (err) {
       setError(err.message)
+      setLoading(false)
     }
   }
 
@@ -77,7 +80,7 @@ export default function Communications() {
   const counts = Object.fromEntries(Object.keys(STATUS_META).map((key) => [key, messages.filter((message) => message.status === key).length]))
 
   return <div className="space-y-6">
-    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight"><MessageCircle className="text-emerald-400" /> Comunicaciones</h1><p className="mt-1 text-sm text-slate-400">Mensajes de WhatsApp, estados de entrega y automatizaciones de reparaciones.</p></div><button type="button" className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300" onClick={load} disabled={loading}><RefreshCw size={15} /> Actualizar</button></header>
+    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight"><MessageCircle className="text-emerald-400" /> Comunicaciones</h1><p className="mt-1 text-sm text-slate-400">Mensajes de WhatsApp, estados de entrega y automatizaciones de reparaciones.</p></div><button type="button" className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300" onClick={() => { setLoading(true); setError(''); load() }} disabled={loading}><RefreshCw size={15} /> Actualizar</button></header>
     {error && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-300">{error}</p>}
     {status && <div className={`rounded-lg border p-4 text-sm ${status.configured || status.simulate ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200' : 'border-amber-500/30 bg-amber-500/10 text-amber-200'}`}>{status.simulate ? 'Modo simulado activado explícitamente.' : status.configured ? 'WhatsApp Business Cloud API configurado.' : 'Integración de WhatsApp no configurada.'}</div>}
     <div className="grid grid-cols-2 gap-3 md:grid-cols-5">{Object.entries(STATUS_META).map(([key, [label, Icon, color]]) => <button key={key} type="button" onClick={() => setFilter(filter === key ? 'all' : key)} className={`rounded-xl border p-4 text-left transition ${filter === key ? 'border-cyan-500/50 bg-cyan-500/10' : 'border-slate-800 bg-slate-900/40 hover:border-slate-700'}`}><Icon size={18} className={color} /><p className="mt-3 text-2xl font-semibold text-white">{counts[key] ?? 0}</p><p className="text-xs text-slate-400">{label}</p></button>)}</div>

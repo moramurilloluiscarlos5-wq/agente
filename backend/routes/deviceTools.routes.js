@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
+import { requireLicense } from '../middleware/license.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { requireRole } from '../middleware/roles.js'
 import { rateLimit } from '../middleware/security.js'
@@ -28,7 +29,7 @@ function commandName(value) {
   return result
 }
 
-export function createDeviceToolsRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile], getRelease = getDeviceAgentRelease } = {}) {
+export function createDeviceToolsRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense], getRelease = getDeviceAgentRelease } = {}) {
   const router = Router()
   router.use(...authenticate, DEVICE_ROLES, requirePermission('devices.view'))
   router.use((req, _res, next) => {

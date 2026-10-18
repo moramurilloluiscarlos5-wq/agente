@@ -23,3 +23,7 @@ versions.txt
 supabase/.temp/
 login-desktop.png
 login-final.png
+
+# Proyectos y archivos ajenos a CARLOSTECH AI
+ferpogas51.github.io/
+backend/scripts/*.png

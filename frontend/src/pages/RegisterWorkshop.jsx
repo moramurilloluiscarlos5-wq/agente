@@ -1,38 +1,82 @@
-﻿import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { ArrowRight, Building2, CheckCircle2, LoaderCircle } from 'lucide-react'
+import { ArrowRight, CheckCircle2, LoaderCircle } from 'lucide-react'
+import AuthLayout from '../components/auth/AuthLayout.jsx'
+import AuthField from '../components/auth/AuthField.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { api } from '../services/api.js'
 import { supabase } from '../services/supabase.js'
 import { workspaceDestination } from '../utils/workspace.js'
 
-const inputClass = 'ct-input mt-2'
-const panelClass = 'w-full max-w-2xl rounded-[16px] border border-slate-800 bg-slate-900 p-6 shadow-xl sm:p-10'
+function registrationError(error, existingUser, accountCreated) {
+  if (accountCreated || error.code === 'REGISTRATION_COMMITTED') return 'Tu taller se creó. Inicia sesión para continuar.'
+  if (error.status === 409) {
+    return existingUser
+      ? 'Tu cuenta ya pertenece a un taller. Inicia sesión para acceder.'
+      : 'Ya existe una cuenta con este correo. Inicia sesión para continuar.'
+  }
+  if (error.code === 'API_OFFLINE') return 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.'
+  if (error.code === 'API_TIMEOUT') return 'El servidor está tardando en responder. Inténtalo de nuevo en unos momentos.'
+  if (error.status === 429) return 'Se han realizado varios intentos. Espera unos minutos antes de volver a intentarlo.'
+  if (error.status === 401 || error.status === 403) return 'Tu sesión ha caducado. Inicia sesión de nuevo para continuar.'
+  return 'No pudimos crear tu taller. Revisa los datos e inténtalo de nuevo.'
+}
 
 export default function RegisterWorkshop() {
   const { status, profile, refreshProfile, logout } = useAuth()
   const { pathname } = useLocation()
   const existingUser = pathname === '/crear-taller'
   const inFlight = useRef(false)
+  const noticeRef = useRef(null)
+  const successRef = useRef(null)
   const [form, setForm] = useState({ full_name: '', email: '', password: '', confirm_password: '', workshop_name: '', workshop_phone: '', workshop_city: '' })
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [created, setCreated] = useState(null)
-  const change = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }))
+
+  useEffect(() => {
+    const previousTitle = document.title
+    document.title = 'Crea tu taller · Taller Flow'
+    return () => { document.title = previousTitle }
+  }, [])
+
+  useEffect(() => {
+    if (error) noticeRef.current?.focus()
+  }, [error])
+
+  useEffect(() => {
+    if (created) successRef.current?.focus()
+  }, [created])
+
+  function change(event) {
+    const { name, value } = event.target
+    setForm((current) => ({ ...current, [name]: value }))
+    setFieldErrors((current) => ({ ...current, [name]: '', ...(name === 'password' ? { confirm_password: '' } : {}) }))
+  }
+
+  function invalidField(name, message) {
+    setFieldErrors({ [name]: message })
+    document.getElementById('register-' + name)?.focus()
+  }
 
   async function submit(event) {
     event.preventDefault()
     if (inFlight.current) return
     setError('')
-    if (!form.workshop_name.trim()) return setError('Ingresa el nombre de tu taller.')
-    if (!existingUser && form.password !== form.confirm_password) return setError('Las contraseñas no coinciden.')
+    setFieldErrors({})
+    if (!existingUser && !form.full_name.trim()) return invalidField('full_name', 'Ingresa tu nombre completo.')
+    if (!form.workshop_name.trim()) return invalidField('workshop_name', 'Ingresa el nombre de tu taller.')
+    if (!existingUser && form.password !== form.confirm_password) return invalidField('confirm_password', 'Las contraseñas no coinciden.')
     inFlight.current = true
     setLoading(true)
+    let accountCreated = false
     try {
       const payload = existingUser
         ? { workshop_name: form.workshop_name, workshop_phone: form.workshop_phone, workshop_city: form.workshop_city }
         : form
       const { data } = await api.post(existingUser ? '/auth/create-workshop' : '/auth/register-workshop', payload)
+      accountCreated = true
       setCreated(data)
       if (!existingUser) {
         const { error: loginError } = await supabase.auth.signInWithPassword({ email: form.email.trim(), password: form.password })
@@ -42,7 +86,7 @@ export default function RegisterWorkshop() {
       setForm((current) => ({ ...current, password: '', confirm_password: '' }))
     } catch (requestError) {
       if (requestError.code === 'REGISTRATION_COMMITTED') setCreated({ workshop: { name: form.workshop_name } })
-      setError(requestError.message || 'No se pudo crear el taller. Intenta de nuevo.')
+      setError(registrationError(requestError, existingUser, accountCreated))
     } finally {
       inFlight.current = false
       setLoading(false)
@@ -53,65 +97,91 @@ export default function RegisterWorkshop() {
     return <Navigate to={workspaceDestination(profile)} replace />
   }
   const ready = status === 'authenticated' && profile?.workshop?.status === 'ACTIVE'
-  const field = (name, label, type = 'text', maxLength, required = false, autoComplete) => (
-    <label className="block text-sm text-slate-300" key={name}>
-      {label}<input name={name} type={type} value={form[name]} onChange={change} className={inputClass}
-        maxLength={maxLength} minLength={type === 'password' ? 8 : undefined} required={required} autoComplete={autoComplete} />
-    </label>
-  )
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950 px-5 py-10 text-slate-100">
-      <section className={panelClass}>
-        {created ? <div className="text-center">
-          <CheckCircle2 size={42} className="mx-auto text-emerald-300" />
-          <h1 className="mt-5 text-2xl font-semibold">¡Tu taller está listo!</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-400">{created.workshop?.name} ya tiene su configuración inicial y tu cuenta quedó como propietario.</p>
-          {loading && <p role="status" className="mt-4 text-sm text-slate-400">Preparando tu sesión…</p>}
-          {error && <p role="alert" className="mt-4 text-sm text-amber-200">{error}</p>}
-          {!loading && <div className="mt-7 flex flex-col justify-center gap-3">
-            {ready ? <>
-              <Link to="/dashboard" className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950">Ir al Dashboard <ArrowRight size={16} /></Link>
-              <Link to="/clientes" className="rounded-xl border border-slate-700 px-5 py-3 text-sm">Registrar primer cliente</Link>
-              <Link to="/personal" className="rounded-xl border border-slate-700 px-5 py-3 text-sm">Invitar empleado</Link>
-            </> : <Link to="/login" className="text-cyan-300">Iniciar sesión</Link>}
-          </div>}
-        </div> : <>
-          <div className="flex items-center gap-3">
-            <Building2 size={32} className="text-cyan-300" />
-            <div><p className="text-xs font-semibold tracking-widest text-cyan-300">CARLOSTECH AI</p><h1 className="mt-1 text-2xl font-semibold">{existingUser ? 'Crea tu taller' : 'Registra tu taller gratis'}</h1></div>
-          </div>
-          <p className="mt-4 text-sm leading-6 text-slate-400">{existingUser ? 'Tu cuenta está lista. Completa los datos del taller para entrar a tu espacio de trabajo.' : 'Crea tu cuenta y comienza a gestionar tu taller.'}</p>
-          <p className="mt-2 text-xs leading-5 text-slate-500">¿Tu taller ya utiliza CARLOSTECH AI? Solicita tu acceso al administrador del taller.</p>
-          <form onSubmit={submit} className="mt-8 space-y-6">
-            <fieldset disabled={loading || status === 'loading'} className="space-y-6">
-              {!existingUser && <section aria-label="Datos del propietario">
-                <h2 className="mb-4 text-sm font-semibold text-slate-200">Datos del propietario</h2>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {field('full_name', 'Nombre completo', 'text', 150, true, 'name')}
-                  {field('email', 'Correo', 'email', 254, true, 'email')}
-                  {field('password', 'Contraseña', 'password', 128, true, 'new-password')}
-                  {field('confirm_password', 'Confirmar contraseña', 'password', 128, true, 'new-password')}
-                </div>
-              </section>}
-              <section aria-label="Datos del taller">
-                <h2 className="mb-4 text-sm font-semibold text-slate-200">Datos del taller</h2>
-                {field('workshop_name', 'Nombre del taller', 'text', 120, true, 'organization')}
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  {field('workshop_phone', 'Teléfono opcional', 'tel', 40, false, 'tel')}
-                  {field('workshop_city', 'Ciudad opcional', 'text', 200)}
+    <AuthLayout variant="register">
+      {created ? (
+        <div className="ct-auth-success">
+          <CheckCircle2 size={36} strokeWidth={1.5} aria-hidden="true" />
+          <header className="ct-auth-heading">
+            <p className="ct-auth-eyebrow">REGISTRO COMPLETADO</p>
+            <h1 ref={successRef} tabIndex={-1}>Tu taller está listo</h1>
+            <p>{created.workshop?.name} ya tiene su configuración inicial. Tu cuenta tiene acceso como propietario.</p>
+          </header>
+          {loading && <p role="status" className="ct-auth-notice ct-auth-notice--info"><LoaderCircle size={16} className="animate-spin" aria-hidden="true" /> Preparando tu sesión…</p>}
+          {error && <p ref={noticeRef} tabIndex={-1} role="alert" className="ct-auth-notice ct-auth-notice--info">{error}</p>}
+          {!loading && (
+            <div className="ct-auth-form">
+              {ready ? (
+                <>
+                  <Link to="/dashboard" className="ct-auth-primary">Ir a mi taller <ArrowRight size={16} aria-hidden="true" /></Link>
+                  <Link to="/clientes" className="ct-auth-secondary">Registrar primer cliente</Link>
+                  <Link to="/personal" className="ct-auth-link">Invitar a mi equipo</Link>
+                </>
+              ) : <Link to="/login" className="ct-auth-primary">Iniciar sesión <ArrowRight size={16} aria-hidden="true" /></Link>}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <header className="ct-auth-heading">
+            <p className="ct-auth-eyebrow">PARA PROPIETARIOS DE TALLER</p>
+            <h1>Crea tu taller en Taller Flow</h1>
+            <p>{existingUser
+              ? 'Tu cuenta está lista. Completa los datos del taller para entrar a tu espacio de trabajo.'
+              : 'Configura tu espacio de trabajo y comienza a gestionar reparaciones, clientes y equipos.'}</p>
+          </header>
+
+          <form onSubmit={submit} className="ct-auth-form" aria-busy={loading}>
+            <fieldset disabled={loading || status === 'loading'} className="ct-auth-fieldset">
+              {!existingUser && (
+                <section className="ct-auth-section" aria-labelledby="owner-details-title">
+                  <h2 id="owner-details-title">Datos del propietario</h2>
+                  <div className="ct-auth-fields">
+                    <AuthField id="register-full_name" name="full_name" label="Nombre completo" value={form.full_name} onChange={change}
+                      maxLength={150} required autoComplete="name" placeholder="Tu nombre y apellido" error={fieldErrors.full_name} />
+                    <AuthField id="register-email" name="email" label="Correo electrónico" type="email" value={form.email} onChange={change}
+                      maxLength={254} required autoComplete="email" autoCapitalize="none" spellCheck={false} placeholder="nombre@taller.com" />
+                    <AuthField id="register-password" name="password" label="Contraseña" type="password" value={form.password} onChange={change}
+                      minLength={8} maxLength={128} required autoComplete="new-password" hint="Usa al menos 8 caracteres." />
+                    <AuthField id="register-confirm_password" name="confirm_password" label="Confirmar contraseña" type="password" value={form.confirm_password} onChange={change}
+                      minLength={8} maxLength={128} required autoComplete="new-password" error={fieldErrors.confirm_password} />
+                  </div>
+                </section>
+              )}
+
+              <section className="ct-auth-section" aria-labelledby="workshop-details-title">
+                <h2 id="workshop-details-title">Datos del taller</h2>
+                <div className="ct-auth-fields">
+                  <div className="ct-auth-field-wide">
+                    <AuthField id="register-workshop_name" name="workshop_name" label="Nombre del taller" value={form.workshop_name} onChange={change}
+                      maxLength={120} required autoComplete="organization" placeholder="El nombre de tu negocio" error={fieldErrors.workshop_name} />
+                  </div>
+                  <AuthField id="register-workshop_phone" name="workshop_phone" label="Teléfono (opcional)" type="tel" value={form.workshop_phone} onChange={change}
+                    maxLength={40} autoComplete="tel" />
+                  <AuthField id="register-workshop_city" name="workshop_city" label="Ciudad (opcional)" value={form.workshop_city} onChange={change}
+                    maxLength={200} autoComplete="address-level2" />
                 </div>
               </section>
-              {error && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>}
-              <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 py-3.5 text-sm font-semibold text-slate-950 disabled:opacity-60">
-                {loading && <LoaderCircle size={17} className="animate-spin" />}{loading ? 'Creando taller…' : 'Crear mi taller'}
+
+              {error && <p ref={noticeRef} tabIndex={-1} role="alert" className="ct-auth-notice ct-auth-notice--error">{error}</p>}
+              <button type="submit" className="ct-auth-primary" disabled={loading || status === 'loading'}>
+                {loading ? <LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> : null}
+                {loading ? 'Creando taller…' : 'Crear mi taller'}
+                {!loading && <ArrowRight size={16} aria-hidden="true" />}
               </button>
             </fieldset>
+            <span className="sr-only" role="status">{loading ? 'Creando tu taller. Espera un momento.' : ''}</span>
           </form>
-          {existingUser ? <button type="button" onClick={logout} className="mt-6 text-sm text-slate-400">Cerrar sesión</button>
-            : <p className="mt-6 text-center text-sm text-slate-500">¿Ya tienes cuenta? <Link to="/login" className="text-cyan-300">Inicia sesión</Link></p>}
-        </>}
-      </section>
-    </main>
+
+          <p className="ct-auth-staff-note">Si tu taller ya usa Taller Flow, solicita acceso al administrador.</p>
+          <div className="ct-auth-switch">
+            {existingUser
+              ? <button type="button" onClick={logout} className="ct-auth-link" disabled={loading}>Cerrar sesión</button>
+              : <p>¿Ya tienes cuenta? <Link to="/login" className="ct-auth-link">Inicia sesión</Link></p>}
+          </div>
+        </>
+      )}
+    </AuthLayout>
   )
 }

@@ -1,6 +1,5 @@
-import { createContext, useEffect, useState } from 'react'
-
-export const SidebarContext = createContext(null)
+import { useEffect, useState } from 'react'
+import { SidebarContext } from './sidebar.js'
 
 export function SidebarProvider({ children }) {
   const [collapsed, setCollapsed] = useState(

@@ -1,13 +1,14 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
+import { requireLicense } from '../middleware/license.js'
 import { databaseError, fail, REPAIR_SELECT, searchTerm, scopeRepairs } from '../utils/operations.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { scopeToWorkshop } from '../utils/workshop.js'
 
 const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req, res)).catch(next)
 
-export function createSearchRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile] } = {}) {
+export function createSearchRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense] } = {}) {
   const router = Router()
   router.use(...authenticate)
 

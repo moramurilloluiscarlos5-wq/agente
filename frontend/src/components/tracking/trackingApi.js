@@ -1,7 +1,13 @@
-import { supabase } from '../services/supabase.js'
+import { supabase } from '../../services/supabase.js'
+import { resolveApiBaseUrl } from '../../utils/apiBase.js'
 
 export function baseApiUrl() {
-  return import.meta.env.VITE_API_URL ?? '/api'
+  // Misma resolución segura que services/api.js: en producción siempre es
+  // el mismo origen; nunca la PC del visitante aunque el build venga envenenado.
+  return resolveApiBaseUrl(
+    import.meta.env.VITE_API_URL,
+    typeof window !== 'undefined' ? window.location.hostname : 'localhost',
+  )
 }
 
 export async function authHeaders() {

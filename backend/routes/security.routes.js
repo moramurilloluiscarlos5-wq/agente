@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
+import { requireLicense } from '../middleware/license.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { databaseError, fail, pageParams, searchTerm, uuid } from '../utils/operations.js'
 import { auditSafe, writeAudit } from '../services/auditService.js'
@@ -9,7 +10,7 @@ import { requireRole } from '../middleware/roles.js'
 
 const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req, res)).catch(next)
 
-export function createSecurityRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile] } = {}) {
+export function createSecurityRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense] } = {}) {
   const router = Router()
   router.use(...authenticate)
 

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Bell, Menu, Search } from 'lucide-react'
+import { Bell, ChevronRight, Menu, Search, Store } from 'lucide-react'
 import { NAV_ITEMS } from '../../utils/constants.js'
 import { useSidebar } from '../../hooks/useSidebar.js'
 import { useAuth } from '../../hooks/useAuth.js'
@@ -15,13 +15,31 @@ export default function Navbar() {
   const [query, setQuery] = useState('')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
+  const searchRef = useRef(null)
+  const notificationsRef = useRef(null)
+
+  useEffect(() => {
+    function onKey(event) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        searchRef.current?.focus()
+      }
+      if (event.key === 'Escape') setNotificationsOpen(false)
+    }
+    function onPointer(event) {
+      if (!notificationsRef.current?.contains(event.target)) setNotificationsOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onPointer)
+    return () => { document.removeEventListener('keydown', onKey); document.removeEventListener('pointerdown', onPointer) }
+  }, [])
 
   useEffect(() => { if (!profileId) return; api.get('/notifications').then((response) => setNotifications(response.data ?? [])).catch(() => {}) }, [profileId])
 
   const currentPage = NAV_ITEMS.find((item) =>
     item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path),
   )
-  const pageLabel = location.pathname === '/dashboard' ? 'Dashboard' : currentPage?.label ?? 'CARLOSTECH AI'
+  const pageLabel = location.pathname === '/dashboard' ? 'Dashboard' : currentPage?.label ?? 'Taller Flow'
 
   const handleSearch = (event) => {
     event.preventDefault()
@@ -31,51 +49,62 @@ export default function Navbar() {
   }
 
   return (
-    <header className="flex h-[4.5rem] shrink-0 items-center gap-3 border-b border-slate-800/80 bg-[#0d1727] px-4 md:px-8">
+    <header className="tf-navbar flex shrink-0 items-center gap-3 border-b border-slate-800/80 px-4 md:px-8">
       <button
         type="button"
         onClick={openMobile}
-        className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-800 text-slate-300 hover:border-cyan-500/50 hover:text-cyan-400 md:hidden"
+        className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 md:hidden"
         aria-label="Abrir menú"
       >
         <Menu size={18} />
       </button>
 
-      <div className="hidden min-w-0 flex-col md:flex">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">Espacio de trabajo</p>
-        <h1 className="mt-0.5 truncate text-sm font-semibold text-slate-100">{pageLabel}</h1>
-      </div>
+      <nav aria-label="Contexto" className="hidden min-w-0 items-center gap-3 md:flex">
+        <span className="hidden text-xs text-slate-500 lg:inline">Mi espacio</span><ChevronRight size={13} className="hidden text-slate-600 lg:block" />
+        <span className="truncate text-sm font-medium text-slate-300">{pageLabel}</span>
+      </nav>
 
-      <form onSubmit={handleSearch} className="ml-auto flex max-w-md flex-1 items-center">
-        <div className="flex w-full items-center gap-2 rounded-md border border-slate-800 bg-slate-900/55 px-3 py-2 focus-within:border-cyan-500/55">
-          <Search size={16} className="shrink-0 text-slate-500" />
+      <form onSubmit={handleSearch} className="ml-auto flex w-full max-w-[380px] items-center">
+        <div className="tf-search flex w-full items-center gap-2">
+          <Search size={15} className="shrink-0 text-slate-500" />
           <input
             type="search"
+            ref={searchRef}
+            aria-label="Buscar cliente, orden o IMEI"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar cliente, orden, IMEI, modelo..."
-            className="w-full bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+            placeholder="Buscar cliente, orden, IMEI…"
+            className="w-full bg-transparent text-[13px] text-slate-100 placeholder:text-slate-500 focus:outline-none"
           />
+          <kbd className="hidden shrink-0 text-[10px] text-slate-500 sm:block">Ctrl K</kbd>
         </div>
       </form>
 
-      {profile?.workshop?.name && <span className="hidden max-w-44 truncate text-xs text-slate-500 xl:block" title={profile.workshop.name}>{profile.workshop.name}</span>}
-      <div className="relative shrink-0">
+      {profile?.workshop?.name && (
+        <span className="hidden shrink-0 items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 xl:flex" title={profile.workshop.name}>
+          <Store size={14} />
+          <span className="max-w-36 truncate">{profile.workshop.name}</span>
+        </span>
+      )}
+
+      <div ref={notificationsRef} className="relative shrink-0">
         <button
           type="button"
           onClick={() => setNotificationsOpen((prev) => !prev)}
-          className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-800 text-slate-300 hover:border-cyan-500/50 hover:text-cyan-400"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-slate-200"
           aria-label="Notificaciones"
+          aria-expanded={notificationsOpen}
+          aria-controls="notifications-panel"
         >
-          <Bell size={18} />
+          <Bell size={17} />
         </button>
 
         {notificationsOpen && (
-          <div className="absolute right-0 z-20 mt-2 w-72 rounded-xl border border-slate-700/80 bg-[#162235] p-3 shadow-xl shadow-black/30">
+          <div id="notifications-panel" className="tf-popover absolute right-0 z-20 mt-3 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-700/80 bg-[var(--ct-surface-raised)] p-4 shadow-xl shadow-black/40">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
               Notificaciones
             </p>
-            {notifications.length ? <div className="space-y-2">{notifications.map((notification) => <article key={notification.id} className="rounded-lg bg-slate-800/50 px-3 py-2"><p className="text-sm text-slate-200">{notification.title}</p><p className="mt-1 text-xs text-slate-400">{notification.message}</p></article>)}</div> : <p className="rounded-lg bg-slate-800/50 px-3 py-4 text-center text-sm text-slate-400">No hay notificaciones nuevas.</p>}
+            {notifications.length ? <div className="space-y-2">{notifications.map((notification) => <article key={notification.id} className="rounded-md bg-slate-800/50 px-3 py-2"><p className="text-sm text-slate-200">{notification.title}</p><p className="mt-1 text-xs text-slate-400">{notification.message}</p></article>)}</div> : <p className="rounded-md bg-slate-800/50 px-3 py-4 text-center text-sm text-slate-400">No hay notificaciones nuevas.</p>}
           </div>
         )}
       </div>

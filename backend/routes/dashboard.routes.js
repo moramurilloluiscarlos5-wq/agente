@@ -1,11 +1,12 @@
 import { Router } from 'express'
 import { requireSupabase, supabaseAdmin } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
+import { requireLicense } from '../middleware/license.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { scopeToWorkshop } from '../utils/workshop.js'
 
 const router = Router()
-router.use(requireSupabase, requireAuth, loadProfile)
+router.use(requireSupabase, requireAuth, loadProfile, requireLicense)
 
 // Contadores sobre todos los registros, sin truncar a la primera página.
 router.get('/', requirePermission('dashboard.view'), async (req, res, next) => {

@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
+import { requireLicense } from '../middleware/license.js'
 import { requireRole } from '../middleware/roles.js'
 import { databaseError, fail, pageParams, searchTerm, uuid, validateValue, text, money } from '../utils/operations.js'
 import { hasPermission, requirePermission } from '../middleware/rbac.js'
@@ -64,7 +65,7 @@ function hideCost(rows, profile) {
   return rows.map(({ cost: _cost, ...rest }) => rest)
 }
 
-export function createInventoryRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile] } = {}) {
+export function createInventoryRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense] } = {}) {
   const router = Router()
   router.use(...authenticate)
 

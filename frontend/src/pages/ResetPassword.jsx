@@ -14,7 +14,7 @@ export default function ResetPassword() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    document.title = 'Restablecer contraseña | CARLOSTECH AI'
+    document.title = 'Restablecer contraseña | Taller Flow'
   }, [])
 
   async function submit(event) {

@@ -1,8 +1,8 @@
-import { createContext, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AuthContext } from './auth.js'
 import { supabase, isSupabaseConfigured } from '../services/supabase.js'
-import { api } from '../services/api.js'
+import { api, ApiError } from '../services/api.js'
 
-export const AuthContext = createContext(null)
 
 const ROLE_LABELS = {
   OWNER: 'Dueño del taller',
@@ -40,6 +40,19 @@ function clearPrivateSessionCache() {
   }
 }
 
+// Reintentos al restaurar la sesión mientras el API está inalcanzable.
+const RESTORE_RETRY_DELAYS_MS = [800, 1600, 3200]
+
+function isInvalidSessionError(error) {
+  // Sólo un rechazo del backend (401/403) significa "sesión inválida".
+  // Un fallo de red (API_OFFLINE/API_TIMEOUT/5xx) NO invalida la sesión.
+  return error instanceof ApiError && (error.code === 'AUTH_REQUIRED' || error.status === 401 || error.status === 403)
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export function AuthProvider({ children }) {
   const generation = useRef(0)
   const [auth, setAuth] = useState(() => ({
@@ -50,38 +63,58 @@ export function AuthProvider({ children }) {
   }))
 
   // Restaura la sesión persistida al cargar la aplicación.
-  useEffect(() => {
-    if (!isSupabaseConfigured) return
-    let cancelled = false
-    const version = generation.current
-
-    async function restoreSession() {
+  // IMPORTANTE: un fallo transitorio de red no debe cerrar la sesión del
+  // usuario. Se reintenta con backoff y, si el API sigue inalcanzable, la
+  // app queda en estado 'offline' CON la sesión de Supabase preservada;
+  // sólo un rechazo explícito del backend (401/403) cierra la sesión.
+  const restoreSession = useCallback(async () => {
+    if (!isSupabaseConfigured) return 'unconfigured'
+    const version = ++generation.current
+    let lastError = null
+    for (let attempt = 0; attempt <= RESTORE_RETRY_DELAYS_MS.length; attempt += 1) {
       try {
         const { data } = await supabase.auth.getSession()
-        if (cancelled || version !== generation.current) return
+        if (version !== generation.current) return 'stale'
 
         if (!data.session?.user) {
           setAuth((prev) => ({ ...prev, status: 'anonymous', user: null, profile: null }))
-          return
+          return 'anonymous'
         }
 
         const { profile } = await api.get('/auth/me')
-        if (cancelled || version !== generation.current) return
+        if (version !== generation.current) return 'stale'
         setAuth({ status: 'authenticated', user: data.session.user, profile, error: null })
-      } catch {
-        if (!cancelled && version === generation.current) {
+        return 'authenticated'
+      } catch (error) {
+        lastError = error
+        if (version !== generation.current) return 'stale'
+        if (isInvalidSessionError(error)) {
           await supabase.auth.signOut().catch(() => null)
           clearPrivateSessionCache()
           setAuth({ status: 'anonymous', user: null, profile: null, error: null })
+          return 'signed-out'
         }
+        if (attempt < RESTORE_RETRY_DELAYS_MS.length) await wait(RESTORE_RETRY_DELAYS_MS[attempt])
       }
     }
-
-    restoreSession()
-    return () => {
-      cancelled = true
-    }
+    // El API sigue inalcanzable: conservar la sesión y reportar offline.
+    const { data } = await supabase.auth.getSession().catch(() => ({ data: null }))
+    if (version !== generation.current) return 'stale'
+    setAuth((prev) => ({
+      status: 'offline',
+      user: data?.session?.user ?? prev.user,
+      profile: prev.profile,
+      error: lastError?.message ?? 'Taller Flow no pudo conectarse con el servidor.',
+    }))
+    return 'offline'
   }, [])
+
+  useEffect(() => {
+    // Session restoration updates state after Supabase/API requests settle.
+    // oxlint-disable-next-line react/set-state-in-effect
+    restoreSession()
+    return () => { generation.current += 1 }
+  }, [restoreSession])
 
   async function refreshProfile() {
     const version = ++generation.current
@@ -133,6 +166,12 @@ export function AuthProvider({ children }) {
       return { ok: true, profile }
     } catch (err) {
       if (version !== generation.current) return { ok: false }
+      // La sesión de Supabase quedó persistida: un fallo de red del API no
+      // la destruye; restoreSession la recuperará cuando vuelva la conexión.
+      if (!isInvalidSessionError(err)) {
+        setAuth((prev) => ({ ...prev, status: 'anonymous', error: err.message }))
+        return { ok: false }
+      }
       await supabase.auth.signOut().catch(() => null)
       clearPrivateSessionCache()
       setAuth((prev) => ({ ...prev, status: 'anonymous', error: err.message }))
@@ -147,6 +186,11 @@ export function AuthProvider({ children }) {
     clearPrivateSessionCache()
   }
 
+  const retryConnection = useCallback(async () => {
+    setAuth((prev) => ({ ...prev, status: 'loading', error: null }))
+    await restoreSession()
+  }, [restoreSession])
+
   const roleLabel = ROLE_LABELS[auth.profile?.role] ?? auth.profile?.role
 
   const value = {
@@ -155,6 +199,7 @@ export function AuthProvider({ children }) {
     roleLabel,
     login,
     logout,
+    retryConnection,
     hasPermission: (permission) => hasPermission(auth.profile, permission),
     refreshProfile,
   }

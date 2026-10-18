@@ -9,6 +9,8 @@
 **/.env.*
 **/dist/
 backend/public/
+**/.tmp/
+/.tmp/
 **/test-results/
 **/playwright-report/
 **/*.log
@@ -16,3 +18,9 @@ login-desktop.png
 login-final.png
 shell-probe.txt
 versions.txt
+CarlosTech_Recovery_Final/
+device-agent/
+releases/
+
+ferpogas51.github.io/
+database/

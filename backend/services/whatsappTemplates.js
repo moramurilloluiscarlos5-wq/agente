@@ -1,12 +1,12 @@
 const STATUS_TEMPLATES = {
-  recibido: { templateName: 'repair_received', text: 'Tu equipo {{marca}} {{modelo}} fue recibido correctamente en CARLOSTECH.' },
+  recibido: { templateName: 'repair_received', text: 'Tu equipo {{marca}} {{modelo}} fue recibido correctamente.' },
   diagnostico: { templateName: 'repair_diagnosis_complete', text: 'El diagnóstico de tu equipo {{marca}} {{modelo}} ha sido completado. Comunícate con nosotros para revisar las opciones de reparación.' },
   esperando_autorizacion: { templateName: 'repair_waiting_authorization', text: 'Tenemos lista la cotización de tu {{marca}} {{modelo}}. Orden: {{orden}}. Total estimado: ${{total}}. Estamos esperando tu autorización.' },
   esperando_refaccion: { templateName: 'repair_waiting_part', text: 'Tu equipo {{marca}} {{modelo}} está esperando una refacción. Te avisaremos cuando podamos continuar.' },
   en_reparacion: { templateName: 'repair_started', text: 'La reparación de tu {{marca}} {{modelo}} ya comenzó. Orden: {{orden}}.' },
   en_pruebas: { templateName: 'repair_testing', text: 'Tu equipo {{marca}} {{modelo}} está en pruebas finales. Te avisaremos cuando esté listo.' },
   listo_para_entregar: { templateName: 'repair_ready', text: 'Buenas noticias: tu {{marca}} {{modelo}} ya está listo para entregar. Orden: {{orden}}. Total: ${{total}}.' },
-  entregado: { templateName: 'repair_delivered', text: 'Gracias por confiar en CARLOSTECH. La orden {{orden}} fue entregada correctamente.' },
+  entregado: { templateName: 'repair_delivered', text: 'Gracias por confiar en nosotros. La orden {{orden}} fue entregada correctamente.' },
   pago_pendiente: { templateName: 'payment_pending', text: 'La reparación {{orden}} tiene un saldo pendiente de ${{saldo}}.' },
 }
 

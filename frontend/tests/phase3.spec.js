@@ -42,6 +42,7 @@ async function workshop(page, role = 'ADMINISTRADOR') {
     const respond = (json, status = 200) => route.fulfill({ status, json })
     if (!request.headers().authorization?.startsWith('Bearer ')) return respond({ message: 'Falta sesión de prueba' }, 401)
     if (method !== 'GET') state.mutations.push({ path, method, body })
+    if (path === '/health') return route.fulfill({ json: { status: 'ok' } })
     if (path === '/auth/me') return respond({ id: profile.id, role, profile })
     if (path === '/whatsapp/messages') return respond({ data: [] })
     const consent = path.match(/^\/whatsapp\/customers\/([^/]+)\/consent$/)
@@ -129,7 +130,7 @@ test('recupera el listado tras un fallo de API sin mostrar un éxito falso', asy
   await page.goto('/clientes')
   await expect(page.getByRole('alert')).toContainText('Error de conexión simulado')
   state.failCustomers = false
-  await page.getByRole('button', { name: 'Reintentar' }).click()
+  await page.getByRole('main').getByRole('button', { name: 'Reintentar', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Luis Prueba', exact: true })).toBeVisible()
 })
 

@@ -14,5 +14,8 @@
     "build:railway": "npm run build",
     "start": "npm --prefix backend start",
     "start:backend": "npm --prefix backend start"
+  },
+  "devDependencies": {
+    "railway": "^3.11.0"
   }
 }

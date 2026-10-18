@@ -1,12 +1,13 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
+import { requireLicense } from '../middleware/license.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { databaseError } from '../utils/operations.js'
 import { scopeToWorkshop } from '../utils/workshop.js'
 
 const router = Router()
-router.use(requireSupabase, requireAuth, loadProfile)
+router.use(requireSupabase, requireAuth, loadProfile, requireLicense)
 router.get('/', requirePermission('dashboard.view'), async (req, res, next) => {
   try {
     let query = scopeToWorkshop(supabaseAdmin.from('notifications').select('*').order('created_at', { ascending: false }).limit(20), req)

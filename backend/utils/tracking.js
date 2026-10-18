@@ -58,7 +58,7 @@ export const TRACKING_STATUS_META = {
   entregado: {
     label: 'Entregado',
     headline: 'Equipo entregado',
-    message: 'Tu equipo fue entregado. Gracias por confiar en CARLOSTECH.',
+    message: 'Tu equipo fue entregado. Gracias por confiar en nosotros.',
     done: false,
   },
   cancelado: {
@@ -176,7 +176,7 @@ export function buildTrackingWhatsAppMessage({ trackingUrl, orderNumber, custome
     '',
     `Orden: ${orderNumber}`,
     '',
-    'CARLOSTECH',
+    'Tu taller',
     'Servicio Técnico',
   ]
   return lines.join('\n')

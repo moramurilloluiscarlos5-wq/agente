@@ -55,7 +55,7 @@ export default function DeviceAgentRelease({ installedVersion }) {
   const updateAvailable = release && isNewerAgentVersion(release.version, installedVersion)
 
   return <section className="ct-surface-raised p-5" aria-label="Descarga y actualizaciones del agente">
-    <h2 className="text-lg font-semibold">CarlosTech Device Agent</h2>
+    <h2 className="text-lg font-semibold">Taller Flow Device Agent</h2>
     <p className="mt-1 text-sm text-slate-400">Windows 10 / Windows 11 · x64{installedVersion ? ` · Versión instalada: ${installedVersion}` : ''}</p>
     {loading && !release && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-slate-400"><LoaderCircle size={16} className="animate-spin" /> Consultando versión oficial…</p>}
     {error && <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -69,7 +69,7 @@ export default function DeviceAgentRelease({ installedVersion }) {
         <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Actualizar</a>
       </div>}
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Descargar CarlosTech Device Agent</a>
+        <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Descargar Taller Flow Device Agent</a>
         <a className="text-sm text-cyan-300 underline underline-offset-4" href={release.releaseUrl} target="_blank" rel="noreferrer">{release.source === 'external' ? 'Abrir página de descarga' : `Ver release v${release.version}`}</a>
       </div>
     </>}

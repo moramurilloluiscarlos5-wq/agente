@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { randomBytes } from 'node:crypto'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
+import { requireLicense } from '../middleware/license.js'
 import { requireRole } from '../middleware/roles.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { rateLimit } from '../middleware/security.js'
@@ -20,7 +21,7 @@ import {
 import { generateRepairReceiptPdf } from '../services/repairReceiptPdf.js'
 import { generateRepairQrPng } from '../services/repairQr.js'
 
-const STAFF = ['ADMINISTRADOR', 'RECEPCION', 'TECNICO', 'OWNER', 'SUPER_ADMIN']
+const STAFF = ['ADMINISTRADOR', 'RECEPCION', 'TECNICO', 'CAJERO', 'OWNER', 'SUPER_ADMIN']
 const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next)
 
 export function appBaseUrl() {
@@ -83,7 +84,7 @@ export async function trackedRepairIdByToken(db, token) {
   return data
 }
 
-export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile] } = {}) {
+export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense] } = {}) {
   const router = Router()
 
   // Portal público: solo lectura, sin sesión, con rate limit.
@@ -108,9 +109,12 @@ export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requi
     return res.json({ data: serializeTrackingPayload({ order, history, warranty }) })
   }))
 
-  router.use(...authenticate, requireRole(...STAFF))
+  // Este router se monta en /api: la autenticación se aplica SOLO a sus propias
+  // rutas. Un router.use() aquí afectaría a todos los routers montados después
+  // (bloqueaba roles como CAJERO y autenticaba dos veces cada petición).
+  const staff = [...authenticate, requireRole(...STAFF)]
 
-  router.get('/repairs/:orderNumber/tracking', requirePermission('repairs.view'), asyncRoute(async (req, res) => {
+  router.get('/repairs/:orderNumber/tracking', ...staff, requirePermission('repairs.view'), asyncRoute(async (req, res) => {
     const order = await trackedRepairByOrderNumber(db, req.params.orderNumber, req.profile)
     const history = await trackedRepairHistory(db, order.id)
     res.json({
@@ -124,7 +128,7 @@ export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requi
     })
   }))
 
-  router.get('/repairs/:orderNumber/tracking.png', requirePermission('repairs.view'), asyncRoute(async (req, res) => {
+  router.get('/repairs/:orderNumber/tracking.png', ...staff, requirePermission('repairs.view'), asyncRoute(async (req, res) => {
     const order = await trackedRepairByOrderNumber(db, req.params.orderNumber, req.profile)
     if (!order.tracking_token || order.tracking_enabled === false) {
       fail('Esta orden todavía no tiene un enlace de seguimiento activo', 404)
@@ -136,11 +140,12 @@ export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requi
     res.send(png)
   }))
 
-  router.get('/repairs/:orderNumber/receipt.pdf', requirePermission('repairs.view'), asyncRoute(async (req, res) => {
+  router.get('/repairs/:orderNumber/receipt.pdf', ...staff, requirePermission('repairs.view'), asyncRoute(async (req, res) => {
     const order = await trackedRepairByOrderNumber(db, req.params.orderNumber, req.profile)
     const history = await trackedRepairHistory(db, order.id)
     const qrPng = order.tracking_token ? await generateRepairQrPng(trackingUrlFor(order.tracking_token)) : null
     const pdf = await generateRepairReceiptPdf({
+      workshopName: req.profile.workshop_id === order.workshop_id ? (req.profile.workshop?.name || 'Taller técnico') : 'Taller técnico',
       order,
       history,
       qrPng,
@@ -152,7 +157,7 @@ export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requi
     res.send(pdf)
   }))
 
-  router.post('/repairs/:orderNumber/tracking/regenerate', requirePermission('repairs.update'), asyncRoute(async (req, res) => {
+  router.post('/repairs/:orderNumber/tracking/regenerate', ...staff, requirePermission('repairs.update'), asyncRoute(async (req, res) => {
     if (!TRACKING_REGENERATE_ROLES.has(req.profile.role)) fail('Solo un administrador puede regenerar el enlace', 403)
     const order = await trackedRepairByOrderNumber(db, req.params.orderNumber, req.profile)
     const token = randomTrackingToken()
@@ -162,7 +167,7 @@ export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requi
     res.json({ data: { orderNumber: order.order_number, trackingToken: token, trackingUrl: trackingUrlFor(token), trackingEnabled: true } })
   }))
 
-  router.patch('/repairs/:orderNumber/tracking', requirePermission('repairs.update'), asyncRoute(async (req, res) => {
+  router.patch('/repairs/:orderNumber/tracking', ...staff, requirePermission('repairs.update'), asyncRoute(async (req, res) => {
     if (!TRACKING_TOGGLE_ROLES.has(req.profile.role)) fail('Solo un administrador puede cambiar la visibilidad del seguimiento', 403)
     if (typeof req.body?.tracking_enabled !== 'boolean') fail('tracking_enabled debe ser booleano')
     const order = await trackedRepairByOrderNumber(db, req.params.orderNumber, req.profile)
@@ -172,7 +177,7 @@ export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requi
     res.json({ data: { orderNumber: order.order_number, trackingEnabled: req.body.tracking_enabled, trackingUrl: order.tracking_token ? trackingUrlFor(order.tracking_token) : null } })
   }))
 
-  router.post('/repairs/:orderNumber/tracking/whatsapp', requirePermission('whatsapp.send'), asyncRoute(async (req, res) => {
+  router.post('/repairs/:orderNumber/tracking/whatsapp', ...staff, requirePermission('whatsapp.send'), asyncRoute(async (req, res) => {
     const order = await trackedRepairByOrderNumber(db, req.params.orderNumber, req.profile)
     if (!order.tracking_token || order.tracking_enabled === false) {
       fail('Esta orden todavía no tiene un enlace de seguimiento activo', 404)

@@ -4,7 +4,7 @@ import { api } from '../../services/api.js'
 import { repairButtonClass, repairInputClass, repairSecondaryClass } from '../repairs/repairForm.js'
 
 const QUICK_MESSAGES = [
-  ['received', 'Equipo recibido', ({ repair, customer }) => `Hola ${customerName(customer)}. Tu equipo ${deviceName(repair)} fue recibido correctamente en CARLOSTECH. Orden: ${repair.order_number}. Te mantendremos informado sobre el avance de tu reparación.`],
+  ['received', 'Equipo recibido', ({ repair, customer }) => `Hola ${customerName(customer)}. Tu equipo ${deviceName(repair)} fue recibido correctamente. Orden: ${repair.order_number}. Te mantendremos informado sobre el avance de tu reparación.`],
   ['diagnosis', 'Diagnóstico completado', ({ repair, customer }) => `Hola ${customerName(customer)}. El diagnóstico de tu ${deviceName(repair)} ha sido completado. Orden: ${repair.order_number}. Comunícate con nosotros para revisar las opciones de reparación.`],
   ['authorization', 'Esperando autorización', ({ repair, customer }) => `Hola ${customerName(customer)}. Ya tenemos la cotización de tu ${deviceName(repair)}. Orden: ${repair.order_number}. Total estimado: $${Number(repair.estimated_cost || 0).toFixed(2)}. Estamos esperando tu autorización.`],
   ['started', 'Reparación iniciada', ({ repair, customer }) => `Hola ${customerName(customer)}. La reparación de tu ${deviceName(repair)} ya comenzó. Orden: ${repair.order_number}.`],

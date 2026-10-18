@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
+import { requireLicense } from '../middleware/license.js'
 import { requireRole } from '../middleware/roles.js'
 import { databaseError, fail, pageParams, searchTerm, uuid, validateQuotePayload } from '../utils/operations.js'
 import { assertSameWorkshop, scopeToWorkshop, stampWorkshop, workshopScope } from '../utils/workshop.js'
@@ -10,7 +11,7 @@ const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req,
 const writers = requireRole('ADMINISTRADOR', 'RECEPCION')
 const admin = requireRole('ADMINISTRADOR')
 
-export function createQuotesRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile] } = {}) {
+export function createQuotesRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense] } = {}) {
   const router = Router()
   router.use(...authenticate)
 

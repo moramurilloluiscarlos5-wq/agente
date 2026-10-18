@@ -32,7 +32,7 @@ async function localJson(path, options = {}) {
     const timedOut = controller?.signal.aborted
     throw Object.assign(new Error(timedOut
       ? 'El agente local no respondió a tiempo. Si ya está activo, permite el acceso a la red local en el navegador y vuelve a comprobar.'
-      : 'No se pudo conectar con CarlosTech Device Agent. Comprueba que esté ejecutándose en esta computadora y que el navegador tenga permiso para acceder a la red local.'), { code: timedOut ? 'AGENT_TIMEOUT' : 'AGENT_UNAVAILABLE' })
+      : 'No se pudo conectar con Taller Flow Device Agent. Comprueba que esté ejecutándose en esta computadora y que el navegador tenga permiso para acceder a la red local.'), { code: timedOut ? 'AGENT_TIMEOUT' : 'AGENT_UNAVAILABLE' })
   } finally { if (timer) clearTimeout(timer) }
   if (!response.ok) throw Object.assign(new Error(body.error || `El agente respondió ${response.status}.`), { status: response.status, code: 'AGENT_ERROR' })
   return body
@@ -48,7 +48,7 @@ export async function openDeviceAgent() {
   const makePairing = async () => {
     const currentStatus = await localJson('/pairing/status')
     const sessionToken = await getSessionToken()
-    if (!sessionToken) throw new Error('Inicia sesión en CARLOSTECH para vincular esta computadora.')
+    if (!sessionToken) throw new Error('Inicia sesión en Taller Flow para vincular esta computadora.')
     await localJson('/pairing/exchange', { method: 'POST', body: JSON.stringify({ pairing_code: currentStatus.data?.pairing_code, session_token: sessionToken, backend_url: backendOrigin() }) })
     return openDeviceAgent()
   }
@@ -80,7 +80,7 @@ export async function openDeviceAgent() {
     let result
     try {
       result = await fetch(`${AGENT_URL}${path}`, { ...options, headers: { Authorization: `Bearer ${session.token}`, 'Content-Type': 'application/json', ...(options.headers || {}) } })
-    } catch { throw Object.assign(new Error('No se pudo conectar con CarlosTech Device Agent. Comprueba que esté ejecutándose en esta computadora.'), { code: 'AGENT_UNAVAILABLE' }) }
+    } catch { throw Object.assign(new Error('No se pudo conectar con Taller Flow Device Agent. Comprueba que esté ejecutándose en esta computadora.'), { code: 'AGENT_UNAVAILABLE' }) }
     const body = await result.json().catch(() => ({}))
     if (!result.ok) throw Object.assign(new Error(body.error || `El agente respondió ${result.status}.`), { status: result.status, code: result.status === 401 ? 'AGENT_AUTH_INVALID' : 'AGENT_ERROR' })
     return body.data

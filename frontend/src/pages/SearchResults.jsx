@@ -19,7 +19,11 @@ function ResultSection({ icon: Icon, title, count, children }) {
 
 export default function SearchResults() {
   const [searchParams] = useSearchParams()
-  const query = searchParams.get('q') ?? ''
+  const query = (searchParams.get('q') ?? '').trim()
+  return <SearchResultsContent key={query} query={query} />
+}
+
+function SearchResultsContent({ query }) {
   const [data, setData] = useState(emptyData)
   const [loading, setLoading] = useState(Boolean(query))
   const [error, setError] = useState('')
@@ -27,13 +31,9 @@ export default function SearchResults() {
   useEffect(() => {
     let active = true
     if (!query.trim()) {
-      setData(emptyData)
-      setLoading(false)
       return () => { active = false }
     }
 
-    setLoading(true)
-    setError('')
     api.get(`/search?q=${encodeURIComponent(query)}`).then((response) => {
       if (active) setData(response.data ?? emptyData)
     }).catch((err) => {

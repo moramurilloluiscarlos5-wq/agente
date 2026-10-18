@@ -9,6 +9,8 @@ import { auditSafe, writeAudit } from '../services/auditService.js'
 import { shouldRecordLogin } from '../utils/loginAudit.js'
 import { randomSlugSuffix, slugifyWorkshop } from '../utils/workshop.js'
 import { databaseError } from '../utils/operations.js'
+import { ensureTrialSubscription } from '../services/billingService.js'
+import { trialDaysFromEnv } from '../config/billing.js'
 
 export function createAuthRouter({ db = supabaseAdmin, authenticate = requireAuth, profileLoader = loadProfile, sessionLoader = loadProfileForSession, configured = requireSupabase } = {}) {
 const router = Router()
@@ -17,6 +19,15 @@ const asyncHandler = (handler) => (req, res, next) => Promise.resolve(handler(re
 router.use(configured)
 
 const WORKSHOP_EMPLOYEE_ROLES = ['ADMINISTRADOR', 'TECNICO', 'RECEPCION', 'CAJERO']
+
+// Prueba sin tarjeta. Si falla no se bloquea el registro: el dueño recibirá 402 y podrá contratar.
+async function startTrial(workshopId) {
+  try {
+    await ensureTrialSubscription({ db, workshopId, trialDays: trialDaysFromEnv() })
+  } catch (error) {
+    console.error('No se pudo crear la prueba gratuita', { code: error?.code ?? null })
+  }
+}
 
 // `last_login_at` pertenece a la migraciÃ³n 006. Se carga aparte para que una
 // base que aÃºn no la tenga siga pudiendo abrir Personal sin convertirlo en 500.
@@ -32,6 +43,17 @@ async function withOptionalLastLogin(rows) {
 
 function isValidEmail(value) {
   return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+}
+
+// El OWNER es el dueño del taller: solo SUPER_ADMIN puede cambiar su rol o
+// suspenderlo. Un ADMINISTRADOR (empleado) nunca puede quitarle el control.
+function assertCanManageTarget(actor, targetRole) {
+  if (targetRole === 'OWNER' && actor.role !== 'SUPER_ADMIN') {
+    throw Object.assign(new Error('Solo el soporte de la plataforma puede cambiar al dueño del taller.'), { status: 403, publicMessage: 'Solo el soporte de la plataforma puede cambiar al dueño del taller.' })
+  }
+  if (targetRole === 'SUPER_ADMIN' && actor.role !== 'SUPER_ADMIN') {
+    throw Object.assign(new Error('Usuario no encontrado'), { status: 404, publicMessage: 'Usuario no encontrado' })
+  }
 }
 
 async function ensureAdministratorSurvivesChange(userId, nextRole, nextActive, workshopId = null) {
@@ -123,6 +145,7 @@ router.post('/register-workshop', rateLimit({ windowMs: 15 * 60_000, max: 10, me
       .eq('id', authData.user.id).single()
     if (error || !profile?.workshop) return res.status(503).json({ code: 'REGISTRATION_COMMITTED', message: 'Tu cuenta se creó. Inicia sesión para continuar.' })
     const result = { profile, workshop: profile.workshop }
+    await startTrial(result.workshop.id)
     await auditSafe(writeAudit({ db: db, req, userId: result.profile.id, workshopId: result.workshop.id, action: 'WORKSHOP_REGISTERED', entity: 'workshops', entityId: result.workshop.id, description: 'Taller ' + businessName + ' registrado', newValues: { workshop_id: result.workshop.id } }))
     res.status(201).json({ data: result })
   } catch (error) {
@@ -146,6 +169,7 @@ router.post('/create-workshop', authenticate, sessionLoader, asyncHandler(async 
       workshopPhone: workshop_phone,
       workshopCity: workshop_city,
     })
+    await startTrial(result.workshop.id)
     await auditSafe(writeAudit({ db: db, req, userId: result.profile.id, workshopId: result.workshop.id, action: 'WORKSHOP_REGISTERED', entity: 'workshops', entityId: result.workshop.id, description: 'Taller ' + result.workshop.name + ' registrado', newValues: { workshop_id: result.workshop.id } }))
     res.status(201).json({ data: result })
   } catch (error) {
@@ -248,6 +272,7 @@ router.patch('/users/:id/role', authenticate, profileLoader, requireRole('ADMINI
     if (targetError) throw targetError
     targetRoleBeforeChange = target?.role ?? null
   }
+  assertCanManageTarget(req.profile, targetRoleBeforeChange)
   await ensureAdministratorSurvivesChange(req.params.id, role, true)
   const { data, error } = await db
     .from('profiles')
@@ -273,9 +298,10 @@ router.patch('/users/:id/status', authenticate, profileLoader, requireRole('ADMI
   }
   // Anti-IDOR: el objetivo debe pertenecer al mismo taller.
   if (req.profile.role !== 'SUPER_ADMIN') {
-    const { data: target, error: targetError } = await db.from('profiles').select('workshop_id').eq('id', req.params.id).maybeSingle()
+    const { data: target, error: targetError } = await db.from('profiles').select('role,workshop_id').eq('id', req.params.id).maybeSingle()
     if (targetError) throw targetError
     if (!target || target.workshop_id !== req.profile.workshop_id) return res.status(404).json({ message: 'Usuario no encontrado' })
+    assertCanManageTarget(req.profile, target.role)
   }
   await ensureAdministratorSurvivesChange(req.params.id, null, is_active)
   const { data, error } = await db

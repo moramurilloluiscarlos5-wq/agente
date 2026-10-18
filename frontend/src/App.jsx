@@ -1,37 +1,45 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout.jsx'
 import RequireAuth from './layouts/RequireAuth.jsx'
 import RequirePermission from './layouts/RequirePermission.jsx'
-import Dashboard from './pages/Dashboard.jsx'
-import Repairs from './pages/Repairs.jsx'
-import NewRepair from './pages/NewRepair.jsx'
-import RepairDetail from './pages/RepairDetail.jsx'
-import Customers from './pages/Customers.jsx'
-import Devices from './pages/Devices.jsx'
-import AIDiagnostic from './pages/AIDiagnostic.jsx'
-import Quotes from './pages/Quotes.jsx'
-import Inventory from './pages/Inventory.jsx'
-import Payments from './pages/Payments.jsx'
-import Warranties from './pages/Warranties.jsx'
-import Communications from './pages/Communications.jsx'
-import Reports from './pages/Reports.jsx'
-import Settings from './pages/Settings.jsx'
-import Staff from './pages/Staff.jsx'
-import SearchResults from './pages/SearchResults.jsx'
-import Login from './pages/Login.jsx'
-import ResetPassword from './pages/ResetPassword.jsx'
-import NotFound from './pages/NotFound.jsx'
-import Audit from './pages/Audit.jsx'
-import Roles from './pages/Roles.jsx'
-import PublicTracking from './pages/PublicTracking.jsx'
-import RegisterWorkshop from './pages/RegisterWorkshop.jsx'
-import WorkshopSuspended from './pages/WorkshopSuspended.jsx'
-import DeviceTools from './pages/DeviceTools.jsx'
+import LicenseRedirect from './components/billing/LicenseRedirect.jsx'
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
+const Repairs = lazy(() => import('./pages/Repairs.jsx'))
+const NewRepair = lazy(() => import('./pages/NewRepair.jsx'))
+const RepairDetail = lazy(() => import('./pages/RepairDetail.jsx'))
+const Customers = lazy(() => import('./pages/Customers.jsx'))
+const Devices = lazy(() => import('./pages/Devices.jsx'))
+const AIDiagnostic = lazy(() => import('./pages/AIDiagnostic.jsx'))
+const Quotes = lazy(() => import('./pages/Quotes.jsx'))
+const Inventory = lazy(() => import('./pages/Inventory.jsx'))
+const Payments = lazy(() => import('./pages/Payments.jsx'))
+const Warranties = lazy(() => import('./pages/Warranties.jsx'))
+const Communications = lazy(() => import('./pages/Communications.jsx'))
+const Reports = lazy(() => import('./pages/Reports.jsx'))
+const Settings = lazy(() => import('./pages/Settings.jsx'))
+const Staff = lazy(() => import('./pages/Staff.jsx'))
+const SearchResults = lazy(() => import('./pages/SearchResults.jsx'))
+const Login = lazy(() => import('./pages/Login.jsx'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword.jsx'))
+const NotFound = lazy(() => import('./pages/NotFound.jsx'))
+const Audit = lazy(() => import('./pages/Audit.jsx'))
+const Roles = lazy(() => import('./pages/Roles.jsx'))
+const PublicTracking = lazy(() => import('./pages/PublicTracking.jsx'))
+const RegisterWorkshop = lazy(() => import('./pages/RegisterWorkshop.jsx'))
+const WorkshopSuspended = lazy(() => import('./pages/WorkshopSuspended.jsx'))
+const DeviceTools = lazy(() => import('./pages/DeviceTools.jsx'))
+
+const Billing = lazy(() => import('./pages/Billing.jsx'))
+const Pricing = lazy(() => import('./pages/Pricing.jsx'))
 
 export default function App() {
   return (
+    <Suspense fallback={<p role="status" className="p-6 text-sm text-slate-400">Cargando página…</p>}>
+    <LicenseRedirect />
     <Routes>
       {/* Público */}
+      <Route path="/precios" element={<Pricing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/restablecer-contrasena" element={<ResetPassword />} />
       <Route path="/registro" element={<RegisterWorkshop />} />
@@ -58,6 +66,7 @@ export default function App() {
           <Route path="/comunicaciones" element={<Communications />} />
           <Route path="/reportes" element={<RequirePermission permission="reports.view"><Reports /></RequirePermission>} />
           <Route path="/configuracion" element={<RequirePermission permission="settings.view"><Settings /></RequirePermission>} />
+          <Route path="/facturacion" element={<Billing />} />
           <Route path="/personal" element={<RequirePermission permission="users.view"><Staff /></RequirePermission>} />
           <Route path="/auditoria" element={<RequirePermission permission="audit.view"><Audit /></RequirePermission>} />
           <Route path="/roles" element={<RequirePermission permission="roles.view"><Roles /></RequirePermission>} />
@@ -66,5 +75,6 @@ export default function App() {
         </Route>
       </Route>
     </Routes>
+    </Suspense>
   )
 }

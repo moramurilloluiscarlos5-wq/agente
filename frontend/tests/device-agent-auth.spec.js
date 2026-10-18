@@ -21,6 +21,7 @@ async function setup(page, { paired = true } = {}) {
   const state = { paired, sessionStatus: 200, stalledPath: null, localRequests: [] }
   await page.route(/\/api\//, async (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '')
+    if (path === '/health') return route.fulfill({ json: { status: 'ok' } })
     if (path === '/auth/me') return route.fulfill({ json: { profile } })
     if (path === '/device-tools/session') {
       expect(route.request().method()).toBe('POST')
@@ -47,7 +48,7 @@ async function setup(page, { paired = true } = {}) {
 test('a rejected paired-agent token offers recovery pairing instead of a dead-end error', async ({ page }) => {
   await setup(page)
   await page.goto('/herramientas-dispositivo')
-  await expect(page.getByRole('heading', { name: 'Conectar esta computadora con CARLOSTECH AI' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Conectar esta computadora con Taller Flow' })).toBeVisible()
   await expect(page.getByText('El agente respondió, pero su secreto anterior ya no coincide.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Permitir y vincular' })).toBeVisible()
   await expect(page.getByText('Agent detectado · pendiente de vincular', { exact: true })).toBeVisible()
@@ -118,7 +119,7 @@ test('a backend session failure keeps the detected agent visible and allows retr
   await expect(page.getByRole('heading', { name: 'El agente está activo; falta completar la conexión' })).toBeVisible()
   await expect(page.getByText('Agent detectado · conexión pendiente', { exact: true })).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'El servicio de sesiones no está disponible temporalmente.' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'CarlosTech Device Agent no está conectado' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Taller Flow Device Agent no está conectado' })).toHaveCount(0)
   state.sessionStatus = 200
   await page.getByRole('button', { name: 'Reintentar conexión', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Permitir y vincular' })).toBeVisible()
@@ -128,11 +129,11 @@ test('a backend session failure keeps the detected agent visible and allows retr
 for (const path of ['/health', '/pairing/status']) {
   test(`a stalled ${path} times out and the installation button can retry discovery`, async ({ page }) => {
     await page.clock.install()
-    await page.clock.pauseAt(new Date(Date.now() + 1000))
     const state = await setup(page, { paired: false })
     state.stalledPath = path
     await page.goto('/herramientas-dispositivo')
     await expect.poll(() => state.localRequests.includes(path)).toBe(true)
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
     await expect(page.getByRole('button', { name: 'Comprobar instalación', exact: true })).toBeDisabled()
     await page.clock.runFor(8001)
     await expect(page.getByRole('alert').filter({ hasText: 'El agente local no respondió a tiempo.' })).toBeVisible()

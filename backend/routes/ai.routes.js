@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
+import { requireLicense } from '../middleware/license.js'
 import { requireRole } from '../middleware/roles.js'
 import { databaseError, fail, uuid, validateAIDiagnosticPayload } from '../utils/operations.js'
 import { requirePermission } from '../middleware/rbac.js'
@@ -17,7 +18,7 @@ let provider = null
 try { provider = createAIProvider() } catch (error) { providerError = error }
 const aiService = new AIService({ provider })
 
-export function createAIRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile] } = {}) {
+export function createAIRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense] } = {}) {
   const router = Router()
   router.use(...authenticate, allowedRoles)
 

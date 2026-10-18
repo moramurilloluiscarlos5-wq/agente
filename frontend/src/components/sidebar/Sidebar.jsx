@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, Store } from 'lucide-react'
 import { NAV_ITEMS } from '../../utils/constants.js'
 import { useSidebar } from '../../hooks/useSidebar.js'
 import { useAuth } from '../../hooks/useAuth.js'
@@ -33,6 +33,7 @@ export default function Sidebar() {
     return groups
   }, {})
   const sectionOrder = ['Operación', 'Taller', 'Finanzas', 'Gestión', 'Configuración']
+  const compact = collapsed && !mobileOpen
 
   return (
     <>
@@ -46,46 +47,49 @@ export default function Sidebar() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex h-full flex-col border-r border-slate-800/80 bg-[#0d1727] transition-all duration-200 ease-in-out md:static ${
+        className={`tf-sidebar fixed inset-y-0 left-0 z-40 flex h-full shrink-0 flex-col border-r border-slate-800/80 bg-[var(--ct-bg-sidebar)] transition-all duration-200 ease-in-out md:static ${
           collapsed ? 'md:w-20' : 'md:w-64'
         } ${mobileOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >
-        <div className="flex h-[4.5rem] items-center justify-between border-b border-slate-800/80 px-4">
+        <div className={`tf-sidebar-brand flex items-center justify-between ${compact ? 'flex-col gap-3 px-2 py-5' : 'px-5 py-6'}`}>
           <div className="flex items-center gap-2 overflow-hidden">
-            <BrandLogo variant={collapsed ? 'symbol' : 'compact'} size={collapsed ? 'md' : 'sm'} priority />
+            <BrandLogo variant={compact ? 'symbol' : 'compact'} size="md" priority />
           </div>
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-800 text-slate-400 hover:border-cyan-500/50 hover:text-cyan-400 md:flex"
+            className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-slate-800/60 hover:text-slate-300 md:flex"
             aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
           >
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
         </div>
 
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5">
+        {!compact && <div className="tf-workspace"><span className="tf-workspace-icon"><Store size={18} /></span><div className="min-w-0"><p className="truncate">{workshopName}</p><span>Espacio de trabajo</span></div></div>}
+
+        <nav aria-label="Navegación principal" className="flex-1 space-y-5 overflow-y-auto px-3 py-5">
           {Object.entries(sections).sort(([a], [b]) => sectionOrder.indexOf(a) - sectionOrder.indexOf(b)).map(([section, items]) => <div key={section}>
-            {!collapsed && <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">{section}</p>}
+            {!compact && <p className="tf-nav-section mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.16em]">{section}</p>}
             <div className="space-y-0.5">{items.map(({ label, path, icon: Icon }) => (
               <NavLink
                 key={path}
                 to={path}
                 end={path === '/'}
                 onClick={closeMobile}
-                className={({ isActive }) => `group relative flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${isActive ? 'bg-slate-800/80 text-slate-100 before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-cyan-400' : 'text-slate-400 hover:bg-slate-800/45 hover:text-slate-200'}`}
-                title={collapsed ? label : undefined}
+                className={({ isActive }) => `tf-nav-link ${isActive ? 'is-active' : ''} ${compact ? 'justify-center' : ''}`}
+                title={compact ? label : undefined}
+                aria-label={label}
               >
                 <Icon size={17} strokeWidth={1.8} className="shrink-0" />
-                {!collapsed && <span className="truncate">{label}</span>}
+                {!compact && <span className="truncate">{label}</span>}
               </NavLink>
             ))}</div>
           </div>)}
         </nav>
 
         <div className="border-t border-slate-800/80 px-3">
-          {!collapsed && (
-            <div className="mt-3 flex items-center gap-3 rounded-lg border border-slate-800/80 bg-slate-900/45 px-3 py-2.5">
+          {!compact && (
+            <div className="mt-3 flex items-center gap-2.5 px-1">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-700/70 text-xs font-semibold text-slate-200">
                 {getInitials(displayName)}
               </span>
@@ -98,11 +102,11 @@ export default function Sidebar() {
           <button
             type="button"
             onClick={handleLogout}
-            className="mt-1 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
+            className="mt-1 mb-1 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-800/50 hover:text-slate-300"
             title={collapsed ? 'Cerrar sesión' : undefined}
           >
             <LogOut size={19} className="shrink-0" />
-            {!collapsed && <span>Cerrar sesión</span>}
+            {!compact && <span>Cerrar sesión</span>}
           </button>
         </div>
       </aside>
