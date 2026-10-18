@@ -8,7 +8,8 @@ La base de datos y Supabase Auth existentes se conservan. No crear PostgreSQL
 adicional en Railway ni ejecutar el seed de demostración en producción.
 
 - Build: `npm run build`.
-- Inicio: `npm start`.
+- Inicio: `npm start` en local; en Railway y en la imagen Docker, `node backend/server.js`
+  (Node como proceso 1: con `npm start` por medio el SIGTERM de cada deploy no llega a Node).
 - Healthcheck: `/health` (también existe `/api/health`).
 - Puerto: `PORT` proporcionado por Railway; host `0.0.0.0`.
 - Rutas SPA: Express sirve `index.html` fuera de `/api`; un `/assets/*` que ya no
@@ -121,10 +122,16 @@ conexiones y sale con código 1. Para que le dé tiempo, configura
 `RAILWAY_DEPLOYMENT_DRAINING_SECONDS=15` (por defecto Railway manda SIGKILL al
 instante). En los logs aparece como `Cierre ordenado (SIGTERM)`.
 
-Una promesa rechazada sin capturar se registra y el servidor sigue; una excepción sin
-capturar se registra, cierra en orden y sale con código 1 para que Railway reinicie el
-servicio. El CI comprueba con la imagen real que el SIGTERM llega a Node tanto con el
-arranque del Dockerfile como con `npm run start`, que es el comando del servicio.
+Una promesa rechazada sin capturar se registra y el servidor sigue; una excepción sin capturar se registra, cierra en orden y sale con código 1 para que Railway reinicie el servicio.
+
+Para que el SIGTERM llegue a Node, Railway debe arrancarlo directamente: en servicios con
+Dockerfile el comando de arranque se ejecuta en forma exec y sustituye al `CMD`, así que
+`railway.json` y el `CMD` del Dockerfile usan `node backend/server.js`. El CI lo comprueba con
+la imagen real (parada con SIGTERM y código de salida 0) y verifica que ambos comandos
+coincidan. Con `npm run start` por medio, el `sh` intermedio muere con la señal y Node nunca
+llega a cerrar en orden (así estaba el servicio). **Al migrar fuera de `railway.json` (se retira
+el 01/12/2026), pon como Start Command del servicio `node backend/server.js` o déjalo vacío
+para usar el `CMD`**: el valor actual del panel, `npm run start`, no propaga la señal.
 
 ## Cabeceras de seguridad
 

@@ -133,24 +133,18 @@ jobs:
           curl --fail --silent --head http://localhost:8080/ | grep --ignore-case 'content-security-policy-report-only'
           # Un asset que ya no existe debe dar 404 (no index.html): así el frontend detecta la versión nueva.
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8080/assets/no-existe-0123.js)" = 404
-      - name: Parada ordenada con SIGTERM (arranque del Dockerfile)
+      - name: Parada ordenada con SIGTERM (Node como proceso 1, igual que en Railway)
         run: |
-          docker stop --time 20 app
+          docker stop --timeout 20 app
           test "$(docker inspect --format '{{.State.ExitCode}}' app)" = 0
           docker logs app 2>&1 | grep --fixed-strings 'Cierre ordenado (SIGTERM)'
-      - name: Parada ordenada con SIGTERM (arranque "npm run start" como en Railway)
+      - name: El arranque de railway.json coincide con el CMD de la imagen
         run: |
-          docker run --detach --name railway-start --publish 8081:8081 \
-            --env PORT=8081 --env LICENSING_ENABLED=false carlostech-ai:ci sh -c "npm run start"
-          for attempt in $(seq 1 30); do
-            curl --fail --silent http://localhost:8081/health && break
-            sleep 1
-          done
-          docker stop --time 20 railway-start
-          test "$(docker inspect --format '{{.State.ExitCode}}' railway-start)" = 0
-          docker logs railway-start 2>&1 | grep --fixed-strings 'Cierre ordenado (SIGTERM)'
-      - name: Logs de los contenedores
+          # Railway ejecuta el startCommand en forma exec y sustituye el CMD: si difieren, el
+          # SIGTERM podría dejar de llegar a Node (con "npm run start" por medio se pierde).
+          start_command="$(node -p "require('./railway.json').deploy.startCommand")"
+          image_cmd="$(docker inspect --format '{{join .Config.Cmd " "}}' carlostech-ai:ci)"
+          test "$start_command" = "$image_cmd"
+      - name: Logs del contenedor
         if: always()
-        run: |
-          docker logs app || true
-          docker logs railway-start || true
+        run: docker logs app || true

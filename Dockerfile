@@ -19,4 +19,6 @@ RUN npm --prefix backend ci --omit=dev --no-audit --no-fund && npm cache clean -
 COPY --chown=node:node backend/ ./backend/
 COPY --from=frontend-build --chown=node:node /app/backend/public ./backend/public
 USER node
-CMD ["npm", "start"]
+# Node como proceso 1 (sin npm ni sh): recibe el SIGTERM de Railway y puede cerrar en orden.
+# Con "npm start" por medio la señal se pierde en el sh intermedio.
+CMD ["node", "backend/server.js"]
