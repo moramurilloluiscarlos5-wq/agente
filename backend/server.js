@@ -25,8 +25,9 @@ import deviceAgentRoutes from './routes/deviceAgent.routes.js'
 import { supabaseAdmin } from './config/supabase.js'
 import { startWhatsAppWorker } from './services/whatsappService.js'
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js'
-import { securityHeaders } from './middleware/security.js'
+import { securityHeaders, CSP_REPORT_PATH } from './middleware/security.js'
 import { createBillingRouter, createBillingWebhookHandler } from './routes/billing.routes.js'
+import { createCspReportRouter } from './routes/cspReport.routes.js'
 import { assertBillingConfig, loadBillingConfig, licensingEnabled } from './config/billing.js'
 
 
@@ -61,6 +62,8 @@ app.use('/api/health', healthRoutes)
 app.use('/health', healthRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/billing', createBillingRouter())
+// Público y antes del router genérico `/api` (que exige sesión): el navegador reporta sin credenciales.
+app.use(CSP_REPORT_PATH, createCspReportRouter())
 // El endpoint de actualización del agente es público para que el instalador
 // pueda consultar la descarga antes de que exista una sesión en la aplicación.
 // Debe montarse antes del router genérico de tracking (`/api`), que protege
