@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Un push nuevo a la misma rama cancela la ejecución anterior.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (pruebas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  frontend:
+    name: Frontend (lint y build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      PLAYWRIGHT_CHANNEL: chromium
+      # Valores ficticios: las pruebas interceptan toda llamada a Supabase y al API.
+      VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+      VITE_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - name: Subir trazas de las pruebas fallidas
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-test-results
+          path: frontend/test-results
+          retention-days: 7
+          if-no-files-found: ignore
+
+  device-agent:
+    name: Device Agent (pruebas)
+    runs-on: windows-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: device-agent
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: device-agent/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  docker:
+    name: Imagen de producción (Docker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Construir la imagen que usa Railway
+        run: |
+          docker build \
+            --build-arg VITE_SUPABASE_URL=https://ci-placeholder.supabase.co \
+            --build-arg VITE_SUPABASE_ANON_KEY=ci-placeholder-anon-key \
+            --tag carlostech-ai:ci .
+      - name: Arrancar el contenedor y comprobar /health y la SPA
+        run: |
+          docker run --detach --name app --publish 8080:8080 \
+            --env PORT=8080 --env LICENSING_ENABLED=false carlostech-ai:ci
+          for attempt in $(seq 1 30); do
+            curl --fail --silent http://localhost:8080/health && break
+            sleep 1
+          done
+          curl --fail --silent --head http://localhost:8080/ | grep --ignore-case 'content-security-policy-report-only'
+      - name: Logs del contenedor
+        if: always()
+        run: docker logs app || true

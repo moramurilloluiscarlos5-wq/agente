@@ -34,6 +34,7 @@ Configurar antes del build:
 | `TRIAL_DAYS`, `BILLING_GRACE_DAYS` | Opcionales (14 y 7 por defecto) |
 | `LICENSING_ENABLED` | `false` apaga las licencias (no exige Stripe ni bloquea talleres). Úsalo hasta aplicar la migración 019 y configurar Stripe; luego bórrala o ponla en `true` |
 | `TRUST_PROXY` | Opcional. En producción vale `1` por defecto (proxy de Railway) para que los límites de peticiones y la auditoría usen la IP real del usuario |
+| `CSP_ENFORCE` | Opcional. `true` aplica la Content-Security-Policy; por defecto solo la reporta (ver Cabeceras de seguridad) |
 | `DEVICE_AGENT_GITHUB_REPOSITORY` | `propietario/repositorio` con las releases firmadas del agente. Tiene prioridad sobre cualquier descarga externa |
 | `DEVICE_AGENT_EXTERNAL_RELEASE_URL` + `DEVICE_AGENT_EXTERNAL_VERSION` | Respaldo temporal sin firma (Mediafire). Solo se usa si no hay repositorio o si GitHub todavía no publica una release firmada válida. Ya no existe un valor por defecto en el código |
 
@@ -108,12 +109,36 @@ No se encontró un flujo de uploads persistentes implementado. Los archivos
 estáticos del diseño son parte del build; el disco de Railway no debe usarse
 para conservar adjuntos entre despliegues.
 
+## Cabeceras de seguridad
+
+Todas las respuestas llevan `X-Content-Type-Options`, `X-Frame-Options: DENY`,
+`Referrer-Policy` y `Permissions-Policy`; en producción y tras HTTPS también
+`Strict-Transport-Security` (1 año). Las rutas `/api` salen con `Cache-Control: no-store`.
+
+La Content-Security-Policy se envía como `Content-Security-Policy-Report-Only`: no bloquea
+nada y el navegador reporta cada violación a `POST /api/csp-report`, que la deja en los logs
+de Railway como `[csp-report] {...}` (sin query ni tokens, con los ids enmascarados). La
+política permite Google Fonts, el Supabase de `SUPABASE_URL`, el Device Agent local
+(`127.0.0.1:5391`) y los estilos en línea de React; se define en `buildCsp`
+(`backend/middleware/security.js`).
+
+Para aplicarla: navega la app unos días, revisa los logs, ajusta la política si hay
+violaciones legítimas y pon `CSP_ENFORCE=true`. Si algo se rompe, quita la variable y
+vuelves al modo reporte sin tocar código.
+
 ## Validación y operación
 
 `npm --prefix backend test`, `npm --prefix frontend run lint` y
 `npm --prefix frontend run test:e2e`. No hay script de typecheck (JavaScript).
 Las pruebas de navegador existentes usan API/sesiones simuladas; no prueban
 el login real ni la persistencia de Supabase en producción.
+
+El workflow `.github/workflows/ci.yml` corre en cada push y pull request: pruebas
+del backend, lint y build del frontend, e2e de Playwright, pruebas del Device
+Agent y la construcción de la imagen Docker de producción, que además se arranca
+y se comprueba (`/health` y la SPA con su CSP). En CI los e2e usan
+`PLAYWRIGHT_CHANNEL=chromium`; en local, `PLAYWRIGHT_PORT` permite ejecutarlos en
+otro puerto si ya tienes un servidor de desarrollo abierto en el 5173.
 
 La cuenta Railway consultada el 19/09/2026 tenía prueba gratuita de 30 días,
 US$5 de crédito y consumo US$0. Aunque el enum del workspace decía HOBBY,
