@@ -2,6 +2,8 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
+  // El primer test de cada ejecución paga el arranque en frío de Edge y Vite (hasta ~25 s en esta máquina).
+  timeout: 60_000,
   fullyParallel: false,
   workers: 1,
   reporter: 'list',

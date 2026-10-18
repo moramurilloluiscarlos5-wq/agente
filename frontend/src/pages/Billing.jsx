@@ -32,7 +32,8 @@ export default function Billing() {
     try { await goToStripe('/billing/checkout', { plan: plan.code }) } catch (err) { setError(err.message); setBusyCode(null) }
   }
 
-  const needsPlan = !subscription || subscription.status !== 'active' || subscription.license?.allowed === false
+  const disabled = subscription?.disabled === true
+  const needsPlan = !disabled && (!subscription || subscription.status !== 'active' || subscription.license?.allowed === false)
   return (
     <div className="ct-page space-y-6">
       <PageHeader title="Facturación" description="Licencia, plan y método de pago de tu taller." />
@@ -40,6 +41,7 @@ export default function Billing() {
       {success && <p role="status" className="rounded-lg border border-[rgba(74,222,128,.3)] bg-[var(--tf-success-soft)] p-3 text-sm text-[#86efac]">{pending ? 'Pago recibido. Estamos activando tu licencia…' : '¡Listo! Tu licencia está activa.'}</p>}
       {error && <p role="alert" className="rounded-lg border border-[rgba(248,113,113,.32)] bg-[var(--tf-danger-soft)] p-3 text-sm text-[#fca5a5]">{error}</p>}
       <LicenseCard key={reloadKey} onLoaded={setSubscription} />
+      {disabled && <section aria-label="Licencias desactivadas" className="ct-surface-raised max-w-2xl p-6"><h2 className="font-semibold text-[var(--tf-text)]">Licencias desactivadas</h2><p className="mt-2 text-sm text-[var(--tf-text-muted)]">El cobro por suscripción todavía no está activado. Tu taller tiene acceso completo y no necesitas pagar nada.</p></section>}
       {needsPlan && plans.length > 0 && <section aria-label="Planes disponibles" className="max-w-4xl space-y-4"><h2 className="font-semibold text-[var(--tf-text)]">Elige tu plan</h2><PlanCards plans={plans} onBuy={buy} busyCode={busyCode} /></section>}
     </div>
   )

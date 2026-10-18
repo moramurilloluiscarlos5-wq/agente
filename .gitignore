@@ -27,3 +27,8 @@ login-final.png
 # Proyectos y archivos ajenos a CARLOSTECH AI
 ferpogas51.github.io/
 backend/scripts/*.png
+# Sus rutas largas rompen `git add -A` en Windows
+CarlosTech_Recovery_Final/
+
+# Enlace local de la CLI de Railway
+.railway/

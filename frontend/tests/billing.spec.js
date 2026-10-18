@@ -69,3 +69,14 @@ test('configuración muestra plan, estado, próximo cobro y gestionar pago', asy
   await expect(card.getByTestId('license-next')).toContainText('2030')
   await expect(card.getByRole('button', { name: 'Gestionar pago' })).toBeVisible()
 })
+
+test('licencias apagadas: /precios no se queda cargando y /facturacion explica el estado', async ({ page }) => {
+  await setup(page, { subscription: { disabled: true, status: null, plan: null, license: { allowed: true, reason: 'disabled' } } })
+  await page.route(/\/api\/billing\/plans/, (route) => route.fulfill({ json: { data: [], trial_days: 0, disabled: true } }))
+  await page.goto('/precios')
+  await expect(page.getByText('Los planes de pago aún no están disponibles')).toBeVisible()
+  await expect(page.getByText('Cargando planes…')).toHaveCount(0)
+  await page.goto('/facturacion')
+  await expect(page.getByRole('region', { name: 'Licencias desactivadas' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Planes disponibles' })).toHaveCount(0)
+})

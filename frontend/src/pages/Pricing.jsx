@@ -13,10 +13,11 @@ export default function Pricing() {
   const [plans, setPlans] = useState([])
   const [trialDays, setTrialDays] = useState(0)
   const [error, setError] = useState('')
+  const [loaded, setLoaded] = useState(false)
   const [busyCode, setBusyCode] = useState(null)
 
   useEffect(() => {
-    api.get('/billing/plans').then((response) => { setPlans(response.data); setTrialDays(response.trial_days ?? 0) }).catch((err) => setError(err.message))
+    api.get('/billing/plans').then((response) => { setPlans(response.data); setTrialDays(response.trial_days ?? 0) }).catch((err) => setError(err.message)).finally(() => setLoaded(true))
   }, [])
 
   async function buy(plan) {
@@ -33,7 +34,7 @@ export default function Pricing() {
         <div className="mt-12 text-center"><h1 className="text-3xl font-semibold">Precios simples para tu taller</h1><p className="mt-3 text-sm text-[var(--tf-text-muted)]">Un solo plan con todo incluido. Cancela cuando quieras.</p></div>
         {params.get('checkout') === 'cancelled' && <p role="status" className="mt-6 rounded-lg border border-[rgba(251,191,36,.3)] bg-[var(--tf-warning-soft)] p-3 text-center text-sm text-[#fcd34d]">El pago se canceló. No se realizó ningún cobro.</p>}
         {error && <p role="alert" className="mt-6 rounded-lg border border-[rgba(248,113,113,.32)] bg-[var(--tf-danger-soft)] p-3 text-center text-sm text-[#fca5a5]">{error}</p>}
-        <div className="mt-10">{plans.length > 0 ? <PlanCards plans={plans} onBuy={buy} busyCode={busyCode} trialDays={trialDays} /> : !error && <p role="status" className="text-center text-sm text-[var(--tf-text-muted)]">Cargando planes…</p>}</div>
+        <div className="mt-10">{plans.length > 0 ? <PlanCards plans={plans} onBuy={buy} busyCode={busyCode} trialDays={trialDays} /> : !error && <p role="status" className="text-center text-sm text-[var(--tf-text-muted)]">{loaded ? 'Los planes de pago aún no están disponibles. Vuelve a revisar pronto.' : 'Cargando planes…'}</p>}</div>
       </div>
     </main>
   )
