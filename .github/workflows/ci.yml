@@ -131,6 +131,26 @@ jobs:
             sleep 1
           done
           curl --fail --silent --head http://localhost:8080/ | grep --ignore-case 'content-security-policy-report-only'
-      - name: Logs del contenedor
+          # Un asset que ya no existe debe dar 404 (no index.html): así el frontend detecta la versión nueva.
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://localhost:8080/assets/no-existe-0123.js)" = 404
+      - name: Parada ordenada con SIGTERM (arranque del Dockerfile)
+        run: |
+          docker stop --time 20 app
+          test "$(docker inspect --format '{{.State.ExitCode}}' app)" = 0
+          docker logs app 2>&1 | grep --fixed-strings 'Cierre ordenado (SIGTERM)'
+      - name: Parada ordenada con SIGTERM (arranque "npm run start" como en Railway)
+        run: |
+          docker run --detach --name railway-start --publish 8081:8081 \
+            --env PORT=8081 --env LICENSING_ENABLED=false carlostech-ai:ci sh -c "npm run start"
+          for attempt in $(seq 1 30); do
+            curl --fail --silent http://localhost:8081/health && break
+            sleep 1
+          done
+          docker stop --time 20 railway-start
+          test "$(docker inspect --format '{{.State.ExitCode}}' railway-start)" = 0
+          docker logs railway-start 2>&1 | grep --fixed-strings 'Cierre ordenado (SIGTERM)'
+      - name: Logs de los contenedores
         if: always()
-        run: docker logs app || true
+        run: |
+          docker logs app || true
+          docker logs railway-start || true

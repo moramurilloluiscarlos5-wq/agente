@@ -1,7 +1,6 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import healthRoutes from './routes/health.routes.js'
@@ -28,6 +27,8 @@ import { notFoundHandler, errorHandler } from './middleware/errorHandler.js'
 import { securityHeaders, CSP_REPORT_PATH } from './middleware/security.js'
 import { createBillingRouter, createBillingWebhookHandler } from './routes/billing.routes.js'
 import { createCspReportRouter } from './routes/cspReport.routes.js'
+import { mountSpa } from './middleware/spa.js'
+import { installLifecycleHandlers } from './utils/lifecycle.js'
 import { assertBillingConfig, loadBillingConfig, licensingEnabled } from './config/billing.js'
 
 
@@ -87,35 +88,15 @@ app.use('/api', operationsRoutes)
 // Servir archivos compilados del frontend cuando existan (producción).
 // Ignorar el directorio si falta para no romper el modo desarrollo local.
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const publicDir = path.join(__dirname, 'public')
-if (fs.existsSync(publicDir)) {
-  app.use(express.static(publicDir, {
-    index: false,
-    setHeaders(res, filePath) {
-      // index.html SIEMPRE sin caché: si un navegador conservara el HTML viejo
-      // tras un deploy, seguiría pidiendo un bundle antiguo (404) o uno viejo
-      // con URLs horneadas incorrectas. Los assets con hash sí son inmutables.
-      if (filePath.endsWith('index.html')) {
-        res.setHeader('Cache-Control', 'no-store')
-        return
-      }
-      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-      }
-    },
-  }))
-}
-// Fallback SPA para rutas que no sean API. (El 404 JSON sigue activo para el resto.)
-app.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
-  if (!fs.existsSync(publicDir)) return next()
-  res.setHeader('Cache-Control', 'no-store')
-  res.sendFile(path.join(publicDir, 'index.html'))
-})
+mountSpa(app, path.join(__dirname, 'public'))
 
 app.use(notFoundHandler)
 app.use(errorHandler)
 
-app.listen(PORT, HOST, () => {
+let whatsappWorker = null
+const server = app.listen(PORT, HOST, () => {
   console.log(`TallerFlow backend escuchando en http://${HOST}:${PORT}`)
-  startWhatsAppWorker(supabaseAdmin)
+  whatsappWorker = startWhatsAppWorker(supabaseAdmin)
 })
+// Se instala después de arrancar: un fallo de configuración al iniciar debe seguir tumbando el proceso.
+installLifecycleHandlers({ server, onShutdown: () => clearInterval(whatsappWorker) })

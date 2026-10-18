@@ -8,6 +8,9 @@ import { createLicenseMiddleware, invalidateLicenseCache } from '../middleware/l
 import { assertBillingConfig, loadBillingConfig, licensingEnabled } from '../config/billing.js'
 import { evaluateLicense, ensureTrialSubscription, mapStripeStatus } from '../services/billingService.js'
 
+// Estas pruebas asumen licencias activas aunque el .env local las apague (LICENSING_ENABLED=false).
+process.env.LICENSING_ENABLED = 'true'
+
 const WORKSHOP = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const OTHER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 const DAY = 86_400_000

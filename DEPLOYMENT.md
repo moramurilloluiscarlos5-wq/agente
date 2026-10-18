@@ -11,7 +11,9 @@ adicional en Railway ni ejecutar el seed de demostración en producción.
 - Inicio: `npm start`.
 - Healthcheck: `/health` (también existe `/api/health`).
 - Puerto: `PORT` proporcionado por Railway; host `0.0.0.0`.
-- Rutas SPA: Express sirve `index.html` fuera de `/api`.
+- Rutas SPA: Express sirve `index.html` fuera de `/api`; un `/assets/*` que ya no
+  existe (pestaña abierta antes de un deploy) responde 404 y el frontend recarga
+  solo una vez para tomar la versión nueva.
 - Node 22 en Nixpacks; compatible con Node 24 para las pruebas locales.
 
 ## Variables
@@ -35,6 +37,7 @@ Configurar antes del build:
 | `LICENSING_ENABLED` | `false` apaga las licencias (no exige Stripe ni bloquea talleres). Úsalo hasta aplicar la migración 019 y configurar Stripe; luego bórrala o ponla en `true` |
 | `TRUST_PROXY` | Opcional. En producción vale `1` por defecto (proxy de Railway) para que los límites de peticiones y la auditoría usen la IP real del usuario |
 | `CSP_ENFORCE` | Opcional. `true` aplica la Content-Security-Policy; por defecto solo la reporta (ver Cabeceras de seguridad) |
+| `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | Recomendado: `15`. Segundos entre SIGTERM y SIGKILL cuando Railway reemplaza el deploy; vale 0 por defecto y entonces el proceso muere al instante y el cierre ordenado no llega a ejecutarse (ver Cierre ordenado) |
 | `DEVICE_AGENT_GITHUB_REPOSITORY` | `propietario/repositorio` con las releases firmadas del agente. Tiene prioridad sobre cualquier descarga externa |
 | `DEVICE_AGENT_EXTERNAL_RELEASE_URL` + `DEVICE_AGENT_EXTERNAL_VERSION` | Respaldo temporal sin firma (Mediafire). Solo se usa si no hay repositorio o si GitHub todavía no publica una release firmada válida. Ya no existe un valor por defecto en el código |
 
@@ -108,6 +111,20 @@ WhatsApp deshabilitado no inicia su temporizador de procesamiento.
 No se encontró un flujo de uploads persistentes implementado. Los archivos
 estáticos del diseño son parte del build; el disco de Railway no debe usarse
 para conservar adjuntos entre despliegues.
+
+## Cierre ordenado
+
+En cada deploy Railway envía SIGTERM al proceso anterior. El backend
+(`backend/utils/lifecycle.js`) deja de aceptar conexiones, espera hasta 10 s a que
+terminen las peticiones en curso y sale con código 0; si no terminan, corta las
+conexiones y sale con código 1. Para que le dé tiempo, configura
+`RAILWAY_DEPLOYMENT_DRAINING_SECONDS=15` (por defecto Railway manda SIGKILL al
+instante). En los logs aparece como `Cierre ordenado (SIGTERM)`.
+
+Una promesa rechazada sin capturar se registra y el servidor sigue; una excepción sin
+capturar se registra, cierra en orden y sale con código 1 para que Railway reinicie el
+servicio. El CI comprueba con la imagen real que el SIGTERM llega a Node tanto con el
+arranque del Dockerfile como con `npm run start`, que es el comando del servicio.
 
 ## Cabeceras de seguridad
 
