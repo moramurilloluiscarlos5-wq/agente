@@ -104,7 +104,7 @@ export function AuthProvider({ children }) {
       status: 'offline',
       user: data?.session?.user ?? prev.user,
       profile: prev.profile,
-      error: lastError?.message ?? 'Taller Flow no pudo conectarse con el servidor.',
+      error: lastError?.message ?? 'TallerFlow no pudo conectarse con el servidor.',
     }))
     return 'offline'
   }, [])

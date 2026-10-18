@@ -48,7 +48,7 @@ async function setup(page, { paired = true } = {}) {
 test('a rejected paired-agent token offers recovery pairing instead of a dead-end error', async ({ page }) => {
   await setup(page)
   await page.goto('/herramientas-dispositivo')
-  await expect(page.getByRole('heading', { name: 'Conectar esta computadora con Taller Flow' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Conectar esta computadora con TallerFlow' })).toBeVisible()
   await expect(page.getByText('El agente respondió, pero su secreto anterior ya no coincide.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Permitir y vincular' })).toBeVisible()
   await expect(page.getByText('Agent detectado · pendiente de vincular', { exact: true })).toBeVisible()
@@ -119,7 +119,7 @@ test('a backend session failure keeps the detected agent visible and allows retr
   await expect(page.getByRole('heading', { name: 'El agente está activo; falta completar la conexión' })).toBeVisible()
   await expect(page.getByText('Agent detectado · conexión pendiente', { exact: true })).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: 'El servicio de sesiones no está disponible temporalmente.' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Taller Flow Device Agent no está conectado' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'TallerFlow Device Agent no está conectado' })).toHaveCount(0)
   state.sessionStatus = 200
   await page.getByRole('button', { name: 'Reintentar conexión', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Permitir y vincular' })).toBeVisible()

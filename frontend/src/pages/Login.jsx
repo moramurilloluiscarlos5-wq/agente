@@ -1,6 +1,6 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { ArrowRight, CircleAlert, CheckCircle2, LoaderCircle, LockKeyhole } from 'lucide-react'
+import { CircleAlert, CheckCircle2, LoaderCircle } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.js'
 import { workspaceDestination } from '../utils/workspace.js'
 import { supabase } from '../services/supabase.js'
@@ -42,7 +42,7 @@ export default function Login() {
 
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Iniciar sesión | Taller Flow'
+    document.title = 'Iniciar sesión | TallerFlow'
     return () => { document.title = previousTitle }
   }, [])
 
@@ -138,9 +138,8 @@ export default function Login() {
   return (
     <AuthLayout>
       <header className="ct-auth-heading">
-        <div className="ct-auth-heading-icon"><LockKeyhole size={19} strokeWidth={1.6} aria-hidden="true" /></div>
         <h1>Iniciar sesión</h1>
-        <p>Accede al sistema de gestión de tu taller.</p>
+        <p>Entra con el correo y la contraseña de tu cuenta del taller.</p>
       </header>
 
       {!isConfigured && <p role="alert" className="ct-auth-notice ct-auth-notice--info">El acceso aún no está disponible. Contacta al administrador para completar la configuración.</p>}
@@ -167,8 +166,7 @@ export default function Login() {
         {confirmationMessage && <p role="status" className="ct-auth-notice ct-auth-notice--success"><CheckCircle2 size={17} aria-hidden="true" />{confirmationMessage}</p>}
         <button type="submit" disabled={busy || !isConfigured || status === 'loading'} className="ct-auth-primary">
           {loading && <LoaderCircle size={17} className="animate-spin" aria-hidden="true" />}
-          {loading ? 'Iniciando sesión...' : status === 'loading' ? 'Comprobando sesión…' : 'Iniciar sesión'}
-          {!loading && status !== 'loading' && <ArrowRight size={17} aria-hidden="true" />}
+          {loading ? 'Iniciando sesión…' : status === 'loading' ? 'Comprobando sesión…' : 'Iniciar sesión'}
         </button>
         {errorCode === 'email_not_confirmed' && <button type="button" onClick={resendConfirmation} disabled={busy || Boolean(confirmationMessage)} className="ct-auth-secondary">{resending ? 'Enviando…' : 'Reenviar correo de confirmación'}</button>}
       </form>
@@ -178,7 +176,7 @@ export default function Login() {
         <p>¿Aún no tienes una cuenta?</p>
         <Link to="/registro" className="ct-auth-secondary">Registra tu taller</Link>
       </div>
-      <p className="ct-auth-staff-note">Si tu taller ya usa Taller Flow, solicita<br className="ct-auth-desktop-break" /> acceso al administrador.</p>
+      <p className="ct-auth-staff-note">¿Tu taller ya usa TallerFlow? Pide al administrador que te agregue al equipo.</p>
     </AuthLayout>
   )
 }

@@ -68,10 +68,10 @@ export function evaluateLicense(subscription, { now = Date.now(), graceDays = 7 
 
 export const LICENSE_MESSAGES = {
   no_subscription: 'Tu taller no tiene una licencia activa. Elige un plan para continuar.',
-  trial_expired: 'Tu periodo de prueba terminó. Elige un plan para seguir usando Taller Flow.',
+  trial_expired: 'Tu periodo de prueba terminó. Elige un plan para seguir usando TallerFlow.',
   period_ended: 'Tu licencia venció. Renueva tu suscripción para continuar.',
   past_due_expired: 'No pudimos cobrar tu suscripción y el periodo de gracia terminó. Actualiza tu método de pago.',
-  canceled: 'Tu suscripción fue cancelada. Elige un plan para volver a usar Taller Flow.',
+  canceled: 'Tu suscripción fue cancelada. Elige un plan para volver a usar TallerFlow.',
   unpaid: 'Tu suscripción tiene pagos pendientes. Actualiza tu método de pago para continuar.',
   incomplete: 'Tu pago aún no se ha completado. Termina el pago para activar tu licencia.',
 }

@@ -37,7 +37,7 @@ export default function RegisterWorkshop() {
 
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Crea tu taller · Taller Flow'
+    document.title = 'Crea tu taller · TallerFlow'
     return () => { document.title = previousTitle }
   }, [])
 
@@ -104,7 +104,7 @@ export default function RegisterWorkshop() {
         <div className="ct-auth-success">
           <CheckCircle2 size={36} strokeWidth={1.5} aria-hidden="true" />
           <header className="ct-auth-heading">
-            <p className="ct-auth-eyebrow">REGISTRO COMPLETADO</p>
+            <p className="ct-auth-eyebrow">Registro completado</p>
             <h1 ref={successRef} tabIndex={-1}>Tu taller está listo</h1>
             <p>{created.workshop?.name} ya tiene su configuración inicial. Tu cuenta tiene acceso como propietario.</p>
           </header>
@@ -125,8 +125,8 @@ export default function RegisterWorkshop() {
       ) : (
         <>
           <header className="ct-auth-heading">
-            <p className="ct-auth-eyebrow">PARA PROPIETARIOS DE TALLER</p>
-            <h1>Crea tu taller en Taller Flow</h1>
+            <p className="ct-auth-eyebrow">Para dueños de taller</p>
+            <h1>Crea tu taller en TallerFlow</h1>
             <p>{existingUser
               ? 'Tu cuenta está lista. Completa los datos del taller para entrar a tu espacio de trabajo.'
               : 'Configura tu espacio de trabajo y comienza a gestionar reparaciones, clientes y equipos.'}</p>
@@ -174,7 +174,7 @@ export default function RegisterWorkshop() {
             <span className="sr-only" role="status">{loading ? 'Creando tu taller. Espera un momento.' : ''}</span>
           </form>
 
-          <p className="ct-auth-staff-note">Si tu taller ya usa Taller Flow, solicita acceso al administrador.</p>
+          <p className="ct-auth-staff-note">¿Tu taller ya usa TallerFlow? Pide al administrador que te agregue al equipo.</p>
           <div className="ct-auth-switch">
             {existingUser
               ? <button type="button" onClick={logout} className="ct-auth-link" disabled={loading}>Cerrar sesión</button>

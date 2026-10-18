@@ -14,14 +14,14 @@ export default function PlanCards({ plans, onBuy, busyCode = null, buyLabel = 'C
         return (
           <article key={plan.code} className="ct-surface-raised flex flex-col p-6" aria-label={plan.name}>
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold text-slate-100">{plan.name}</h3>
-              {saving > 0 && <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-300">Ahorra {saving}%</span>}
+              <h3 className="text-lg font-semibold text-[var(--tf-text)]">{plan.name}</h3>
+              {saving > 0 && <span className="rounded-full bg-[var(--tf-success-soft)] px-2.5 py-1 text-xs font-medium text-[#86efac]">Ahorra {saving}%</span>}
             </div>
-            <p className="mt-4 text-3xl font-semibold text-slate-50">{formatPrice(plan.price_cents, plan.currency)}<span className="ml-1 text-sm font-normal text-slate-400">/ {yearly ? 'año' : 'mes'}</span></p>
-            <ul className="mt-5 flex-1 space-y-2 text-sm text-slate-300">
+            <p className="mt-4 text-3xl font-semibold text-[var(--tf-text)]">{formatPrice(plan.price_cents, plan.currency)}<span className="ml-1 text-sm font-normal text-[var(--tf-text-muted)]">/ {yearly ? 'año' : 'mes'}</span></p>
+            <ul className="mt-5 flex-1 space-y-2 text-sm text-[var(--tf-text-muted)]">
               {FEATURES.map((feature) => <li key={feature} className="flex gap-2"><Check size={16} className="mt-0.5 shrink-0 text-sky-300" />{feature}</li>)}
             </ul>
-            {trialDays > 0 && <p className="mt-4 text-xs text-slate-500">{trialDays} días de prueba al registrar tu taller, sin tarjeta.</p>}
+            {trialDays > 0 && <p className="mt-4 text-xs text-[var(--tf-text-subtle)]">{trialDays} días de prueba al registrar tu taller, sin tarjeta.</p>}
             <button type="button" className="ct-btn ct-btn-primary mt-5 justify-center" disabled={busyCode !== null} onClick={() => onBuy(plan)}>
               {busyCode === plan.code ? 'Redirigiendo a Stripe…' : buyLabel}
             </button>

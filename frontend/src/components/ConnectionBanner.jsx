@@ -35,16 +35,16 @@ export default function ConnectionBanner() {
       role="status"
       className={`flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm ${
         offline
-          ? 'border-b border-amber-500/30 bg-amber-500/10 text-amber-100'
-          : 'border-b border-emerald-500/30 bg-emerald-500/10 text-emerald-100'
+          ? 'border-b border-[rgba(251,191,36,.3)] bg-[var(--tf-warning-soft)] text-[#fcd34d]'
+          : 'border-b border-[rgba(74,222,128,.3)] bg-[var(--tf-success-soft)] text-[#86efac]'
       }`}
     >
-      {offline && <AlertTriangle size={15} className="shrink-0 text-amber-300" />}
-      {checking && <LoaderCircle size={15} className="shrink-0 animate-spin text-amber-300" />}
-      {apiStatus === API_STATUS.ONLINE && <CheckCircle2 size={15} className="shrink-0 text-emerald-300" />}
+      {offline && <AlertTriangle size={15} className="shrink-0 text-[#fcd34d]" />}
+      {checking && <LoaderCircle size={15} className="shrink-0 animate-spin text-[#fcd34d]" />}
+      {apiStatus === API_STATUS.ONLINE && <CheckCircle2 size={15} className="shrink-0 text-[#86efac]" />}
       <span>
-        {offline && 'Problemas de conexión con Taller Flow. Reintentando…'}
-        {checking && 'Comprobando conexión con Taller Flow…'}
+        {offline && 'Problemas de conexión con TallerFlow. Reintentando…'}
+        {checking && 'Comprobando conexión con TallerFlow…'}
         {apiStatus === API_STATUS.ONLINE && 'Conexión restablecida.'}
       </span>
       {offline && (

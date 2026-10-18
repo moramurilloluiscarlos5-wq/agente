@@ -27,7 +27,7 @@ import { startWhatsAppWorker } from './services/whatsappService.js'
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js'
 import { securityHeaders } from './middleware/security.js'
 import { createBillingRouter, createBillingWebhookHandler } from './routes/billing.routes.js'
-import { assertBillingConfig, loadBillingConfig } from './config/billing.js'
+import { assertBillingConfig, loadBillingConfig, licensingEnabled } from './config/billing.js'
 
 
 const app = express()
@@ -44,7 +44,9 @@ const defaultOrigins = process.env.NODE_ENV === 'production' ? '' : 'http://loca
 const allowedOrigins = (process.env.CORS_ORIGIN || defaultOrigins).split(',').map((origin) => origin.trim()).filter(Boolean)
 app.use(securityHeaders)
 // Producción no arranca sin facturación completa; fuera de producción solo se avisa.
-if (process.env.NODE_ENV === 'production') {
+if (!licensingEnabled()) {
+  console.warn('Licencias DESACTIVADAS (LICENSING_ENABLED=false): ningún taller se bloquea por licencia.')
+} else if (process.env.NODE_ENV === 'production') {
   const billing = assertBillingConfig()
   console.log(`Facturación Stripe en modo ${billing.testMode ? 'PRUEBA (test)' : 'REAL (live)'}`)
 } else if (!loadBillingConfig().ok) {
@@ -111,6 +113,6 @@ app.use(notFoundHandler)
 app.use(errorHandler)
 
 app.listen(PORT, HOST, () => {
-  console.log(`CARLOSTECH AI backend escuchando en http://${HOST}:${PORT}`)
+  console.log(`TallerFlow backend escuchando en http://${HOST}:${PORT}`)
   startWhatsAppWorker(supabaseAdmin)
 })

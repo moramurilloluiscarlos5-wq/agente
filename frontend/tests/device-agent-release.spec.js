@@ -43,7 +43,7 @@ test('offers the official installer and an update from 1.0.0 to 1.0.1', async ({
   const state = await setup(page)
   await page.goto('/herramientas-dispositivo')
   await expect(page.getByText('Nueva versión disponible: 1.0.1', { exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Descargar Taller Flow Device Agent', exact: true })).toHaveAttribute('href', state.release.downloadUrl)
+  await expect(page.getByRole('link', { name: 'Descargar TallerFlow Device Agent', exact: true })).toHaveAttribute('href', state.release.downloadUrl)
   await expect(page.getByRole('link', { name: 'Actualizar', exact: true })).toHaveAttribute('href', state.release.downloadUrl)
 })
 
@@ -52,10 +52,10 @@ test('rejects unsigned metadata and recovers through retry', async ({ page }) =>
   state.release.signed = false
   await page.goto('/herramientas-dispositivo')
   await expect(page.getByRole('alert')).toContainText('no contiene un instalador firmado válido')
-  await expect(page.getByRole('link', { name: 'Descargar Taller Flow Device Agent', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Descargar TallerFlow Device Agent', exact: true })).toHaveCount(0)
   state.release.signed = true
   await page.getByRole('button', { name: 'Reintentar descarga' }).click()
-  await expect(page.getByRole('link', { name: 'Descargar Taller Flow Device Agent', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Descargar TallerFlow Device Agent', exact: true })).toBeVisible()
 })
 
 test('shows a real release error without a dead download link', async ({ page }) => {
@@ -63,16 +63,16 @@ test('shows a real release error without a dead download link', async ({ page })
   state.status = 503
   await page.goto('/herramientas-dispositivo')
   await expect(page.getByRole('alert')).toContainText('No hay una release oficial firmada disponible.')
-  await expect(page.getByRole('link', { name: 'Descargar Taller Flow Device Agent', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Descargar TallerFlow Device Agent', exact: true })).toHaveCount(0)
   state.status = 200
   await page.getByRole('button', { name: 'Reintentar descarga' }).click()
-  await expect(page.getByRole('link', { name: 'Descargar Taller Flow Device Agent', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Descargar TallerFlow Device Agent', exact: true })).toBeVisible()
 })
 
 test('refreshes on focus and never proposes a downgrade', async ({ page }) => {
   const state = await setup(page, '1.0.9')
   await page.goto('/herramientas-dispositivo')
-  await expect(page.getByRole('link', { name: 'Descargar Taller Flow Device Agent', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Descargar TallerFlow Device Agent', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Actualizar', exact: true })).toHaveCount(0)
   state.release = release('1.0.10')
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
@@ -84,7 +84,7 @@ test('polls each minute and removes the timer when leaving Device Tools', async 
   await page.clock.install()
   const state = await setup(page)
   await page.goto('/herramientas-dispositivo')
-  await expect(page.getByRole('link', { name: 'Descargar Taller Flow Device Agent', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Descargar TallerFlow Device Agent', exact: true })).toBeVisible()
   state.release = release('1.0.2')
   await page.clock.fastForward(60000)
   await expect(page.getByText('Nueva versión disponible: 1.0.2', { exact: true })).toBeVisible()

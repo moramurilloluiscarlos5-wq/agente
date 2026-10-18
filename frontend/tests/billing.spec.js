@@ -4,8 +4,8 @@ import { loadEnv } from 'vite'
 const env = loadEnv('development', process.cwd(), 'VITE_')
 const owner = { id: '11111111-1111-4111-8111-111111111111', full_name: 'Carlos Martínez', role: 'OWNER', is_active: true, workshop_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', workshop: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Taller Centro', status: 'ACTIVE' }, workspace_access: 'ACTIVE', permissions: ['*'], permissionsSource: 'rbac' }
 const plans = [
-  { code: 'base_monthly', name: 'Taller Flow Mensual', price_cents: 2900, currency: 'usd', interval: 'month' },
-  { code: 'base_yearly', name: 'Taller Flow Anual', price_cents: 29000, currency: 'usd', interval: 'year' },
+  { code: 'base_monthly', name: 'TallerFlow Mensual', price_cents: 2900, currency: 'usd', interval: 'month' },
+  { code: 'base_yearly', name: 'TallerFlow Anual', price_cents: 29000, currency: 'usd', interval: 'year' },
 ]
 
 async function setup(page, { dashboard = 'ok', subscription } = {}) {
@@ -24,20 +24,20 @@ async function setup(page, { dashboard = 'ok', subscription } = {}) {
     if (path === '/billing/plans') return route.fulfill({ json: { data: plans, trial_days: 14 } })
     if (path === '/billing/subscription') return route.fulfill({ json: { data: subscription } })
     if (path === '/billing/checkout') return route.fulfill({ json: { data: { url: '/precios?checkout=cancelled' } } })
-    if (path === '/dashboard' && dashboard === 'licenseRequired') return route.fulfill({ status: 402, json: { code: 'LICENSE_REQUIRED', reason: 'trial_expired', message: 'Tu periodo de prueba terminó. Elige un plan para seguir usando Taller Flow.' } })
+    if (path === '/dashboard' && dashboard === 'licenseRequired') return route.fulfill({ status: 402, json: { code: 'LICENSE_REQUIRED', reason: 'trial_expired', message: 'Tu periodo de prueba terminó. Elige un plan para seguir usando TallerFlow.' } })
     return route.fulfill({ json: { data: [] } })
   })
   return calls
 }
 
-const activeSubscription = { status: 'active', plan: { name: 'Taller Flow Mensual' }, current_period_end: '2030-01-15T00:00:00Z', trial_end: null, cancel_at_period_end: false, has_billing_account: true, license: { allowed: true, reason: 'active', grace: false, grace_until: null } }
+const activeSubscription = { status: 'active', plan: { name: 'TallerFlow Mensual' }, current_period_end: '2030-01-15T00:00:00Z', trial_end: null, cancel_at_period_end: false, has_billing_account: true, license: { allowed: true, reason: 'active', grace: false, grace_until: null } }
 
 test('/precios es público, muestra planes y "Comprar" lleva al registro sin sesión', async ({ page }) => {
   await page.route(/\/api\//, (route) => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/billing/plans') ? { data: plans, trial_days: 14 } : { data: [] } }))
   await page.goto('/precios')
   await expect(page.getByRole('heading', { name: 'Precios simples para tu taller' })).toBeVisible()
-  await expect(page.getByRole('article', { name: 'Taller Flow Mensual' })).toContainText('$29')
-  await expect(page.getByRole('article', { name: 'Taller Flow Anual' })).toContainText('Ahorra')
+  await expect(page.getByRole('article', { name: 'TallerFlow Mensual' })).toContainText('$29')
+  await expect(page.getByRole('article', { name: 'TallerFlow Anual' })).toContainText('Ahorra')
   await page.getByRole('button', { name: 'Comprar' }).first().click()
   await expect(page).toHaveURL(/\/registro/)
 })
@@ -64,7 +64,7 @@ test('configuración muestra plan, estado, próximo cobro y gestionar pago', asy
   await setup(page, { subscription: activeSubscription })
   await page.goto('/configuracion')
   const card = page.getByRole('region', { name: 'Estado de la licencia' })
-  await expect(card.getByTestId('license-plan')).toHaveText('Taller Flow Mensual')
+  await expect(card.getByTestId('license-plan')).toHaveText('TallerFlow Mensual')
   await expect(card.getByTestId('license-status')).toHaveText('Activa')
   await expect(card.getByTestId('license-next')).toContainText('2030')
   await expect(card.getByRole('button', { name: 'Gestionar pago' })).toBeVisible()

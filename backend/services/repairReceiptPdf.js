@@ -43,7 +43,7 @@ export async function generateRepairReceiptPdf({ order, history = [], qrPng = nu
     doc.on('error', reject)
 
     doc.font('Helvetica-Bold').fontSize(20).fillColor(NAVY).text(workshopName)
-    doc.font('Helvetica').fontSize(11).fillColor(ACCENT).text('Powered by Taller Flow')
+    doc.font('Helvetica').fontSize(11).fillColor(ACCENT).text('Powered by TallerFlow')
     doc.moveDown(0.2)
     doc.font('Helvetica-Bold').fontSize(14).fillColor(NAVY).text('COMPROBANTE DE RECEPCIÓN')
     doc.font('Helvetica').fontSize(10).fillColor(MUTED).text(`Orden ${order?.order_number ?? ''} · Recibido: ${formatDate(order?.received_at)}`)

@@ -5,7 +5,7 @@ import Stripe from 'stripe'
 import { createFakeDb } from './helpers/fakeBillingDb.js'
 import { createBillingRouter, createBillingWebhookHandler } from '../routes/billing.routes.js'
 import { createLicenseMiddleware, invalidateLicenseCache } from '../middleware/license.js'
-import { assertBillingConfig, loadBillingConfig } from '../config/billing.js'
+import { assertBillingConfig, loadBillingConfig, licensingEnabled } from '../config/billing.js'
 import { evaluateLicense, ensureTrialSubscription, mapStripeStatus } from '../services/billingService.js'
 
 const WORKSHOP = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -71,7 +71,25 @@ test('configuración: valida variables y no filtra valores', () => {
   assert.equal(loadBillingConfig({ ...ENV, TRIAL_DAYS: 'abc' }).ok, false)
 })
 
-// ─── Decisión de licencia ───────────────────────────────────────────────
+test('configuración: LICENSING_ENABLED=false solo se apaga con "false"', () => {
+  assert.equal(licensingEnabled({}), true)
+  assert.equal(licensingEnabled({ LICENSING_ENABLED: 'true' }), true)
+  assert.equal(licensingEnabled({ LICENSING_ENABLED: ' FALSE ' }), false)
+})
+
+test('middleware: con licencias apagadas deja pasar sin consultar la BD', async () => {
+  const previous = process.env.LICENSING_ENABLED
+  process.env.LICENSING_ENABLED = 'false'
+  try {
+    const broken = { from: () => { throw new Error('no debe consultarse') } }
+    assert.equal((await runLicense(broken, { role: 'OWNER', workshop_id: WORKSHOP })).nextCalled, true)
+  } finally {
+    if (previous === undefined) delete process.env.LICENSING_ENABLED
+    else process.env.LICENSING_ENABLED = previous
+  }
+})
+
+// ─── Licencia: decisión ─────────────────────────────────────────────────
 test('licencia: activo, prueba, vencido, gracia y sin suscripción', () => {
   const now = Date.now()
   const iso = (ms) => new Date(ms).toISOString()

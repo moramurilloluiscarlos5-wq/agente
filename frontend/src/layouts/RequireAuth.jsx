@@ -6,21 +6,21 @@ import { workspaceDestination } from '../utils/workspace.js'
 export default function RequireAuth() {
   const { status, profile, error, retryConnection } = useAuth()
   const { pathname } = useLocation()
-  if (status === 'loading') return <div role="status" className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">Cargando sesión…</div>
+  if (status === 'loading') return <div role="status" className="flex min-h-screen items-center justify-center bg-[var(--tf-surface-sunken)] text-[var(--tf-text-muted)]">Cargando sesión…</div>
   // API inalcanzable pero con sesión preservada: NO redirigir a /login.
-  // Mostrar el fallo real (servidor de Taller Flow) y permitir reintentar.
+  // Mostrar el fallo real (servidor de TallerFlow) y permitir reintentar.
   if (status === 'offline') {
     return (
-      <div role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-950 px-6 text-center text-slate-200">
-        <CloudOff size={36} className="text-amber-300" />
-        <h1 className="text-xl font-semibold">Taller Flow no pudo conectarse con el servidor.</h1>
-        <p className="max-w-md text-sm leading-6 text-slate-400">
+      <div role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--tf-surface-sunken)] px-6 text-center text-[var(--tf-text)]">
+        <CloudOff size={36} className="text-[#fcd34d]" />
+        <h1 className="text-xl font-semibold">TallerFlow no pudo conectarse con el servidor.</h1>
+        <p className="max-w-md text-sm leading-6 text-[var(--tf-text-muted)]">
           Tu sesión está a salvo. Revisa tu conexión; en cuanto el servidor responda podrás continuar.
         </p>
         <button type="button" onClick={retryConnection} className="ct-btn ct-btn-primary">
           <RefreshCw size={15} /> Reintentar
         </button>
-        {error && <p className="max-w-md text-xs text-slate-500">{error}</p>}
+        {error && <p className="max-w-md text-xs text-[var(--tf-text-subtle)]">{error}</p>}
       </div>
     )
   }

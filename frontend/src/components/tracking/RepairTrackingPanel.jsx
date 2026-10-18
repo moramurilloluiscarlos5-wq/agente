@@ -11,9 +11,9 @@ export default function RepairTrackingPanel({ order }) {
   if (!order?.order_number) return null
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+    <section className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 font-semibold"><QrCode size={18} className="text-cyan-400" /> Seguimiento público y comprobante</h2>
+        <h2 className="flex items-center gap-2 font-semibold"><QrCode size={18} className="text-[var(--tf-link)]" /> Seguimiento público y comprobante</h2>
         <TrackingActions
           orderNumber={order.order_number}
           snapshot={snapshot}
@@ -22,7 +22,7 @@ export default function RepairTrackingPanel({ order }) {
           onQr={() => setQrOpen(true)}
         />
       </div>
-      {loading && <p className="text-sm text-slate-400">Cargando enlace de seguimiento…</p>}
+      {loading && <p className="text-sm text-[var(--tf-text-muted)]">Cargando enlace de seguimiento…</p>}
       {qrOpen && snapshot?.trackingUrl && (
         <QrModal orderNumber={snapshot.orderNumber} trackingUrl={snapshot.trackingUrl} onClose={() => setQrOpen(false)} />
       )}

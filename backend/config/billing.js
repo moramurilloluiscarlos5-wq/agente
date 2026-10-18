@@ -16,6 +16,12 @@ function intInRange(value, fallback, min, max) {
   return { value: parsed }
 }
 
+// Interruptor explícito para operar sin licencias (p. ej. antes de configurar Stripe).
+// Por defecto las licencias están activas; solo LICENSING_ENABLED=false las apaga.
+export function licensingEnabled(env = process.env) {
+  return String(env.LICENSING_ENABLED ?? '').trim().toLowerCase() !== 'false'
+}
+
 // Días de gracia de past_due. Se usa también cuando billing no está completo.
 export function graceDaysFromEnv(env = process.env) {
   const parsed = intInRange(env.BILLING_GRACE_DAYS, 7, 0, 60)

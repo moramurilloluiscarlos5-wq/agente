@@ -84,10 +84,10 @@ test('móvil conserva las etiquetas tras colapsar el menú y respeta movimiento 
   await page.screenshot({ path: testInfo.outputPath('staff-mobile.png'), fullPage: true, animations: 'disabled' })
 })
 
-test('la identidad de Taller Flow se muestra en el acceso', async ({ page }, testInfo) => {
+test('la identidad de TallerFlow se muestra en el acceso', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/login')
   await expect(page.getByRole('heading', { name: 'Iniciar sesión', exact: true })).toBeVisible()
-  await expect(page).toHaveTitle('Iniciar sesión | Taller Flow')
+  await expect(page).toHaveTitle('Iniciar sesión | TallerFlow')
   await page.screenshot({ path: testInfo.outputPath('login-desktop.png'), fullPage: true, animations: 'disabled' })
 })

@@ -7,7 +7,7 @@ const HASH = /^[a-f0-9]{64}$/i
 const API = 'https://api.github.com'
 const EXTERNAL_HOSTS = new Set(['www.mediafire.com', 'mediafire.com'])
 
-function unavailable(message = 'No se pudo verificar la publicación oficial de Taller Flow Device Agent. Intenta nuevamente.') {
+function unavailable(message = 'No se pudo verificar la publicación oficial de TallerFlow Device Agent. Intenta nuevamente.') {
   return Object.assign(new Error(message), { status: 503, publicMessage: message })
 }
 
@@ -99,7 +99,7 @@ export function createDeviceAgentReleaseResolver({
       if (page === 10) throw unavailable()
     }
     const release = releases.sort(compareVersions)[0]
-    if (!release) throw unavailable('No hay una publicación oficial estable de Taller Flow Device Agent disponible.')
+    if (!release) throw unavailable('No hay una publicación oficial estable de TallerFlow Device Agent disponible.')
     if (!Array.isArray(release.assets) || !release.published_at || !Number.isFinite(Date.parse(release.published_at))) throw unavailable()
     const version = release.tag_name.match(TAG)[1]
     const releaseUrl = officialUrl(release.html_url, repository, `releases/tag/${release.tag_name}`)

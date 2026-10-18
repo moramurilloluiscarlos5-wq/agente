@@ -1,72 +1,211 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Activity, ArrowUpRight, CheckCircle2, Clock3, PackageSearch, Plus, RefreshCw, Wrench } from 'lucide-react'
-import RecentRepairsTable from '../components/dashboard/RecentRepairsTable.jsx'
-import UpcomingDeliveries from '../components/dashboard/UpcomingDeliveries.jsx'
-import RecentCustomers from '../components/dashboard/RecentCustomers.jsx'
+import { AlertTriangle, CalendarClock, Plus, RefreshCw, UserPlus, Wrench } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader.jsx'
+import StatusBadge from '../components/ui/StatusBadge.jsx'
+import { Alert, Button, Card, EmptyState, Skeleton } from '../components/ui/DesignSystem.jsx'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
+import { friendlyError } from '../utils/errors.js'
+import { formatCurrency, formatDate, formatRelative } from '../utils/formatters.js'
 
-const canCreateRoles = ['OWNER', 'ADMINISTRADOR', 'RECEPCION']
+const CAN_CREATE = ['OWNER', 'ADMINISTRADOR', 'RECEPCION', 'SUPER_ADMIN']
+
+// Etapas del flujo de una reparación, en el orden en que avanza un equipo.
+function flowSteps(stats) {
+  return [
+    { key: 'received', label: 'Recibidos', status: 'recibido', count: stats.received ?? 0, tone: 'received', hint: 'Esperan diagnóstico' },
+    { key: 'diagnosis', label: 'Diagnóstico', status: 'diagnostico', count: (stats.diagnostics ?? 0) + (stats.awaitingApproval ?? 0), tone: 'diagnosis', hint: stats.awaitingApproval ? `${stats.awaitingApproval} esperan autorización` : 'En revisión' },
+    { key: 'repair', label: 'En reparación', status: 'en_reparacion', count: (stats.inRepair ?? 0) + (stats.testing ?? 0), tone: 'repair', hint: stats.testing ? `${stats.testing} en pruebas` : 'Trabajo en curso' },
+    { key: 'parts', label: 'Esperando refacción', status: 'esperando_refaccion', count: stats.waitingParts ?? 0, tone: 'parts', hint: 'Pendientes de pieza' },
+    { key: 'ready', label: 'Listos', status: 'listo_para_entregar', count: stats.ready ?? 0, tone: 'ready', hint: 'Avisar al cliente' },
+    { key: 'delivered', label: 'Entregados', status: 'entregado', count: stats.deliveredLast30Days ?? stats.delivered ?? 0, tone: 'delivered', hint: stats.deliveredLast30Days == null ? 'En total' : 'Últimos 30 días' },
+  ]
+}
+
+function greeting() {
+  const hour = new Date().getHours()
+  return hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
+}
+
+function WorkshopFlow({ stats }) {
+  const steps = flowSteps(stats)
+  const active = steps.slice(0, 5)
+  const activeTotal = active.reduce((total, step) => total + step.count, 0)
+  return (
+    <Card title="Flujo del taller" description="Dónde están hoy los equipos que recibiste. Toca una etapa para ver sus órdenes." bodyClassName={null}>
+      <div className="tf-flow" style={{ '--tf-flow-steps': steps.length }}>
+        {steps.map((step) => (
+          <Link key={step.key} to={`/reparaciones?status=${step.status}`} className={`tf-flow-step tf-tone-${step.tone} ${step.count ? '' : 'is-zero'}`} aria-label={`${step.label}: ${step.count}. ${step.hint}`}>
+            <span className="tf-flow-step-label"><span className="tf-swatch" aria-hidden="true" />{step.label}</span>
+            <span className="tf-flow-step-count">{step.count}</span>
+            <span className="tf-flow-step-hint">{step.hint}</span>
+          </Link>
+        ))}
+      </div>
+      {activeTotal > 0 && (
+        <div className="tf-flow-bar" role="img" aria-label={`Distribución de ${activeTotal} órdenes activas por etapa`}>
+          {active.filter((step) => step.count).map((step) => <span key={step.key} className={`tf-tone-${step.tone}`} style={{ flexGrow: step.count, background: 'var(--tone)' }} />)}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function Kpi({ label, value, hint, tone }) {
+  return (
+    <article className="ct-kpi">
+      <p className="ct-kpi-label flex items-center gap-1.5">{tone === 'warning' && <AlertTriangle size={14} className="text-[var(--tf-warning)]" aria-hidden="true" />}{label}</p>
+      <p className="ct-kpi-value">{value}</p>
+      {hint && <p className="ct-kpi-hint">{hint}</p>}
+    </article>
+  )
+}
+
+function revenueHint(revenue) {
+  if (!revenue) return null
+  const { currentMonth, previousMonth, pendingCurrentMonth } = revenue
+  const parts = []
+  if (previousMonth > 0) {
+    const change = Math.round(((currentMonth - previousMonth) / previousMonth) * 100)
+    parts.push(`${change >= 0 ? '+' : ''}${change}% frente al mes anterior`)
+  } else parts.push('Sin cobros el mes anterior')
+  if (pendingCurrentMonth > 0) parts.push(`${formatCurrency(pendingCurrentMonth)} por cobrar`)
+  return parts.join('. ')
+}
+
+function DashboardSkeleton() {
+  return (
+    <div role="status" aria-label="Cargando el panel" className="space-y-5">
+      <Skeleton className="h-[9.5rem] w-full rounded-xl" />
+      <div className="ct-kpi-grid">{[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-[6.5rem] rounded-xl" />)}</div>
+      <div className="ct-dashboard-grid"><Skeleton className="h-72 rounded-xl" /><Skeleton className="h-72 rounded-xl" /></div>
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const { profile } = useAuth()
   const [data, setData] = useState(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [revision, setRevision] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     api.get('/dashboard').then((result) => {
-      if (!cancelled) { setData(result.data); setError('') }
+      if (!cancelled) { setData(result.data); setError(null) }
     }).catch((err) => {
-      if (!cancelled) setError(err.message)
+      if (!cancelled) setError(err)
     }).finally(() => {
       if (!cancelled) setLoading(false)
     })
     return () => { cancelled = true }
   }, [revision])
 
-  const stats = data ? [
-    { label: 'Pendientes', value: data.stats.pending, icon: Clock3, hint: 'Por recibir diagnóstico', tone: 'amber' },
-    { label: 'En reparación', value: data.stats.inRepair, icon: Wrench, hint: 'Trabajo en curso', tone: 'blue' },
-    { label: 'Esperando refacción', value: data.stats.waitingParts, icon: PackageSearch, hint: 'Requieren seguimiento', tone: 'purple' },
-    { label: 'Listos para entregar', value: data.stats.ready, icon: CheckCircle2, hint: 'Próxima entrega', tone: 'mint' },
-  ] : []
-
-  const welcome = profile?.role === 'SUPER_ADMIN'
-    ? 'Administración de la plataforma'
-    : profile?.role === 'TECNICO'
-      ? 'Resumen de tus reparaciones asignadas'
-      : `Resumen de ${profile?.workshop?.name ?? 'tu taller'}`
+  const reload = () => { setLoading(true); setError(null); setRevision((value) => value + 1) }
+  const firstName = profile?.full_name?.trim().split(/\s+/)[0]
+  const isTechnician = profile?.role === 'TECNICO'
+  const hello = `${greeting()}${firstName ? `, ${firstName}` : ''}.`
+  const description = profile?.role === 'SUPER_ADMIN'
+    ? <><span>Administración de la plataforma</span>. {hello}</>
+    : isTechnician
+      ? <><span>Resumen de tus reparaciones asignadas</span>. {hello}</>
+      : <><span>{`Resumen de ${profile?.workshop?.name ?? 'tu taller'}`}</span>. {hello}</>
+  const stats = data?.stats
 
   return (
-    <div className="ct-page space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Panel de control"
-        description={welcome}
+        description={description}
         actions={<>
-          <button type="button" onClick={() => { setLoading(true); setError(''); setRevision((value) => value + 1) }} disabled={loading} className="ct-btn ct-btn-secondary"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} />Actualizar</button>
-          {canCreateRoles.includes(profile?.role) && <Link to="/reparaciones/nueva" className="ct-btn ct-btn-primary"><Plus size={16} />Nueva reparación</Link>}
+          <Button variant="ghost" icon={RefreshCw} onClick={reload} disabled={loading} aria-label="Actualizar panel" className={loading ? '[&_svg]:animate-spin' : ''}>Actualizar</Button>
+          {CAN_CREATE.includes(profile?.role) && <Link to="/reparaciones/nueva" className="ct-btn ct-btn-primary md:hidden"><Plus size={15} aria-hidden="true" />Nueva reparación</Link>}
         </>}
       />
 
-      <section className="tf-dashboard-hero">
-        <div className="tf-hero-copy"><p className="tf-eyebrow"><span /> TU TALLER, EN MOVIMIENTO</p><h2>Todo listo para<br /><span>un gran día de trabajo.</span></h2><p>Hola, {profile?.full_name?.trim().split(/\s+/)[0] || 'equipo'}. Cada reparación cuenta. Aquí tienes el pulso de tu taller.</p><Link to="/reparaciones" className="tf-hero-link">Ver reparaciones <ArrowUpRight size={17} /></Link></div>
-        <div className="tf-flow-art" aria-hidden="true"><div className="tf-flow-orbit" /><div className="tf-flow-orbit tf-flow-orbit-inner" /><div className="tf-flow-core"><Wrench size={34} strokeWidth={1.4} /></div><span className="tf-flow-tag tf-flow-tag-top"><Activity size={16} /> Diagnóstico</span><span className="tf-flow-tag tf-flow-tag-bottom"><CheckCircle2 size={16} /> Entrega</span><span className="tf-flow-dot" /></div>
-      </section>
+      {error && <Alert tone="error" title="No pudimos cargar el panel." action={<Button size="sm" onClick={reload}>Reintentar</Button>}>{friendlyError(error, 'cargar el panel')}</Alert>}
+      {loading && !data && !error && <DashboardSkeleton />}
 
-      {error && <div role="alert" className="rounded-lg border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200"><p>No pudimos cargar el resumen del taller.</p><p className="mt-1 text-xs text-red-200/70">{error}</p><button type="button" onClick={() => { setLoading(true); setError(''); setRevision((value) => value + 1) }} className="mt-3 ct-btn ct-btn-secondary">Reintentar</button></div>}
-      {loading && !data && <div role="status" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[1, 2, 3, 4].map((item) => <div key={item} className="h-[6.75rem] animate-pulse rounded-lg border border-slate-800/70 bg-slate-900/50" />)}</div>}
-      {!loading && !error && data && <>
-        <div className="ct-kpi-grid">{stats.map(({ label, value, icon: Icon, hint, tone }, index) => <article key={label} className={`ct-kpi tf-kpi tf-tone-${tone}`} style={{ '--tf-order': index }}><div className="flex items-start justify-between gap-3"><p className="ct-kpi-label">{label}</p><span className="tf-kpi-icon"><Icon size={18} strokeWidth={1.8} /></span></div><p className="ct-kpi-value">{value}</p><p className="ct-kpi-hint"><span className="tf-status-dot" />{hint}</p></article>)}</div>
-        <div className="ct-dashboard-grid">
-          <section className="ct-surface-raised p-5"><div className="ct-section-heading"><h2>Entregas programadas</h2><Activity size={17} className="text-slate-500" /></div><div className="pt-4"><UpcomingDeliveries deliveries={data.upcomingDeliveries} /></div></section>
-          <section className="ct-surface-raised p-5"><div className="ct-section-heading"><h2>Clientes recientes</h2><Link to="/clientes">Ver clientes</Link></div><div className="pt-4"><RecentCustomers customers={data.recentCustomers} /></div></section>
+      {data && stats && <>
+        <WorkshopFlow stats={stats} />
+
+        <div className="ct-kpi-grid">
+          <Kpi label="Órdenes activas" value={stats.pending ?? 0} hint="Todo lo que no se ha entregado ni cancelado" />
+          <Kpi label="Entregas atrasadas" value={stats.overdue ?? 0} tone={stats.overdue ? 'warning' : undefined} hint={stats.overdue ? 'Pasaron su fecha de entrega' : 'Todo dentro de fecha'} />
+          {data.revenue
+            ? <Kpi label="Cobrado este mes" value={formatCurrency(data.revenue.currentMonth)} hint={revenueHint(data.revenue)} />
+            : <Kpi label="Listos para entregar" value={stats.ready ?? 0} hint="Avisa a estos clientes" />}
+          <Kpi label="Entregados en 30 días" value={stats.deliveredLast30Days ?? stats.delivered ?? 0} hint="Equipos devueltos a sus dueños" />
         </div>
-        <section className="ct-surface-raised p-5"><div className="ct-section-heading"><h2>Reparaciones recientes</h2><Link to="/reparaciones">Ver todas</Link></div><div className="pt-4"><RecentRepairsTable repairs={data.recentRepairs} /></div></section>
+
+        <div className="ct-dashboard-grid">
+          <Card title={isTechnician ? 'Tus reparaciones recientes' : 'Reparaciones recientes'} actions={<Link to="/reparaciones" className="tf-link">Ver todas</Link>} bodyClassName={null}>
+            {data.recentRepairs?.length ? (
+              <div className="ct-table-shell">
+                <table className="ct-table min-w-[36rem]">
+                  <thead><tr><th scope="col">Orden</th><th scope="col">Cliente</th><th scope="col">Equipo</th><th scope="col">Estado</th><th scope="col">Recibido</th></tr></thead>
+                  <tbody>
+                    {data.recentRepairs.map((repair) => (
+                      <tr key={repair.orderNumber}>
+                        <td><Link to={`/reparaciones/${repair.orderNumber}`} className="tf-link tf-num">{repair.orderNumber}</Link></td>
+                        <td className="tf-cell-strong">{repair.customer || '—'}</td>
+                        <td>{repair.device || '—'}</td>
+                        <td><StatusBadge status={repair.status} /></td>
+                        <td className="whitespace-nowrap">{formatDate(repair.receivedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState icon={Wrench} title="Aún no hay reparaciones" description="Cuando recibas un equipo, regístralo aquí para darle seguimiento hasta la entrega."
+                action={CAN_CREATE.includes(profile?.role) && <Link to="/reparaciones/nueva" className="ct-btn ct-btn-primary"><Plus size={15} aria-hidden="true" />Registrar la primera</Link>} />
+            )}
+          </Card>
+
+          <div className="space-y-4">
+            <Card title="Próximas entregas" description="Órdenes activas con fecha prometida" bodyClassName={null}>
+              {data.upcomingDeliveries?.length ? (
+                <ul className="tf-list">
+                  {data.upcomingDeliveries.map((delivery) => {
+                    const late = delivery.estDelivery && new Date(delivery.estDelivery) < new Date()
+                    return (
+                      <li key={delivery.orderNumber} className="tf-list-row">
+                        <div className="min-w-0">
+                          <Link to={`/reparaciones/${delivery.orderNumber}`} className="tf-link tf-num">{delivery.orderNumber}</Link>
+                          <p className="truncate text-xs text-[var(--tf-text-subtle)]">{[delivery.device, delivery.customer].filter(Boolean).join(', ')}</p>
+                        </div>
+                        <span className={`flex shrink-0 items-center gap-1.5 text-xs ${late ? 'text-[var(--tf-warning)]' : 'text-[var(--tf-text-muted)]'}`}>
+                          <CalendarClock size={13} aria-hidden="true" />{late ? 'Atrasada, ' : ''}{formatDate(delivery.estDelivery)}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : <EmptyState icon={CalendarClock} title="Sin entregas programadas" description="Agrega una fecha estimada al crear o editar una orden para verla aquí." className="!py-8" />}
+            </Card>
+
+            {!isTechnician && (
+              <Card title="Clientes recientes" actions={<Link to="/clientes" className="tf-link">Ver clientes</Link>} bodyClassName={null}>
+                {data.recentCustomers?.length ? (
+                  <ul className="tf-list">
+                    {data.recentCustomers.map((customer) => (
+                      <li key={customer.id} className="tf-list-row">
+                        <div className="min-w-0">
+                          <p className="truncate text-[0.8125rem] font-medium text-[var(--tf-text)]">{customer.name}</p>
+                          <p className="truncate text-xs text-[var(--tf-text-subtle)]">{customer.phone || 'Sin teléfono'}</p>
+                        </div>
+                        <span className="shrink-0 text-xs text-[var(--tf-text-subtle)]">{formatRelative(customer.createdAt)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <EmptyState icon={UserPlus} title="Sin clientes todavía" description="Los clientes se registran al crear su primera orden." className="!py-8" />}
+              </Card>
+            )}
+          </div>
+        </div>
       </>}
     </div>
   )

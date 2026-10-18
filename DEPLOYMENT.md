@@ -32,6 +32,7 @@ Configurar antes del build:
 | `WHATSAPP_SIMULATE` | `false` en producción |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `APP_PUBLIC_URL` | **Obligatorias en producción**: sin ellas el backend no arranca y el mensaje indica cuáles faltan. Ver README → Licencias |
 | `TRIAL_DAYS`, `BILLING_GRACE_DAYS` | Opcionales (14 y 7 por defecto) |
+| `LICENSING_ENABLED` | `false` apaga las licencias (no exige Stripe ni bloquea talleres). Úsalo hasta aplicar la migración 019 y configurar Stripe; luego bórrala o ponla en `true` |
 | `TRUST_PROXY` | Opcional. En producción vale `1` por defecto (proxy de Railway) para que los límites de peticiones y la auditoría usen la IP real del usuario |
 | `DEVICE_AGENT_GITHUB_REPOSITORY` | `propietario/repositorio` con las releases firmadas del agente. Tiene prioridad sobre cualquier descarga externa |
 | `DEVICE_AGENT_EXTERNAL_RELEASE_URL` + `DEVICE_AGENT_EXTERNAL_VERSION` | Respaldo temporal sin firma (Mediafire). Solo se usa si no hay repositorio o si GitHub todavía no publica una release firmada válida. Ya no existe un valor por defecto en el código |

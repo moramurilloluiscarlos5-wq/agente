@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '../config/supabase.js'
-import { graceDaysFromEnv } from '../config/billing.js'
+import { graceDaysFromEnv, licensingEnabled } from '../config/billing.js'
 import { evaluateLicense, licenseMessage } from '../services/billingService.js'
 
 const cache = new Map()
@@ -13,6 +13,7 @@ export function invalidateLicenseCache(workshopId) {
 // Va después de loadProfile (necesita req.profile). Falla cerrado ante errores de BD.
 export function createLicenseMiddleware({ db = supabaseAdmin, graceDays = () => graceDaysFromEnv(), ttlMs = 15_000, now = () => Date.now() } = {}) {
   return async function requireLicense(req, res, next) {
+    if (!licensingEnabled()) return next()
     try {
       const profile = req.profile
       if (!profile) return res.status(401).json({ message: 'No autorizado' })

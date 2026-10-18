@@ -2,7 +2,7 @@
 
 Sistema interno de gestión para servicio técnico de celulares: clientes, dispositivos, reparaciones, diagnósticos, cotizaciones, inventario, pagos, garantías, reportes y asistente de IA.
 
-> **Estado (octubre 2026):** en producción en Railway. Multi-taller (OWNER, ADMINISTRADOR, TÉCNICO, RECEPCIÓN, CAJERO y SUPER_ADMIN), reparaciones, seguimiento público con QR/PDF, cotizaciones, inventario, pagos, garantías, reportes, IA, WhatsApp y Device Tools (ADB/Fastboot). La interfaz se presenta como **FixCore**. Ver `AUDITORIA_FASES.md` y `DEPLOYMENT.md`.
+> **Estado (octubre 2026):** en producción en Railway. Multi-taller (OWNER, ADMINISTRADOR, TÉCNICO, RECEPCIÓN, CAJERO y SUPER_ADMIN), reparaciones, seguimiento público con QR/PDF, cotizaciones, inventario, pagos, garantías, reportes, IA, WhatsApp y Device Tools (ADB/Fastboot). La interfaz se presenta como **TallerFlow**. Ver `AUDITORIA_FASES.md` y `DEPLOYMENT.md`.
 
 ---
 

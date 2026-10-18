@@ -35,7 +35,7 @@ const Pricing = lazy(() => import('./pages/Pricing.jsx'))
 
 export default function App() {
   return (
-    <Suspense fallback={<p role="status" className="p-6 text-sm text-slate-400">Cargando página…</p>}>
+    <Suspense fallback={<p role="status" className="p-6 text-sm text-[var(--tf-text-muted)]">Cargando página…</p>}>
     <LicenseRedirect />
     <Routes>
       {/* Público */}

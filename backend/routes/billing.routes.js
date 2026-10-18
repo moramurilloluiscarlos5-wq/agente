@@ -5,7 +5,7 @@ import { requireAuth, loadProfileForSession } from '../middleware/auth.js'
 import { requireRole } from '../middleware/roles.js'
 import { rateLimit } from '../middleware/security.js'
 import { invalidateLicenseCache } from '../middleware/license.js'
-import { loadBillingConfig, trialDaysFromEnv, graceDaysFromEnv } from '../config/billing.js'
+import { loadBillingConfig, trialDaysFromEnv, graceDaysFromEnv, licensingEnabled } from '../config/billing.js'
 import { createBillingProcessor, getWorkshopSubscription, serializeSubscription } from '../services/billingService.js'
 import { auditSafe, writeAudit } from '../services/auditService.js'
 
@@ -50,6 +50,7 @@ export function createBillingRouter({
 
   router.get('/plans', async (_req, res, next) => {
     try {
+      if (!licensingEnabled(env())) return res.json({ data: [], trial_days: 0, disabled: true })
       const { data, error } = await db.from('plans').select('code,name,price_cents,currency,interval').eq('active', true).order('price_cents')
       if (error) throw error
       res.json({ data: (data ?? []).map(publicPlan), trial_days: trialDaysFromEnv(env()) })
@@ -59,6 +60,7 @@ export function createBillingRouter({
   router.get('/subscription', ...authenticate, requireRole('ADMINISTRADOR'), async (req, res, next) => {
     try {
       const workshopId = req.profile.workshop_id
+      if (!licensingEnabled(env())) return res.json({ data: { disabled: true, status: null, license: { allowed: true, reason: 'disabled', grace: false, grace_until: null } } })
       if (!workshopId) return res.status(403).json({ code: 'NO_WORKSHOP', message: 'Tu cuenta no tiene un taller asignado.' })
       const row = await getWorkshopSubscription(db, workshopId)
       res.json({ data: serializeSubscription(row, { graceDays: graceDaysFromEnv(env()) }) })
@@ -67,6 +69,7 @@ export function createBillingRouter({
 
   router.post('/checkout', ...authenticate, requireRole('ADMINISTRADOR'), checkoutLimiter, async (req, res, next) => {
     try {
+      if (!licensingEnabled(env())) return res.status(503).json({ code: 'BILLING_NOT_CONFIGURED', message: 'Las licencias están desactivadas en este entorno.' })
       const profile = req.profile
       // El taller sale de la sesión; nada del body decide a quién se cobra.
       const workshopId = profile.workshop_id

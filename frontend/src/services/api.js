@@ -26,8 +26,8 @@ export class ApiError extends Error {
 
 function friendlyNetworkError(timedOut) {
   return timedOut
-    ? 'El servidor de Taller Flow tardó demasiado en responder. Inténtalo de nuevo en unos segundos.'
-    : 'Taller Flow no pudo conectarse con el servidor. Revisa tu conexión e inténtalo de nuevo.'
+    ? 'El servidor de TallerFlow tardó demasiado en responder. Inténtalo de nuevo en unos segundos.'
+    : 'TallerFlow no pudo conectarse con el servidor. Revisa tu conexión e inténtalo de nuevo.'
 }
 
 // Obtiene el JWT actual de la sesión de Supabase para adjuntarlo al backend.

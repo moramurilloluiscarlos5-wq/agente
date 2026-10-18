@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search, Users, UserCheck, Wrench, X } from 'lucide-react'
+import { Plus, Users, X } from 'lucide-react'
+import PageHeader from '../components/ui/PageHeader.jsx'
+import { Alert, Badge, Button, ConfirmDialog, DataCard, EmptyState, Input, SearchField, Select, TableSkeleton } from '../components/ui/DesignSystem.jsx'
+import { useToast } from '../hooks/useToast.js'
+import { friendlyError } from '../utils/errors.js'
+import { formatRelative, getInitials } from '../utils/formatters.js'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 
 const ROLES = { ADMINISTRADOR: 'Administrador', TECNICO: 'Técnico', RECEPCION: 'Recepción', CAJERO: 'Cajero' }
 const EMPTY = { full_name: '', email: '', password: '', phone: '', role: 'RECEPCION' }
-const fieldClass = 'ct-input'
+const fieldClass = 'ct-select'
 
 export default function Staff() {
   const { profile } = useAuth()
@@ -17,7 +22,8 @@ export default function Staff() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
+  const [confirmUser, setConfirmUser] = useState(null)
+  const toast = useToast()
   const [revision, setRevision] = useState(0)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -34,69 +40,79 @@ export default function Staff() {
   async function createUser(event) {
     event.preventDefault()
     if (busy) return
-    setBusy('create'); setError(''); setMessage('')
+    setBusy('create'); setError('')
     try {
       const { data } = await api.post('/auth/users', form)
       setUsers((previous) => [data, ...previous])
       setForm(EMPTY); setShowForm(false)
-      setMessage('Usuario creado. Ya puede iniciar sesión con el correo y la contraseña indicados.')
-    } catch (err) { setError(err.message) }
+      toast.success(`${data.full_name} ya puede iniciar sesión con el correo y la contraseña que definiste.`)
+    } catch (err) { setError(friendlyError(err, 'crear la cuenta')) }
     finally { setBusy('') }
   }
 
   async function updateUser(user, action, body) {
     if (busy) return
-    if (action === 'status' && !body.is_active && !window.confirm(`¿Desactivar el acceso de ${user.full_name}?`)) return
-    setBusy(user.id); setError(''); setMessage('')
+    if (action === 'status' && !body.is_active && confirmUser?.id !== user.id) { setConfirmUser(user); return }
+    setBusy(user.id); setError('')
     try {
       const { data } = await api.patch(`/auth/users/${user.id}/${action}`, body)
       setUsers((previous) => previous.map((row) => row.id === data.id ? data : row))
       setDraftRoles((previous) => ({ ...previous, [data.id]: data.role }))
-      setMessage('Permisos del usuario actualizados.')
-    } catch (err) { setError(err.message) }
-    finally { setBusy('') }
+      toast.success(action === 'role' ? `${data.full_name} ahora es ${ROLES[data.role] ?? data.role}.` : data.is_active ? `${data.full_name} puede volver a entrar.` : `${data.full_name} ya no puede entrar.`)
+    } catch (err) { toast.error(friendlyError(err, 'actualizar el usuario')) }
+    finally { setBusy(''); setConfirmUser(null) }
   }
 
-  if (!allowed) return <p role="alert" className="text-sm text-slate-400">Solo un administrador puede gestionar el personal.</p>
+  if (!allowed) return <Alert tone="warning">Solo el dueño o un administrador puede gestionar al personal.</Alert>
 
   const filteredUsers = users.filter((user) => {
     const text = `${user.full_name ?? ''} ${user.email ?? ''} ${user.phone ?? ''} ${ROLES[user.role] ?? user.role}`.toLocaleLowerCase('es')
     return text.includes(query.trim().toLocaleLowerCase('es')) && (statusFilter === 'all' || (statusFilter === 'active' ? user.is_active : !user.is_active))
   })
   const summaries = [
-    { label: 'Personas en tu equipo', value: users.length, icon: Users, tone: 'blue' },
-    { label: 'Accesos activos', value: users.filter((user) => user.is_active).length, icon: UserCheck, tone: 'mint' },
-    { label: 'Técnicos', value: users.filter((user) => user.role === 'TECNICO').length, icon: Wrench, tone: 'purple' },
+    { label: 'Personas en el equipo', value: users.length },
+    { label: 'Con acceso activo', value: users.filter((user) => user.is_active).length },
+    { label: 'Técnicos', value: users.filter((user) => user.role === 'TECNICO').length },
   ]
 
-  return <div className="ct-page space-y-6">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><p className="tf-eyebrow mb-2">EL EQUIPO DETRÁS DE CADA REPARACIÓN</p><h1 className="ct-page-title">Personal</h1><p className="ct-page-description">Un gran taller empieza con un gran equipo. Gestiona sus cuentas y permisos.</p></div>
-      <button disabled={Boolean(busy)} onClick={() => setShowForm(!showForm)} aria-expanded={showForm} aria-controls="staff-form" className="ct-btn ct-btn-primary">{showForm ? <X size={16} /> : <Plus size={16} />}{showForm ? 'Cerrar formulario' : 'Nuevo usuario'}</button>
-    </div>
-    {error && <div role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{error}<button onClick={() => { setLoading(true); setError(''); setRevision((value) => value + 1) }} disabled={Boolean(busy)} className="ml-3 underline">Actualizar lista</button></div>}
-    {message && <p role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">{message}</p>}
-    <div className="tf-staff-summary">{summaries.map(({ label, value, icon: Icon, tone }) => <article className={`ct-surface tf-staff-stat tf-tone-${tone}`} key={label}><span className="tf-kpi-icon"><Icon size={20} /></span><div><p>{label}</p><strong>{loading ? '—' : value}</strong></div></article>)}</div>
-    {showForm && <form id="staff-form" onSubmit={createUser} className="ct-surface-raised tf-popover space-y-4 p-6">
-      <h2 className="text-sm font-semibold text-slate-100">Crear cuenta del personal</h2>
-      <fieldset disabled={Boolean(busy)} className="grid gap-4 sm:grid-cols-2">
-        {[
-          ['full_name', 'Nombre completo', 'text', 150], ['email', 'Correo electrónico', 'email', 254],
-          ['password', 'Contraseña inicial', 'password', 128], ['phone', 'Teléfono (opcional)', 'tel', 40],
-        ].map(([name, label, type, maxLength]) => <label key={name} className="space-y-1 text-sm text-slate-300"><span>{label}</span><input name={name} type={type} value={form[name]} required={name !== 'phone'} minLength={name === 'password' ? 8 : undefined} maxLength={maxLength} autoComplete={name === 'password' ? 'new-password' : 'off'} onChange={(event) => setForm({ ...form, [name]: event.target.value })} className={fieldClass} /></label>)}
-        <label className="space-y-1 text-sm text-slate-300"><span>Rol</span><select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} className={fieldClass}>{Object.entries(ROLES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+  return <div className="space-y-5">
+    <PageHeader title="Personal" description="Cuentas de tu equipo, su rol y si pueden entrar al sistema."
+      actions={<Button variant="primary" icon={showForm ? X : Plus} disabled={Boolean(busy)} onClick={() => setShowForm(!showForm)} aria-expanded={showForm} aria-controls="staff-form">{showForm ? 'Cerrar formulario' : 'Nuevo usuario'}</Button>} />
+    {error && <Alert tone="error" action={<Button size="sm" disabled={Boolean(busy)} onClick={() => { setLoading(true); setError(''); setRevision((value) => value + 1) }}>Actualizar lista</Button>}>{error}</Alert>}
+    <div className="grid grid-cols-3 gap-3">{summaries.map(({ label, value }) => <article className="ct-kpi" key={label}><p className="ct-kpi-label">{label}</p><p className="ct-kpi-value">{loading ? '—' : value}</p></article>)}</div>
+    {showForm && <form id="staff-form" onSubmit={createUser} className="tf-card space-y-4 p-5" style={{ animation: 'tf-pop .18s var(--tf-ease) both' }}>
+      <div><h2 className="text-[0.9375rem] font-semibold">Crear cuenta</h2><p className="mt-1 text-[0.8125rem] text-[var(--tf-text-muted)]">La persona entra con este correo y contraseña. Pídele que la cambie al primer ingreso.</p></div>
+      <fieldset disabled={Boolean(busy)} className="tf-form-grid">
+        <Input label="Nombre completo" name="full_name" required maxLength={150} autoComplete="off" value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} />
+        <Input label="Correo electrónico" name="email" type="email" required maxLength={254} autoComplete="off" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+        <Input label="Contraseña inicial" name="password" type="password" required minLength={8} maxLength={128} autoComplete="new-password" hint="Al menos 8 caracteres." value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} />
+        <Input label="Teléfono (opcional)" name="phone" type="tel" maxLength={40} autoComplete="off" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
+        <Select label="Rol" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} hint="Define qué puede ver y hacer.">{Object.entries(ROLES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select>
       </fieldset>
-      <p className="text-xs text-slate-400">La contraseña debe tener al menos 8 caracteres. El correo quedará confirmado al crear esta cuenta interna.</p>
-      <button disabled={Boolean(busy)} type="submit" className="ct-btn ct-btn-primary">{busy === 'create' ? 'Creando…' : 'Crear usuario'}</button>
+      <div className="flex justify-end gap-2"><Button onClick={() => setShowForm(false)} disabled={Boolean(busy)}>Cancelar</Button><Button variant="primary" type="submit" busy={busy === 'create'}>{busy === 'create' ? 'Creando…' : 'Crear usuario'}</Button></div>
     </form>}
-    <section className="ct-surface overflow-hidden">
-      <div className="tf-staff-toolbar"><div><h2>Miembros del equipo</h2><p>{filteredUsers.length} de {users.length} personas</p></div><div className="flex flex-wrap gap-3"><label className="tf-search flex items-center gap-2"><Search size={16} aria-hidden="true" /><input type="search" aria-label="Buscar personal" placeholder="Buscar por nombre o rol…" value={query} onChange={(event) => setQuery(event.target.value)} /></label><select aria-label="Filtrar por estado" className="ct-select w-auto" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Todos los estados</option><option value="active">Activos</option><option value="inactive">Inactivos</option></select></div></div>
-    {loading ? <p role="status" className="p-8 text-slate-400">Cargando personal…</p> : <div className="overflow-x-auto">
-      <table className="ct-table w-full min-w-[780px] text-left text-sm"><thead className="ct-table-head"><tr><th className="p-4">Nombre</th><th className="p-4">Rol</th><th className="p-4">Estado</th><th className="p-4">Último acceso</th><th className="p-4">Acceso</th></tr></thead><tbody className="ct-table-tbody">
-        {filteredUsers.map((user) => <tr key={user.id}><td className="p-4"><div className="flex items-center gap-3"><span className="tf-avatar" aria-hidden="true">{user.full_name?.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join('') || '?'}</span><div><p className="font-medium text-slate-100">{user.full_name}{user.id === profile.id ? ' (tú)' : ''}</p><p className="mt-1 text-xs text-slate-400">{user.email || user.phone || 'Sin teléfono'}</p></div></div></td><td className="p-4"><div className="flex items-center gap-2"><select aria-label={`Rol de ${user.full_name}`} disabled={Boolean(busy) || user.id === profile.id || user.role === 'OWNER'} className={fieldClass} value={draftRoles[user.id] ?? user.role} onChange={(event) => setDraftRoles({ ...draftRoles, [user.id]: event.target.value })}>{user.role === 'OWNER' && <option value="OWNER">Propietario</option>}{Object.entries(ROLES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>{draftRoles[user.id] && draftRoles[user.id] !== user.role && <button disabled={Boolean(busy)} onClick={() => updateUser(user, 'role', { role: draftRoles[user.id] })} className="ct-link disabled:opacity-50">Guardar</button>}</div></td><td className="p-4"><span className={`ct-status ${user.is_active ? 'ct-status-success' : 'ct-status-neutral'}`}><span className="tf-status-dot" />{user.is_active ? 'Activo' : 'Inactivo'}</span></td><td className="p-4 text-xs text-slate-400">{user.last_login_at ? new Date(user.last_login_at).toLocaleString('es-MX') : 'Sin accesos aún'}</td><td className="p-4"><button disabled={Boolean(busy) || user.id === profile.id || user.role === 'OWNER'} onClick={() => updateUser(user, 'status', { is_active: !user.is_active })} className="ct-btn ct-btn-ghost disabled:opacity-40">{busy === user.id ? 'Guardando…' : user.is_active ? 'Desactivar' : 'Activar'}</button></td></tr>)}
+    <DataCard toolbar={<>
+      <SearchField label="Buscar personal" value={query} onChange={setQuery} placeholder="Nombre, correo o rol" />
+      <select aria-label="Filtrar por estado" className="ct-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="all">Todos los estados</option><option value="active">Activos</option><option value="inactive">Inactivos</option></select>
+      <span className="tf-num ml-auto text-xs text-[var(--tf-text-subtle)]">{filteredUsers.length} de {users.length} personas</span>
+    </>}>
+    {loading ? <TableSkeleton columns={5} rows={3} /> : !filteredUsers.length ? <EmptyState icon={Users} title={users.length ? 'No encontramos coincidencias' : 'Tu equipo empieza aquí'} description={users.length ? 'Prueba con otro nombre o cambia el filtro de estado.' : 'Crea la primera cuenta para empezar a trabajar juntos.'} /> : <div className="ct-table-shell">
+      <table className="ct-table min-w-[46rem]"><thead><tr><th scope="col">Nombre</th><th scope="col">Rol</th><th scope="col">Estado</th><th scope="col">Último acceso</th><th scope="col"><span className="sr-only">Acceso</span></th></tr></thead><tbody>
+        {filteredUsers.map((user) => {
+          const locked = Boolean(busy) || user.id === profile.id || user.role === 'OWNER'
+          return <tr key={user.id}>
+            <td><div className="flex items-center gap-3"><span className="tf-avatar" aria-hidden="true">{getInitials(user.full_name)}</span><div className="min-w-0"><p className="font-medium text-[var(--tf-text)]">{user.full_name}{user.id === profile.id ? ' (tú)' : ''}</p><p className="truncate text-xs text-[var(--tf-text-subtle)]">{user.email || user.phone || 'Sin contacto'}</p></div></div></td>
+            <td><div className="flex items-center gap-2"><select aria-label={`Rol de ${user.full_name}`} disabled={locked} className={`${fieldClass} min-w-[10rem]`} value={draftRoles[user.id] ?? user.role} onChange={(event) => setDraftRoles({ ...draftRoles, [user.id]: event.target.value })}>{user.role === 'OWNER' && <option value="OWNER">Dueño del taller</option>}{Object.entries(ROLES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>{draftRoles[user.id] && draftRoles[user.id] !== user.role && <Button size="sm" variant="primary" disabled={Boolean(busy)} onClick={() => updateUser(user, 'role', { role: draftRoles[user.id] })}>Guardar</Button>}</div></td>
+            <td><Badge tone={user.is_active ? 'success' : 'neutral'}>{user.is_active ? 'Activo' : 'Inactivo'}</Badge></td>
+            <td className="whitespace-nowrap text-xs">{user.last_login_at ? formatRelative(user.last_login_at) : 'Sin accesos aún'}</td>
+            <td className="text-right">{!locked || busy === user.id ? <Button size="sm" variant={user.is_active ? 'ghost' : 'secondary'} busy={busy === user.id} disabled={Boolean(busy)} onClick={() => updateUser(user, 'status', { is_active: !user.is_active })}>{user.is_active ? 'Quitar acceso' : 'Dar acceso'}</Button> : null}</td>
+          </tr>
+        })}
       </tbody></table>
-      {!filteredUsers.length && <div className="ct-empty"><Users size={32} /><h2>{users.length ? 'No encontramos coincidencias' : 'Tu equipo empieza aquí'}</h2><p>{users.length ? 'Prueba con otro nombre o cambia el filtro de estado.' : 'Crea la primera cuenta para empezar a trabajar juntos.'}</p></div>}
     </div>}
-    </section>
+    </DataCard>
+    <ConfirmDialog open={Boolean(confirmUser)} title={`¿Quitar el acceso a ${confirmUser?.full_name ?? 'esta persona'}?`} busy={busy === confirmUser?.id} confirmLabel="Quitar acceso"
+      description="No podrá iniciar sesión hasta que le vuelvas a dar acceso. Sus órdenes y su historial se conservan."
+      onConfirm={() => updateUser(confirmUser, 'status', { is_active: false })} onCancel={() => setConfirmUser(null)} />
   </div>
 }

@@ -36,11 +36,11 @@ export default function Billing() {
   return (
     <div className="ct-page space-y-6">
       <PageHeader title="Facturación" description="Licencia, plan y método de pago de tu taller." />
-      {message && <p role="alert" className="rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-200">{message}</p>}
-      {success && <p role="status" className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 p-3 text-sm text-emerald-200">{pending ? 'Pago recibido. Estamos activando tu licencia…' : '¡Listo! Tu licencia está activa.'}</p>}
-      {error && <p role="alert" className="rounded-lg border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">{error}</p>}
+      {message && <p role="alert" className="rounded-lg border border-[rgba(251,191,36,.3)] bg-[var(--tf-warning-soft)] p-3 text-sm text-[#fcd34d]">{message}</p>}
+      {success && <p role="status" className="rounded-lg border border-[rgba(74,222,128,.3)] bg-[var(--tf-success-soft)] p-3 text-sm text-[#86efac]">{pending ? 'Pago recibido. Estamos activando tu licencia…' : '¡Listo! Tu licencia está activa.'}</p>}
+      {error && <p role="alert" className="rounded-lg border border-[rgba(248,113,113,.32)] bg-[var(--tf-danger-soft)] p-3 text-sm text-[#fca5a5]">{error}</p>}
       <LicenseCard key={reloadKey} onLoaded={setSubscription} />
-      {needsPlan && plans.length > 0 && <section aria-label="Planes disponibles" className="max-w-4xl space-y-4"><h2 className="font-semibold text-slate-100">Elige tu plan</h2><PlanCards plans={plans} onBuy={buy} busyCode={busyCode} /></section>}
+      {needsPlan && plans.length > 0 && <section aria-label="Planes disponibles" className="max-w-4xl space-y-4"><h2 className="font-semibold text-[var(--tf-text)]">Elige tu plan</h2><PlanCards plans={plans} onBuy={buy} busyCode={busyCode} /></section>}
     </div>
   )
 }
