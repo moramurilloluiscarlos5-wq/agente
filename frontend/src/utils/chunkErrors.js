@@ -8,12 +8,21 @@ export function isChunkLoadError(error) {
   return CHUNK_ERROR.test(String(error?.message ?? error ?? ''))
 }
 
+// Indica si aún queda la recarga automática de esta ventana de tiempo (solo lee, no recarga).
+export function canReloadForNewVersion({ storage = globalThis.sessionStorage, now = Date.now() } = {}) {
+  try {
+    const last = Number(storage.getItem(RELOAD_KEY))
+    return !(last && now - last < RELOAD_WINDOW_MS)
+  } catch {
+    return false
+  }
+}
+
 // Recarga una sola vez por ventana de tiempo: si el fallo persiste (no era una versión nueva)
 // se muestra el aviso en lugar de entrar en un bucle de recargas.
 export function reloadForNewVersion({ storage = globalThis.sessionStorage, now = Date.now(), reload = () => globalThis.location.reload() } = {}) {
+  if (!canReloadForNewVersion({ storage, now })) return false
   try {
-    const last = Number(storage.getItem(RELOAD_KEY))
-    if (last && now - last < RELOAD_WINDOW_MS) return false
     storage.setItem(RELOAD_KEY, String(now))
   } catch {
     return false

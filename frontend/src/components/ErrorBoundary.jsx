@@ -1,23 +1,25 @@
 import { Component } from 'react'
-import { isChunkLoadError, reloadForNewVersion } from '../utils/chunkErrors.js'
+import { canReloadForNewVersion, isChunkLoadError, reloadForNewVersion } from '../utils/chunkErrors.js'
 
 // Evita la pantalla en blanco cuando una pantalla falla al cargarse o al dibujarse.
 // Si es una versión nueva desplegada mientras la pestaña seguía abierta, recarga sola una vez.
 export default class ErrorBoundary extends Component {
-  state = { error: null }
+  state = { error: null, reloading: false }
 
+  // Se decide al dibujar si viene una recarga, para no mostrar el aviso un instante antes de recargar.
   static getDerivedStateFromError(error) {
-    return { error }
+    return { error, reloading: isChunkLoadError(error) && canReloadForNewVersion() }
   }
 
   componentDidCatch(error, info) {
     console.error('[ErrorBoundary]', error, info?.componentStack)
-    if (isChunkLoadError(error)) reloadForNewVersion()
+    if (isChunkLoadError(error) && !reloadForNewVersion()) this.setState({ reloading: false })
   }
 
   render() {
-    const { error } = this.state
+    const { error, reloading } = this.state
     if (!error) return this.props.children
+    if (reloading) return <p role="status" className="py-16 text-center text-sm text-[var(--tf-text-muted)]">Actualizando TallerFlow…</p>
     const outdated = isChunkLoadError(error)
     const notice = (
       <section role="alert" className="ct-surface-raised w-full max-w-md rounded-xl border border-[var(--tf-border)] p-6 text-center">

@@ -14,7 +14,7 @@ export function DirectoryMessage({ children, error = false }) {
 }
 
 export function DirectoryLoading() {
-  return <div role="status" className="flex items-center justify-center gap-2 p-8 text-[0.8125rem] text-[var(--tf-text-muted)]"><LoaderCircle className="animate-spin" size={16} aria-hidden="true" />Cargando…</div>
+  return <div role="status" className="flex items-center justify-center gap-2 p-8 text-sm text-[var(--tf-text-muted)]"><LoaderCircle className="animate-spin" size={16} aria-hidden="true" />Cargando…</div>
 }
 
 export function DirectoryPagination({ page, limit, count, onPage, disabled = false }) {
@@ -22,7 +22,7 @@ export function DirectoryPagination({ page, limit, count, onPage, disabled = fal
   return (
     <div className="tf-pagination">
       <span className="tf-num">{count} {count === 1 ? 'registro' : 'registros'}{pages > 1 ? `, página ${page} de ${pages}` : ''}</span>
-      {pages > 1 && <div className="flex gap-1.5">
+      {pages > 1 && <div className="flex gap-2">
         <button type="button" aria-label="Página anterior" disabled={disabled || page <= 1} onClick={() => onPage(page - 1)} className="ct-btn ct-btn-secondary ct-btn-sm"><ChevronLeft size={14} /></button>
         <button type="button" aria-label="Página siguiente" disabled={disabled || page >= pages} onClick={() => onPage(page + 1)} className="ct-btn ct-btn-secondary ct-btn-sm"><ChevronRight size={14} /></button>
       </div>}
@@ -73,10 +73,10 @@ export function DirectoryRepairHistory({ repairs = [] }) {
   return (
     <section className="space-y-3 border-t border-[var(--tf-border)] pt-5">
       <h3 className="text-sm font-semibold">Historial de reparaciones</h3>
-      {repairs.length === 0 ? <p className="text-[0.8125rem] text-[var(--tf-text-muted)]">Todavía no hay reparaciones registradas.</p> : (
+      {repairs.length === 0 ? <p className="text-sm text-[var(--tf-text-muted)]">Todavía no hay reparaciones registradas.</p> : (
         <ul className="overflow-hidden rounded-[var(--tf-radius-control)] border border-[var(--tf-border)]">{repairs.map((repair) => <li key={repair.id} className="border-t border-[var(--tf-border)] first:border-t-0">
-          <Link to={`/reparaciones/${encodeURIComponent(repair.order_number)}`} className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3 transition-colors hover:bg-[rgba(148,163,184,.05)]">
-            <div className="min-w-0"><p className="tf-num text-[0.8125rem] font-medium text-[var(--tf-link)]">{repair.order_number}</p><p className="text-[0.8125rem] text-[var(--tf-text-muted)]">{[repair.brand, repair.model].filter(Boolean).join(' ') || 'Equipo registrado'}, {formatDate(repair.received_at || repair.created_at)}</p></div>
+          <Link to={`/reparaciones/${encodeURIComponent(repair.order_number)}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[rgba(148,163,184,.05)]">
+            <div className="min-w-0"><p className="tf-num text-sm font-medium text-[var(--tf-link)]">{repair.order_number}</p><p className="text-sm text-[var(--tf-text-muted)]">{[repair.brand, repair.model].filter(Boolean).join(' ') || 'Equipo registrado'}, {formatDate(repair.received_at || repair.created_at)}</p></div>
             <StatusBadge status={repair.status} />
           </Link>
         </li>)}</ul>

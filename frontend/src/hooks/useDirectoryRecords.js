@@ -1,3 +1,4 @@
+import { friendlyError } from '../utils/errors.js'
 import { useEffect, useState } from 'react'
 import { api } from '../services/api.js'
 
@@ -18,7 +19,7 @@ export function useDirectoryRecords(path) {
     if (!path) return () => { active = false }
     api.get(path).then(
       (payload) => { if (active) setResult({ path, version, payload, error: '' }) },
-      (error) => { if (active) setResult({ path, version, payload: null, error: error.message }) },
+      (error) => { if (active) setResult({ path, version, payload: null, error: friendlyError(error, 'cargar la información') }) },
     )
     return () => { active = false }
   }, [path, version])

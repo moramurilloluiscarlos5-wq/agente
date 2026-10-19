@@ -5,6 +5,7 @@ import { useSidebar } from '../../hooks/useSidebar.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import BrandLogo from '../branding/BrandLogo.jsx'
 import { getInitials } from '../../utils/formatters.js'
+import { IconButton, Tooltip } from '../ui/DesignSystem.jsx'
 
 export default function Sidebar() {
   const { collapsed, toggleCollapsed, mobileOpen, closeMobile } = useSidebar()
@@ -24,24 +25,22 @@ export default function Sidebar() {
 
   return (
     <>
-      {mobileOpen && <button type="button" aria-label="Cerrar menú" onClick={closeMobile} className="fixed inset-0 z-30 bg-black/60 md:hidden" style={{ animation: 'tf-fade .16s ease both' }} />}
+      {mobileOpen && <button type="button" aria-label="Cerrar menú" onClick={closeMobile} className="fixed inset-0 z-30 bg-black/60 md:hidden" style={{ animation: 'tf-fade .15s ease-out both' }} />}
 
       <aside
         aria-label="Menú lateral"
         className={`tf-sidebar fixed inset-y-0 left-0 z-40 flex h-full shrink-0 flex-col md:static ${compact ? 'md:w-[4.5rem]' : 'md:w-60'} ${mobileOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full md:translate-x-0'}`}
       >
-        <div className={`flex h-[3.75rem] shrink-0 items-center border-b border-[var(--tf-border)] ${compact ? 'justify-center px-2' : 'justify-between px-4'}`}>
+        <div className={`flex h-16 shrink-0 items-center border-b border-[var(--tf-border)] ${compact ? 'justify-center px-2' : 'justify-between px-4'}`}>
           <BrandLogo variant={compact ? 'symbol' : 'full'} />
-          {!compact && <button type="button" onClick={mobileOpen ? closeMobile : toggleCollapsed} className="tf-icon-btn -mr-1.5" aria-label={mobileOpen ? 'Cerrar menú' : 'Colapsar menú'}>
-            {mobileOpen ? <X size={17} /> : <PanelLeftClose size={17} />}
-          </button>}
+          {!compact && <IconButton className="-mr-2" label={mobileOpen ? 'Cerrar menú' : 'Colapsar menú'} icon={mobileOpen ? X : PanelLeftClose} iconSize={18} onClick={mobileOpen ? closeMobile : toggleCollapsed} />}
         </div>
 
         {!compact && <div className="px-3 pt-3">
-          <div className="tf-workspace" title={workshopName}>
+          <div className="tf-workspace">
             <span className="tf-workspace-icon" aria-hidden="true">{workshopName.trim()[0]?.toUpperCase() ?? 'T'}</span>
             <div className="min-w-0">
-              <p className="truncate text-[0.8125rem] font-medium text-[var(--tf-text)]">{workshopName}</p>
+              <p className="truncate text-sm font-medium text-[var(--tf-text)]">{workshopName}</p>
               <p className="text-xs text-[var(--tf-text-subtle)]">{profile?.role === 'SUPER_ADMIN' ? 'Administración' : 'Taller activo'}</p>
             </div>
           </div>
@@ -51,14 +50,19 @@ export default function Sidebar() {
           {groups.map(([section, items]) => (
             <div key={section} className="tf-nav-group">
               {compact ? <div className="mx-2 mb-2 border-t border-[var(--tf-border)] first:hidden" aria-hidden="true" /> : <p className="tf-nav-heading">{section}</p>}
-              <ul className="space-y-0.5">
+              <ul className="space-y-1">
                 {items.map(({ label, path, icon: Icon }) => (
                   <li key={path}>
-                    <NavLink to={path} end={path === '/'} onClick={closeMobile} title={compact ? label : undefined} aria-label={compact ? label : undefined}
-                      className={({ isActive }) => `tf-nav-link ${isActive ? 'is-active' : ''} ${compact ? 'is-compact' : ''}`}>
-                      <Icon size={17} strokeWidth={1.8} className="shrink-0" aria-hidden="true" />
-                      {!compact && <span className="truncate">{label}</span>}
-                    </NavLink>
+                    {compact ? <Tooltip label={label} className="flex">
+                      <NavLink to={path} end={path === '/'} onClick={closeMobile} aria-label={label}
+                        className={({ isActive }) => `tf-nav-link is-compact w-full ${isActive ? 'is-active' : ''}`}>
+                        <Icon size={18} strokeWidth={1.8} className="shrink-0" aria-hidden="true" />
+                      </NavLink>
+                    </Tooltip> : <NavLink to={path} end={path === '/'} onClick={closeMobile}
+                      className={({ isActive }) => `tf-nav-link ${isActive ? 'is-active' : ''}`}>
+                      <Icon size={18} strokeWidth={1.8} className="shrink-0" aria-hidden="true" />
+                      <span className="truncate">{label}</span>
+                    </NavLink>}
                   </li>
                 ))}
               </ul>
@@ -68,17 +72,17 @@ export default function Sidebar() {
 
         <div className={`border-t border-[var(--tf-border)] ${compact ? 'flex flex-col items-center gap-1 p-2' : 'p-2'}`}>
           {compact ? <>
-            <button type="button" onClick={toggleCollapsed} className="tf-icon-btn" aria-label="Expandir menú"><PanelLeftOpen size={17} /></button>
-            <button type="button" onClick={handleLogout} className="tf-icon-btn" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut size={16} /></button>
+            <IconButton label="Expandir menú" icon={PanelLeftOpen} iconSize={18} onClick={toggleCollapsed} />
+            <IconButton label="Cerrar sesión" icon={LogOut} onClick={handleLogout} />
           </> : <div className="flex items-center gap-1">
-            <div className="flex min-w-0 flex-1 items-center gap-2.5 px-1.5 py-1">
+            <div className="flex min-w-0 flex-1 items-center gap-3 px-2 py-1">
               <span className="tf-avatar">{getInitials(displayName)}</span>
               <div className="min-w-0">
-                <p className="truncate text-[0.8125rem] font-medium text-[var(--tf-text)]">{displayName}</p>
+                <p className="truncate text-sm font-medium text-[var(--tf-text)]">{displayName}</p>
                 <p className="truncate text-xs text-[var(--tf-text-subtle)]">{roleLabel}</p>
               </div>
             </div>
-            <button type="button" onClick={handleLogout} className="tf-icon-btn" aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut size={16} /></button>
+            <IconButton label="Cerrar sesión" icon={LogOut} onClick={handleLogout} />
           </div>}
         </div>
       </aside>

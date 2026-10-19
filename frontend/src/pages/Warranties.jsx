@@ -1,9 +1,13 @@
 import { useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader.jsx'
 import RecordPicker from '../components/ui/RecordPicker.jsx'
-import { Alert, Badge, Button, ConfirmDialog, DataCard, Dialog, EmptyState, Input, Pagination, SearchField, Select, TableSkeleton, Textarea } from '../components/ui/DesignSystem.jsx'
+import { Alert, Badge, Button, ConfirmDialog, DataCard, DraftNotice, EmptyState, ErrorAlert, FilterSelect, FormPage, IconButton, Input, Pagination, SearchField, Select, TableSkeleton, Textarea } from '../components/ui/DesignSystem.jsx'
 import { usePagedResource } from '../hooks/usePagedResource.js'
+import { useDraft } from '../hooks/useDraft.js'
+import { useRecord } from '../hooks/useRecord.js'
+import { focusFirstInvalid } from '../utils/forms.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useToast } from '../hooks/useToast.js'
 import { api } from '../services/api.js'
@@ -19,77 +23,90 @@ function daysLeft(expiresAt) {
   return Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000)
 }
 
-function WarrantyForm({ initial, onClose, onSaved }) {
+function WarrantyForm({ initial, onDone }) {
   const toast = useToast()
   const editing = Boolean(initial?.id)
-  const [form, setForm] = useState(() => ({
+  const [form, setForm, draft] = useDraft(editing ? null : 'warranty-new', {
     repair: null,
     service_description: initial?.service_description ?? '', duration_days: String(initial?.duration_days ?? 90),
     conditions: initial?.conditions ?? '', status: initial?.status ?? 'activa',
-  }))
+  })
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
-  const [formError, setFormError] = useState('')
-  const set = (key) => (event) => { setForm((current) => ({ ...current, [key]: event.target.value })); setErrors((current) => ({ ...current, [key]: null })) }
+  const [formError, setFormError] = useState(null)
+  const set = (key) => (event) => { const { value } = event.target; setForm((current) => ({ ...current, [key]: value })); setErrors((current) => ({ ...current, [key]: null })) }
 
   async function submit(event) {
     event.preventDefault()
     const next = {}
-    if (!editing && !form.repair) next.repair = 'Elige la orden de reparación cubierta.'
+    if (!editing && !form.repair) next.repair = 'Elige la orden de reparación que cubre esta garantía.'
     const days = Number(form.duration_days)
-    if (!Number.isInteger(days) || days < 1) next.duration_days = 'Escribe los días de garantía.'
-    if (Object.keys(next).length) { setErrors(next); return }
+    if (!Number.isInteger(days) || days < 1) next.duration_days = 'Escribe los días de garantía, por ejemplo 90.'
+    if (Object.keys(next).length) { setErrors(next); focusFirstInvalid('warranty-form'); return }
     const body = { duration_days: days, service_description: form.service_description.trim() || null, conditions: form.conditions.trim() || null }
     if (!editing) {
       body.repair_order_id = form.repair.id
       body.customer_id = form.repair.customer_id ?? form.repair.customer?.id
       if (form.repair.device_id) body.device_id = form.repair.device_id
     } else body.status = form.status
-    setSaving(true); setFormError('')
+    setSaving(true); setFormError(null)
     try {
       if (editing) await api.patch(`/warranties/${initial.id}`, body)
       else await api.post('/warranties', body)
+      draft.clear()
       toast.success(editing ? 'Garantía actualizada.' : 'Garantía registrada.')
-      onSaved()
+      onDone()
     } catch (error) {
-      setFormError(friendlyError(error, 'guardar la garantía'))
+      setFormError(error)
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Dialog open wide onClose={saving ? undefined : onClose} title={editing ? 'Editar garantía' : 'Registrar garantía'} description="La vigencia empieza el día del servicio."
-      footer={<><Button onClick={onClose} disabled={saving}>Cancelar</Button><Button variant="primary" type="submit" form="warranty-form" busy={saving}>{editing ? 'Guardar cambios' : 'Registrar garantía'}</Button></>}>
+    <FormPage backTo="/garantias" backLabel="Garantías" title={editing ? 'Editar garantía' : 'Registrar garantía'} description="La vigencia empieza el día del servicio."
+      notice={draft.restored && <DraftNotice onDiscard={draft.discard} />}
+      footer={<><Button onClick={onDone} disabled={saving}>Cancelar</Button><Button variant="primary" type="submit" form="warranty-form" busy={saving}>{editing ? 'Guardar cambios' : 'Registrar garantía'}</Button></>}>
       <form id="warranty-form" onSubmit={submit} noValidate className="tf-form-grid">
         {!editing && <div className="tf-span-2">
           <RecordPicker label="Orden de reparación" required value={form.repair} error={errors.repair}
             onChange={(repair) => { setForm((current) => ({ ...current, repair, service_description: current.service_description || repair?.reported_problem || '' })); setErrors((current) => ({ ...current, repair: null })) }}
             path={(q) => `/repairs?limit=6${q ? `&q=${encodeURIComponent(q)}` : ''}`}
             renderLabel={(repair) => `${repair.order_number}, ${[repair.brand, repair.model].filter(Boolean).join(' ')}`}
-            renderMeta={(repair) => customerName(repair.customer)} placeholder="Número de orden, marca o modelo" />
+            renderMeta={(repair) => customerName(repair.customer)} placeholder="ORD-0012 o iPhone 13" />
         </div>}
-        <Input fieldClassName="tf-span-2" label="Servicio cubierto" value={form.service_description} onChange={set('service_description')} maxLength={2000} placeholder="Cambio de pantalla" />
+        <Input fieldClassName="tf-span-2" label="Servicio cubierto (opcional)" value={form.service_description} onChange={set('service_description')} maxLength={2000} placeholder="Cambio de pantalla" />
         <div>
-          <Input label="Días de garantía" required type="number" inputMode="numeric" min="1" step="1" list="warranty-durations" value={form.duration_days} onChange={set('duration_days')} error={errors.duration_days} />
+          <Input label="Días de garantía" required type="number" inputMode="numeric" min="1" step="1" list="warranty-durations" value={form.duration_days} onChange={set('duration_days')} error={errors.duration_days} hint="Lo más común: 30, 90 o 180 días." />
           <datalist id="warranty-durations">{DURATIONS.map((days) => <option key={days} value={days} />)}</datalist>
         </div>
         {editing ? <Select label="Estado" value={form.status} onChange={set('status')}>
           {Object.entries(WARRANTY_STATUSES).map(([value, { label }]) => <option key={value} value={value}>{label}</option>)}
         </Select> : <div />}
-        <Textarea fieldClassName="tf-span-2" label="Condiciones" value={form.conditions} onChange={set('conditions')} maxLength={2000} placeholder="No cubre golpes, humedad ni equipos abiertos por terceros." className="min-h-[4.5rem]" />
-        {formError && <div className="tf-span-2"><Alert tone="error">{formError}</Alert></div>}
+        <Textarea fieldClassName="tf-span-2" label="Condiciones (opcional)" value={form.conditions} onChange={set('conditions')} maxLength={2000} placeholder="No cubre golpes, humedad ni equipos abiertos por terceros." className="min-h-[5rem]" />
+        {formError && <div className="tf-span-2"><ErrorAlert error={formError} action="guardar la garantía" /></div>}
       </form>
-    </Dialog>
+    </FormPage>
   )
+}
+
+export function WarrantyFormPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { record, loading, error, reload } = useRecord(id ? `/warranties/${id}` : null, location.state?.record ?? null)
+  const done = () => navigate('/garantias')
+  if (id && loading) return <div className="tf-form-page"><Alert tone="info">Cargando la garantía…</Alert></div>
+  if (id && (error || !record?.id)) return <div className="tf-form-page space-y-4"><Link to="/garantias" className="tf-form-page-back">Volver a Garantías</Link><ErrorAlert error={error ?? { status: 404 }} action="cargar la garantía" onRetry={reload} /></div>
+  return <WarrantyForm key={record?.id ?? 'new'} initial={id ? record : null} onDone={done} />
 }
 
 export default function Warranties() {
   const { profile, hasPermission } = useAuth()
   const toast = useToast()
+  const navigate = useNavigate()
   const [status, setStatus] = useState('')
   const list = usePagedResource('/warranties', { filters: { status } })
-  const [editing, setEditing] = useState(null)
   const [removing, setRemoving] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const writer = WRITE_ROLES.warranties.includes(profile?.role)
@@ -97,12 +114,13 @@ export default function Warranties() {
   const canEdit = writer && hasPermission('warranties.update')
   const canDelete = WRITE_ROLES.admin.includes(profile?.role) && hasPermission('warranties.update')
   const filtered = Boolean(list.query || status)
+  const clearFilters = () => { list.setQuery(''); setStatus('') }
 
   async function confirmDelete() {
     setDeleting(true)
     try {
       await api.delete(`/warranties/${removing.id}`)
-      toast.success('Garantía eliminada.')
+      toast.success(`Garantía de ${customerName(removing.customer)} eliminada.`)
       setRemoving(null)
       list.reload()
     } catch (error) {
@@ -113,24 +131,26 @@ export default function Warranties() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader title="Garantías" description="Coberturas de los servicios entregados y cuánto les queda."
-        actions={canCreate && <Button variant="primary" icon={Plus} onClick={() => setEditing({})}>Registrar garantía</Button>} />
+        actions={canCreate && <Link to="/garantias/nueva" className="ct-btn ct-btn-primary"><Plus size={16} aria-hidden="true" />Registrar garantía</Link>} />
 
       <DataCard
         toolbar={<>
           <SearchField label="Buscar garantías" value={list.query} onChange={list.setQuery} placeholder="Servicio o condición" />
-          <select aria-label="Filtrar por estado" className="ct-select" value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="">Todos los estados</option>
+          <FilterSelect label="Estado" ariaLabel="Filtrar por estado" value={status} onChange={setStatus}>
+            <option value="">Todos</option>
             {Object.entries(WARRANTY_STATUSES).map(([value, { label }]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          </FilterSelect>
+          {filtered && <Button variant="ghost" onClick={clearFilters}>Quitar filtros</Button>}
         </>}
         footer={!list.loading && !list.error && <Pagination page={list.page} limit={list.limit} count={list.count} onPage={list.setPage} label="garantías" />}>
-        {list.error ? <div className="p-4"><Alert tone="error" action={<Button size="sm" onClick={list.reload}>Reintentar</Button>}>{friendlyError(list.error, 'cargar las garantías')}</Alert></div>
+        {list.error ? <div className="p-4"><ErrorAlert error={list.error} action="cargar las garantías" onRetry={list.reload} /></div>
           : list.loading && !list.rows.length ? <TableSkeleton columns={5} />
-            : !list.rows.length ? <EmptyState icon={ShieldCheck} title={filtered ? 'No hay garantías con esos filtros' : 'Aún no hay garantías'}
-                description={filtered ? 'Prueba con otro texto o cambia el estado.' : 'Registra la garantía al entregar un equipo para atender reclamos con certeza.'}
-                action={!filtered && canCreate && <Button variant="primary" icon={Plus} onClick={() => setEditing({})}>Registrar garantía</Button>} />
+            : !list.rows.length ? (filtered
+              ? <EmptyState icon={ShieldCheck} title="No hay garantías con esos filtros" description="Prueba con otro texto o cambia el estado." action={<Button onClick={clearFilters}>Quitar filtros</Button>} />
+              : <EmptyState icon={ShieldCheck} title="Aún no hay garantías" description="Registra la garantía al entregar un equipo para atender cualquier reclamo con fechas claras."
+                action={canCreate && <Link to="/garantias/nueva" className="ct-btn ct-btn-primary"><Plus size={16} aria-hidden="true" />Registrar garantía</Link>} />)
               : (
                 <div className="ct-table-shell" aria-busy={list.loading}>
                   <table className="ct-table min-w-[44rem]">
@@ -150,8 +170,8 @@ export default function Warranties() {
                             </td>
                             {(canEdit || canDelete) && <td className="text-right">
                               <div className="inline-flex gap-1">
-                                {canEdit && <button type="button" className="tf-icon-btn" onClick={() => setEditing(warranty)} aria-label={`Editar garantía de ${customerName(warranty.customer)}`} title="Editar"><Pencil size={15} /></button>}
-                                {canDelete && <button type="button" className="tf-icon-btn" onClick={() => setRemoving(warranty)} aria-label={`Eliminar garantía de ${customerName(warranty.customer)}`} title="Eliminar"><Trash2 size={15} /></button>}
+                                {canEdit && <IconButton label={`Editar garantía de ${customerName(warranty.customer)}`} icon={Pencil} onClick={() => navigate(`/garantias/${warranty.id}/editar`, { state: { record: warranty } })} />}
+                                {canDelete && <IconButton label={`Eliminar garantía de ${customerName(warranty.customer)}`} icon={Trash2} tone="danger" onClick={() => setRemoving(warranty)} />}
                               </div>
                             </td>}
                           </tr>
@@ -163,8 +183,7 @@ export default function Warranties() {
               )}
       </DataCard>
 
-      {editing && <WarrantyForm initial={editing.id ? editing : null} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); list.reload() }} />}
-      <ConfirmDialog open={Boolean(removing)} title="¿Eliminar esta garantía?" busy={deleting} confirmLabel="Eliminar garantía"
+      <ConfirmDialog open={Boolean(removing)} title={removing ? `¿Eliminar la garantía de ${customerName(removing.customer)}?` : ''} busy={deleting} confirmLabel="Eliminar garantía"
         description={removing ? `La garantía de ${customerName(removing.customer)} dejará de aparecer. Si solo ya no aplica, mejor cámbiala a “Invalidada”.` : ''}
         onConfirm={confirmDelete} onCancel={() => setRemoving(null)} />
     </div>

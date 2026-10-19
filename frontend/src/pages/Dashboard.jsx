@@ -3,10 +3,9 @@ import { Link } from 'react-router-dom'
 import { AlertTriangle, CalendarClock, Plus, RefreshCw, UserPlus, Wrench } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader.jsx'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
-import { Alert, Button, Card, EmptyState, Skeleton } from '../components/ui/DesignSystem.jsx'
+import { Button, Card, ErrorAlert, EmptyState, Skeleton } from '../components/ui/DesignSystem.jsx'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
-import { friendlyError } from '../utils/errors.js'
 import { formatCurrency, formatDate, formatRelative } from '../utils/formatters.js'
 
 const CAN_CREATE = ['OWNER', 'ADMINISTRADOR', 'RECEPCION', 'SUPER_ADMIN']
@@ -55,7 +54,7 @@ function WorkshopFlow({ stats }) {
 function Kpi({ label, value, hint, tone }) {
   return (
     <article className="ct-kpi">
-      <p className="ct-kpi-label flex items-center gap-1.5">{tone === 'warning' && <AlertTriangle size={14} className="text-[var(--tf-warning)]" aria-hidden="true" />}{label}</p>
+      <p className="ct-kpi-label flex items-center gap-2">{tone === 'warning' && <AlertTriangle size={14} className="text-[var(--tf-warning)]" aria-hidden="true" />}{label}</p>
       <p className="ct-kpi-value">{value}</p>
       {hint && <p className="ct-kpi-hint">{hint}</p>}
     </article>
@@ -121,11 +120,11 @@ export default function Dashboard() {
         description={description}
         actions={<>
           <Button variant="ghost" icon={RefreshCw} onClick={reload} disabled={loading} aria-label="Actualizar panel" className={loading ? '[&_svg]:animate-spin' : ''}>Actualizar</Button>
-          {CAN_CREATE.includes(profile?.role) && <Link to="/reparaciones/nueva" className="ct-btn ct-btn-primary md:hidden"><Plus size={15} aria-hidden="true" />Nueva reparación</Link>}
+          {CAN_CREATE.includes(profile?.role) && <Link to="/reparaciones/nueva" className="ct-btn ct-btn-primary md:hidden"><Plus size={16} aria-hidden="true" />Registrar reparación</Link>}
         </>}
       />
 
-      {error && <Alert tone="error" title="No pudimos cargar el panel." action={<Button size="sm" onClick={reload}>Reintentar</Button>}>{friendlyError(error, 'cargar el panel')}</Alert>}
+      {error && <ErrorAlert error={error} action="cargar el panel" onRetry={reload} />}
       {loading && !data && !error && <DashboardSkeleton />}
 
       {data && stats && <>
@@ -177,7 +176,7 @@ export default function Dashboard() {
                           <Link to={`/reparaciones/${delivery.orderNumber}`} className="tf-link tf-num">{delivery.orderNumber}</Link>
                           <p className="truncate text-xs text-[var(--tf-text-subtle)]">{[delivery.device, delivery.customer].filter(Boolean).join(', ')}</p>
                         </div>
-                        <span className={`flex shrink-0 items-center gap-1.5 text-xs ${late ? 'text-[var(--tf-warning)]' : 'text-[var(--tf-text-muted)]'}`}>
+                        <span className={`flex shrink-0 items-center gap-2 text-xs ${late ? 'text-[var(--tf-warning)]' : 'text-[var(--tf-text-muted)]'}`}>
                           <CalendarClock size={13} aria-hidden="true" />{late ? 'Atrasada, ' : ''}{formatDate(delivery.estDelivery)}
                         </span>
                       </li>
@@ -194,7 +193,7 @@ export default function Dashboard() {
                     {data.recentCustomers.map((customer) => (
                       <li key={customer.id} className="tf-list-row">
                         <div className="min-w-0">
-                          <p className="truncate text-[0.8125rem] font-medium text-[var(--tf-text)]">{customer.name}</p>
+                          <p className="truncate text-sm font-medium text-[var(--tf-text)]">{customer.name}</p>
                           <p className="truncate text-xs text-[var(--tf-text-subtle)]">{customer.phone || 'Sin teléfono'}</p>
                         </div>
                         <span className="shrink-0 text-xs text-[var(--tf-text-subtle)]">{formatRelative(customer.createdAt)}</span>

@@ -1,154 +1,243 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
-import { ArrowLeft, Clock3, Pencil, Save, Send, Smartphone, UserRound, Wrench } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Check, Pencil, Send } from 'lucide-react'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
+import { useToast } from '../hooks/useToast.js'
 import { REPAIR_STATUSES } from '../utils/constants.js'
+import { focusFirstInvalid } from '../utils/forms.js'
 import { formatCurrency, formatDate, formatDateTime } from '../utils/formatters.js'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
 import WhatsAppComposer from '../components/whatsapp/WhatsAppComposer.jsx'
-import RepairFields, { RepairField } from '../components/repairs/RepairFields.jsx'
-import { customerName, deviceName, repairButtonClass, repairFormPayload, repairFormValues, repairInputClass, repairSecondaryClass } from '../components/repairs/repairForm.js'
+import RepairFields from '../components/repairs/RepairFields.jsx'
+import RepairTrackingPanel from '../components/tracking/RepairTrackingPanel.jsx'
+import { Alert, Badge, Button, Card, EmptyState, ErrorAlert, Select, Skeleton, Textarea } from '../components/ui/DesignSystem.jsx'
+import { customerName, deviceName, repairFormPayload, repairFormValues } from '../components/repairs/repairForm.js'
 
-function DetailValue({ label, children }) {
-  return <div><dt className="text-xs text-[var(--tf-text-subtle)]">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm text-[var(--tf-text)]">{children || 'Sin registrar'}</dd></div>
+const MANAGE_ROLES = ['OWNER', 'ADMINISTRADOR', 'RECEPCION', 'SUPER_ADMIN']
+// Camino normal de una orden. "Esperando autorización/refacción" y "En pruebas" se agrupan en su etapa.
+const STAGES = [
+  { label: 'Recibido', statuses: ['recibido'] },
+  { label: 'Diagnóstico', statuses: ['diagnostico', 'esperando_autorizacion'] },
+  { label: 'Reparación', statuses: ['en_reparacion', 'esperando_refaccion', 'en_pruebas'] },
+  { label: 'Listo', statuses: ['listo_para_entregar'] },
+  { label: 'Entregado', statuses: ['entregado'] },
+]
+const WHATSAPP_STATUS = { queued: ['En cola', 'neutral'], sent: ['Enviado', 'info'], delivered: ['Entregado', 'success'], read: ['Leído', 'success'], failed: ['No se entregó', 'danger'], simulated: ['Simulado', 'neutral'] }
+
+function useRepair(orderNumber) {
+  const endpoint = `/repairs/${encodeURIComponent(orderNumber)}`
+  const [result, setResult] = useState({ key: null, data: null, history: [], error: null })
+  const [revision, setRevision] = useState(0)
+  const key = `${endpoint}#${revision}`
+  useEffect(() => {
+    let active = true
+    api.get(endpoint).then((response) => { if (active) setResult({ key, data: response.data, history: response.history ?? [], error: null }) })
+      .catch((error) => { if (active) setResult({ key, data: null, history: [], error }) })
+    return () => { active = false }
+  }, [endpoint, key])
+  return { endpoint, ...result, loading: result.key !== key, reload: () => setRevision((value) => value + 1), patch: (data) => setResult((current) => ({ ...current, data: { ...current.data, ...data } })) }
+}
+
+function useTechnicians(enabled) {
+  const [state, setState] = useState({ list: [], error: '' })
+  useEffect(() => {
+    if (!enabled) return undefined
+    let active = true
+    api.get('/technicians').then((response) => { if (active) setState({ list: response.data ?? [], error: '' }) })
+      .catch(() => { if (active) setState({ list: [], error: 'No pudimos cargar la lista de responsables. Intenta de nuevo más tarde.' }) })
+    return () => { active = false }
+  }, [enabled])
+  return state
+}
+
+function Fact({ label, children, wide = false }) {
+  return <div className={wide ? 'sm:col-span-2' : ''}><dt className="text-xs text-[var(--tf-text-subtle)]">{label}</dt><dd className={`mt-1 whitespace-pre-wrap break-words text-sm ${children ? 'text-[var(--tf-text)]' : 'text-[var(--tf-text-subtle)]'}`}>{children || 'Sin registrar'}</dd></div>
+}
+
+function StatusProgress({ status }) {
+  if (status === 'cancelado') return <Alert tone="warning" title="Orden cancelada">Esta orden ya no avanza. Su historial se conserva abajo.</Alert>
+  const current = STAGES.findIndex((stage) => stage.statuses.includes(status))
+  return (
+    <ol className="tf-progress" aria-label="Avance de la orden">
+      {STAGES.map((stage, index) => {
+        const state = index < current ? 'done' : index === current ? 'current' : 'next'
+        return (
+          <li key={stage.label} className={`tf-progress-step is-${state}`} aria-current={state === 'current' ? 'step' : undefined}>
+            <span className="tf-progress-dot" aria-hidden="true">{state === 'done' ? <Check size={12} strokeWidth={3} /> : null}</span>
+            <span className="tf-progress-label">{stage.label}</span>
+            {state === 'current' && stage.statuses.length > 1 && <span className="tf-progress-sub">{REPAIR_STATUSES[status]?.label}</span>}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function StatusUpdate({ repair, endpoint, onSaved }) {
+  const toast = useToast()
+  const [nextStatus, setNextStatus] = useState(repair.status)
+  const [note, setNote] = useState('')
+  const [error, setError] = useState('')
+  const [requestError, setRequestError] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
+
+  async function submit(event) {
+    event.preventDefault()
+    if (savingRef.current) return
+    if (nextStatus === repair.status && !note.trim()) { setError('Elige otro estado o escribe una nota para registrar el avance.'); focusFirstInvalid('status-form'); return }
+    savingRef.current = true
+    setSaving(true); setRequestError(null)
+    try {
+      await api.post(`${endpoint}/history`, { status: nextStatus, note: note.trim() || null })
+      toast.success(nextStatus !== repair.status ? `Orden en ${REPAIR_STATUSES[nextStatus]?.label ?? nextStatus}.` : 'Nota agregada a la bitácora.')
+      setNote('')
+      onSaved()
+    } catch (err) {
+      setRequestError(err)
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form id="status-form" onSubmit={submit} noValidate className="space-y-4 border-b border-[var(--tf-border)] p-6">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+        <Select label="Estado" value={nextStatus} onChange={(event) => { setNextStatus(event.target.value); setError('') }}>
+          {Object.entries(REPAIR_STATUSES).map(([value, config]) => <option key={value} value={value}>{config.label}</option>)}
+        </Select>
+        <Textarea label="Nota (opcional)" rows={2} maxLength={10000} value={note} error={error} onChange={(event) => { setNote(event.target.value); setError('') }}
+          placeholder="Cambié el puerto de carga y probé con dos cargadores." className="min-h-[2.5rem]" />
+      </div>
+      {requestError && <ErrorAlert error={requestError} action="registrar el avance" />}
+      <div className="flex justify-end"><Button variant="primary" type="submit" icon={Send} busy={saving}>{saving ? 'Registrando…' : 'Registrar avance'}</Button></div>
+    </form>
+  )
 }
 
 function RepairDetailContent({ orderNumber }) {
   const { profile, user } = useAuth()
-  const location = useLocation()
-  const [result, setResult] = useState({ data: null, history: [], revision: -1, error: '' })
-  const [revision, setRevision] = useState(0)
-  const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState(() => repairFormValues())
-  const [technicians, setTechnicians] = useState([])
-  const [technicianError, setTechnicianError] = useState('')
-  const [saving, setSaving] = useState('')
-  const savingRef = useRef(false)
-  const [error, setError] = useState('')
-  const [notice, setNotice] = useState(location.state?.created ? 'Orden de reparación creada.' : '')
-  const [nextStatus, setNextStatus] = useState('')
-  const [note, setNote] = useState('')
-  const [whatsappMessages, setWhatsappMessages] = useState([])
-  const repair = result.data
-  const loading = result.revision !== revision
-  const canManage = ['OWNER', 'ADMINISTRADOR', 'RECEPCION'].includes(profile?.role)
+  const repairState = useRepair(orderNumber)
+  const { data: repair, history, loading, error, endpoint, reload } = repairState
+  const [messages, setMessages] = useState({ key: null, list: [] })
+  const canManage = MANAGE_ROLES.includes(profile?.role)
   const canEdit = canManage || (profile?.role === 'TECNICO' && repair?.technician_id === (profile?.id ?? user?.id))
-  const endpoint = `/repairs/${encodeURIComponent(orderNumber)}`
-
-  useEffect(() => {
-    let active = true
-    api.get(endpoint).then((response) => {
-      if (active) setResult({ ...response, revision, error: '' })
-    }).catch((err) => {
-      if (active) setResult({ data: null, history: [], revision, error: err.message })
-    })
-    return () => { active = false }
-  }, [endpoint, revision])
 
   useEffect(() => {
     if (!repair?.id) return undefined
     let active = true
-    api.get(`/whatsapp/messages?repair_order_id=${encodeURIComponent(repair.id)}`).then((response) => {
-      if (active) setWhatsappMessages(response.data ?? [])
-    }).catch(() => {})
+    api.get(`/whatsapp/messages?repair_order_id=${encodeURIComponent(repair.id)}`)
+      .then((response) => { if (active) setMessages({ key: repair.id, list: response.data ?? [] }) })
+      .catch(() => { if (active) setMessages({ key: repair.id, list: [] }) })
     return () => { active = false }
-  }, [repair?.id, revision])
+  }, [repair?.id, history.length])
 
-  useEffect(() => {
-    if (!canManage) return
-    let active = true
-    api.get('/technicians').then((response) => {
-      if (active) setTechnicians(response.data)
-    }).catch((err) => {
-      if (active) setTechnicianError(`No se pudieron cargar los responsables: ${err.message}`)
-    })
-    return () => { active = false }
-  }, [canManage])
+  const back = <Link className="tf-form-page-back" to="/reparaciones"><ArrowLeft size={16} aria-hidden="true" />Reparaciones</Link>
+  if (loading && !repair) return (
+    <div className="space-y-6" role="status" aria-label="Cargando orden">
+      {back}<Skeleton className="h-8 w-56" /><Skeleton className="h-12 w-full" />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]"><div className="tf-card space-y-4 p-6">{[0, 1, 2, 3].map((key) => <Skeleton key={key} className="h-4 w-full" />)}</div><div className="tf-card space-y-4 p-6">{[0, 1].map((key) => <Skeleton key={key} className="h-4 w-full" />)}</div></div>
+    </div>
+  )
+  if (error || !repair) return <div className="space-y-4">{back}<ErrorAlert error={error ?? { status: 404 }} action="cargar la orden" onRetry={reload} /></div>
 
-  function beginEdit() {
-    setForm(repairFormValues(repair))
-    setError('')
-    setNotice('')
-    setEditing(true)
-  }
-
-  async function saveDetails(event) {
-    event.preventDefault()
-    if (savingRef.current) return
-    savingRef.current = true
-    setSaving('details')
-    setError('')
-    setNotice('')
-    try {
-      const response = await api.patch(endpoint, repairFormPayload(form, !canManage))
-      setResult((previous) => ({ ...previous, data: { ...previous.data, ...response.data } }))
-      setEditing(false)
-      setNotice('Cambios guardados.')
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      savingRef.current = false
-      setSaving('')
-    }
-  }
-
-  async function saveHistory(event) {
-    event.preventDefault()
-    if (savingRef.current) return
-    const status = nextStatus || repair.status
-    if (status === repair.status && !note.trim()) { setError('Escribe una nota o selecciona un estado diferente.'); return }
-    savingRef.current = true
-    setSaving('history')
-    setError('')
-    setNotice('')
-    try {
-      const response = await api.post(`${endpoint}/history`, { status, note: note.trim() || null })
-      setResult((previous) => ({ ...previous, data: { ...previous.data, ...response.data } }))
-      setNote('')
-      setNextStatus('')
-      setNotice('Actualización registrada en la bitácora.')
-      try {
-        const refreshed = await api.get(endpoint)
-        setResult({ ...refreshed, revision, error: '' })
-      } catch (refreshError) {
-        setError(`El cambio se guardó, pero no se pudo actualizar la bitácora: ${refreshError.message}`)
-      }
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      savingRef.current = false
-      setSaving('')
-    }
-  }
-
-  const back = <Link className="inline-flex items-center gap-2 text-sm text-[var(--tf-text-muted)] hover:text-[var(--tf-link)]" to="/reparaciones"><ArrowLeft size={16} /> Reparaciones</Link>
-  if (loading) return <div className="space-y-6">{back}<p className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] p-12 text-center text-sm text-[var(--tf-text-muted)]">Cargando orden…</p></div>
-  if (result.error || !repair) return <div className="space-y-6">{back}<div role="alert" className="space-y-4 rounded-[var(--tf-radius-card)] border border-[rgba(248,113,113,.32)] p-6"><p className="text-sm text-[#fca5a5]">{result.error || 'No se encontró esta reparación.'}</p><button className={repairSecondaryClass} onClick={() => setRevision((value) => value + 1)}>Reintentar</button></div></div>
+  const messageList = messages.key === repair.id ? messages.list : []
+  const balance = Math.max(0, Number(repair.estimated_cost || 0) - Number(repair.deposit || 0))
 
   return (
     <div className="space-y-6">
-      {back}
-      <header className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold tracking-tight">{repair.order_number}</h1><StatusBadge status={repair.status} /></div><p className="mt-2 text-sm text-[var(--tf-text-muted)]">Recibido el {formatDate(repair.received_at)} · {repair.technician?.full_name || 'Sin responsable asignado'}</p></div><div className="flex flex-wrap gap-2"><WhatsAppComposer repair={repair} customer={repair.customer} onSent={(message) => setWhatsappMessages((previous) => [message, ...previous])} />{canEdit && !editing && <button className={repairSecondaryClass} disabled={Boolean(saving)} onClick={beginEdit}><Pencil size={16} /> {canManage ? 'Editar orden' : 'Editar diagnóstico'}</button>}</div></header>
-      {notice && <p role="status" className="rounded-lg border border-[rgba(74,222,128,.3)] bg-[var(--tf-success-soft)] px-4 py-3 text-sm text-[#86efac]">{notice}</p>}
-      {error && <div role="alert" className="space-y-2 rounded-lg border border-[rgba(248,113,113,.32)] bg-[var(--tf-danger-soft)] px-4 py-3 text-sm text-[#fca5a5]"><p>{error}</p>{!editing && <button className="text-xs underline" disabled={Boolean(saving)} onClick={() => { setError(''); setRevision((value) => value + 1) }}>Actualizar datos de la orden</button>}</div>}
-      <div className="grid gap-4 md:grid-cols-2">
-        <section className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5"><h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-[var(--tf-text-muted)]"><UserRound size={17} /> Cliente</h2><Link to={`/clientes?id=${encodeURIComponent(repair.customer_id)}`} className="font-semibold text-[var(--tf-link)] hover:underline">{customerName(repair.customer)}</Link><p className="mt-1 text-sm text-[var(--tf-text-muted)]">{repair.customer?.phone || 'Sin teléfono'}</p>{repair.customer?.email && <p className="mt-1 break-all text-sm text-[var(--tf-text-subtle)]">{repair.customer.email}</p>}</section>
-        <section className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5"><h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-[var(--tf-text-muted)]"><Smartphone size={17} /> Equipo</h2>{repair.device_id ? <Link to={`/dispositivos?id=${encodeURIComponent(repair.device_id)}`} className="font-semibold text-[var(--tf-link)] hover:underline">{deviceName(repair.device ?? repair)}</Link> : <p className="font-semibold">{deviceName(repair)}</p>}<p className="mt-1 text-sm text-[var(--tf-text-muted)]">IMEI: {repair.device?.imei || 'Sin registrar'}</p><p className="mt-1 text-sm text-[var(--tf-text-subtle)]">Serie: {repair.device?.serial_number || 'Sin registrar'}{repair.device?.color ? ` · ${repair.device.color}` : ''}</p></section>
+      <div>
+        {back}
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-3"><h1 className="ct-page-title tf-num">{repair.order_number}</h1><StatusBadge status={repair.status} /></div>
+            <p className="ct-page-description">{deviceName(repair.device ?? repair)} de {customerName(repair.customer)}. Recibido el {formatDate(repair.received_at)}.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <WhatsAppComposer repair={repair} customer={repair.customer} onSent={(message) => setMessages((current) => ({ key: repair.id, list: [message, ...(current.key === repair.id ? current.list : [])] }))} />
+            {canEdit && <Link to={`/reparaciones/${encodeURIComponent(repair.order_number)}/editar`} className="ct-btn ct-btn-secondary"><Pencil size={16} aria-hidden="true" />{canManage ? 'Editar orden' : 'Editar diagnóstico'}</Link>}
+          </div>
+        </div>
       </div>
-      {editing ? <form onSubmit={saveDetails} className="space-y-4"><RepairFields form={form} setForm={setForm} technicians={technicians} technicianError={technicianError} technicalOnly={!canManage} disabled={Boolean(saving)} /><div className="flex justify-end gap-3"><button type="button" className={repairSecondaryClass} disabled={Boolean(saving)} onClick={() => { setEditing(false); setError('') }}>Cancelar</button><button className={repairButtonClass} disabled={Boolean(saving)}><Save size={16} />{saving === 'details' ? 'Guardando…' : 'Guardar cambios'}</button></div></form> : <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(290px,0.6fr)]">
-        <section className="space-y-5 rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5"><h2 className="flex items-center gap-2 font-semibold"><Wrench size={18} className="text-[var(--tf-link)]" /> Recepción y diagnóstico</h2><dl className="grid gap-5 sm:grid-cols-2"><div className="sm:col-span-2"><DetailValue label="Problema reportado">{repair.reported_problem}</DetailValue></div><DetailValue label="Síntomas">{repair.symptoms}</DetailValue><DetailValue label="Estado físico">{repair.physical_condition}</DetailValue><DetailValue label="Accesorios recibidos">{repair.accessories_received}</DetailValue><DetailValue label="Daño por líquido / golpes">{`${repair.is_water_damaged ? 'Con daño por líquido' : 'Sin daño por líquido reportado'} · ${repair.is_dropped ? 'Con golpes o caída' : 'Sin golpes reportados'}`}</DetailValue>{Object.entries({ powers_on: 'Enciende', charges: 'Carga', displays_image: 'Muestra imagen', touch_works: 'Funciona el táctil' }).map(([key, label]) => <DetailValue key={key} label={label}>{repair[key] == null ? 'Sin revisar' : repair[key] ? 'Sí' : 'No'}</DetailValue>)}<div className="sm:col-span-2"><DetailValue label="Diagnóstico inicial">{repair.initial_diagnosis}</DetailValue></div><div className="sm:col-span-2"><DetailValue label="Notas internas">{repair.internal_notes}</DetailValue></div></dl></section>
-        <section className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5"><h2 className="mb-5 font-semibold">Estimación y seguimiento</h2><dl className="space-y-5"><DetailValue label="Costo estimado"><span className="text-2xl font-semibold text-[var(--tf-text)]">{formatCurrency(repair.estimated_cost)}</span></DetailValue><DetailValue label="Anticipo registrado">{formatCurrency(repair.deposit)}</DetailValue><DetailValue label="Entrega estimada">{formatDateTime(repair.estimated_delivery_at)}</DetailValue><DetailValue label="Responsable">{repair.technician?.full_name || 'Sin asignar'}</DetailValue><DetailValue label="Última actualización">{formatDateTime(repair.updated_at)}</DetailValue></dl></section>
-      </div>}
-      <section className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="flex items-center gap-2 font-semibold"><Clock3 size={18} className="text-[var(--tf-link)]" /> Bitácora de la reparación</h2><button className="text-xs text-[var(--tf-text-muted)] hover:text-[var(--tf-link)] disabled:opacity-50" disabled={Boolean(saving) || editing} onClick={() => setRevision((value) => value + 1)}>Actualizar bitácora</button></div>
-        {canEdit && <form onSubmit={saveHistory} className="mb-6 space-y-4 rounded-lg border border-[var(--tf-border)] bg-[var(--tf-surface-sunken)] p-4"><fieldset disabled={Boolean(saving) || editing} className="grid gap-4 sm:grid-cols-[240px_minmax(0,1fr)]"><RepairField label="Estado"><select className={repairInputClass} value={nextStatus || repair.status} onChange={(event) => setNextStatus(event.target.value)}>{Object.entries(REPAIR_STATUSES).map(([value, config]) => <option key={value} value={value}>{config.label}</option>)}</select></RepairField><RepairField label="Nota de seguimiento"><textarea className={repairInputClass} rows={2} maxLength={10000} placeholder="Qué se revisó, trabajo realizado o motivo del cambio…" value={note} onChange={(event) => setNote(event.target.value)} /></RepairField></fieldset><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-[var(--tf-text-subtle)]">{editing ? 'Guarda o cancela la edición antes de actualizar el estado.' : 'Puedes agregar una nota conservando el estado actual.'}</p><button className={repairButtonClass} disabled={Boolean(saving) || editing || ((!nextStatus || nextStatus === repair.status) && !note.trim())}><Send size={15} />{saving === 'history' ? 'Registrando…' : 'Registrar actualización'}</button></div></form>}
-        {result.history.length === 0 ? <p className="py-4 text-sm text-[var(--tf-text-subtle)]">Aún no hay movimientos en la bitácora.</p> : <ol className="space-y-5 border-l border-[var(--tf-border)] pl-5">{result.history.map((entry) => <li key={entry.id} className="relative"><span className="absolute -left-[25px] top-1.5 h-2 w-2 rounded-full bg-[var(--tf-primary)]" /><div className="flex flex-wrap items-center gap-2"><StatusBadge status={entry.status} /><time className="text-xs text-[var(--tf-text-subtle)]" dateTime={entry.created_at}>{formatDateTime(entry.created_at)}</time></div>{entry.note && <p className="mt-2 whitespace-pre-wrap break-words text-sm text-[var(--tf-text-muted)]">{entry.note}</p>}<p className="mt-1 text-xs text-[var(--tf-text-subtle)]">{entry.user?.full_name || 'Usuario no disponible'}</p></li>)}</ol>}
-      </section>
-      <section className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5">
-        <h2 className="mb-4 font-semibold">Historial de WhatsApp</h2>
-        {whatsappMessages.length === 0 ? <p className="text-sm text-[var(--tf-text-subtle)]">Aún no hay mensajes asociados a esta orden.</p> : <div className="space-y-3">{whatsappMessages.map((message) => <article key={message.id} className="rounded-lg border border-[var(--tf-border)] bg-[var(--tf-surface-sunken)] p-3"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-[var(--tf-text-muted)]">{formatDateTime(message.created_at)}</span><span className={`text-xs font-medium ${message.status === 'failed' ? 'text-[#fca5a5]' : message.status === 'read' ? 'text-[var(--tf-link)]' : 'text-[#86efac]'}`}>{message.status === 'failed' ? 'Error' : message.status === 'read' ? 'Leído' : message.status === 'delivered' ? 'Entregado' : message.status === 'sent' ? 'Enviado' : 'Pendiente'}</span></div><p className="mt-2 whitespace-pre-wrap text-sm text-[var(--tf-text-muted)]">{message.message}</p>{message.error_message && <p className="mt-2 text-xs text-[#fca5a5]">{message.error_message}</p>}</article>)}</div>}
-      </section>
+
+      <section className="tf-card px-6 py-4"><StatusProgress status={repair.status} /></section>
+
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="min-w-0 space-y-6">
+          <Card title="Recepción y diagnóstico">
+            <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              <Fact label="Problema reportado" wide>{repair.reported_problem}</Fact>
+              <Fact label="Síntomas">{repair.symptoms}</Fact>
+              <Fact label="Estado físico">{repair.physical_condition}</Fact>
+              <Fact label="Accesorios recibidos">{repair.accessories_received}</Fact>
+              <Fact label="Golpes o líquido">{[repair.is_water_damaged ? 'Daño por líquido' : null, repair.is_dropped ? 'Golpes o caída' : null].filter(Boolean).join(' y ') || 'Ninguno reportado'}</Fact>
+              <div className="sm:col-span-2">
+                <dt className="text-xs text-[var(--tf-text-subtle)]">Revisión al recibir</dt>
+                <dd className="mt-2 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                  {Object.entries({ powers_on: 'Enciende', charges: 'Carga', displays_image: 'Muestra imagen', touch_works: 'Táctil' }).map(([key, label]) => (
+                    <span key={key} className="text-[var(--tf-text-muted)]">{label}: <span className={repair[key] == null ? 'text-[var(--tf-text-subtle)]' : repair[key] ? 'text-[var(--tf-success)]' : 'text-[var(--tf-danger)]'}>{repair[key] == null ? 'sin revisar' : repair[key] ? 'sí' : 'no'}</span></span>
+                  ))}
+                </dd>
+              </div>
+              <Fact label="Diagnóstico inicial" wide>{repair.initial_diagnosis}</Fact>
+              <Fact label="Notas internas" wide>{repair.internal_notes}</Fact>
+            </dl>
+          </Card>
+
+          <Card title="Bitácora" description="Cada cambio de estado y nota, en orden." bodyClassName={null}>
+            {canEdit && <StatusUpdate key={repair.status} repair={repair} endpoint={endpoint} onSaved={reload} />}
+            {!history.length ? <EmptyState title="Sin movimientos todavía" description="Registra el primer avance cuando empieces a revisar el equipo." className="!py-8" />
+              : <ol className="tf-timeline p-6">{history.map((entry) => (
+                <li key={entry.id} className="tf-timeline-item">
+                  <div className="flex flex-wrap items-center gap-2"><StatusBadge status={entry.status} /><time className="text-xs text-[var(--tf-text-subtle)]" dateTime={entry.created_at}>{formatDateTime(entry.created_at)}</time></div>
+                  {entry.note && <p className="mt-2 whitespace-pre-wrap break-words text-sm text-[var(--tf-text-muted)]">{entry.note}</p>}
+                  <p className="mt-1 text-xs text-[var(--tf-text-subtle)]">{entry.user?.full_name || 'Usuario no disponible'}</p>
+                </li>))}</ol>}
+          </Card>
+        </div>
+
+        <aside className="min-w-0 space-y-6">
+          <Card title="Cobro">
+            <dl className="space-y-4">
+              <div><dt className="text-xs text-[var(--tf-text-subtle)]">Costo estimado</dt><dd className="tf-num mt-1 text-2xl font-semibold tracking-tight text-[var(--tf-text)]">{formatCurrency(repair.estimated_cost)}</dd></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><dt className="text-xs text-[var(--tf-text-subtle)]">Anticipo</dt><dd className="tf-num mt-1 text-sm text-[var(--tf-text)]">{formatCurrency(repair.deposit)}</dd></div>
+                <div><dt className="text-xs text-[var(--tf-text-subtle)]">Saldo</dt><dd className={`tf-num mt-1 text-sm ${balance > 0 ? 'text-[var(--tf-warning)]' : 'text-[var(--tf-text)]'}`}>{formatCurrency(balance)}</dd></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><dt className="text-xs text-[var(--tf-text-subtle)]">Entrega estimada</dt><dd className="mt-1 text-sm text-[var(--tf-text)]">{repair.estimated_delivery_at ? formatDateTime(repair.estimated_delivery_at) : <span className="text-[var(--tf-text-subtle)]">Sin fecha</span>}</dd></div>
+                <div><dt className="text-xs text-[var(--tf-text-subtle)]">Responsable</dt><dd className="mt-1 text-sm text-[var(--tf-text)]">{repair.technician?.full_name || <span className="text-[var(--tf-text-subtle)]">Sin asignar</span>}</dd></div>
+              </div>
+            </dl>
+          </Card>
+
+          <Card title="Cliente y equipo">
+            <dl className="space-y-4">
+              <div><dt className="text-xs text-[var(--tf-text-subtle)]">Cliente</dt><dd className="mt-1"><Link to={`/clientes/${encodeURIComponent(repair.customer_id)}`} className="tf-link text-sm font-medium">{customerName(repair.customer)}</Link><span className="tf-num block text-sm text-[var(--tf-text-muted)]">{repair.customer?.phone || 'Sin teléfono'}</span></dd></div>
+              <div><dt className="text-xs text-[var(--tf-text-subtle)]">Equipo</dt><dd className="mt-1">{repair.device_id ? <Link to={`/dispositivos/${encodeURIComponent(repair.device_id)}`} className="tf-link text-sm font-medium">{deviceName(repair.device ?? repair)}</Link> : <span className="text-sm text-[var(--tf-text)]">{deviceName(repair)}</span>}
+                <span className="tf-num block break-all text-sm text-[var(--tf-text-muted)]">{repair.device?.imei ? `IMEI ${repair.device.imei}` : repair.device?.serial_number ? `Serie ${repair.device.serial_number}` : 'Sin IMEI ni serie'}</span></dd></div>
+            </dl>
+          </Card>
+
+          <RepairTrackingPanel orderNumber={repair.order_number} />
+
+          <Card title="Mensajes de WhatsApp" bodyClassName={null}>
+            {!messageList.length ? <p className="p-6 text-sm text-[var(--tf-text-subtle)]">Aún no hay mensajes de esta orden.</p>
+              : <ul className="tf-list">{messageList.map((message) => {
+                const [label, tone] = WHATSAPP_STATUS[message.status] ?? ['Pendiente', 'neutral']
+                return (
+                  <li key={message.id} className="space-y-2 px-6 py-4">
+                    <div className="flex items-center justify-between gap-2"><span className="text-xs text-[var(--tf-text-subtle)]">{formatDateTime(message.created_at)}</span><Badge tone={tone}>{label}</Badge></div>
+                    <p className="whitespace-pre-wrap text-sm text-[var(--tf-text-muted)]">{message.message}</p>
+                    {message.error_message && <p className="text-xs text-[var(--tf-danger)]">No se entregó: {message.error_message}</p>}
+                  </li>
+                )
+              })}</ul>}
+          </Card>
+        </aside>
+      </div>
     </div>
   )
 }
@@ -157,3 +246,66 @@ export default function RepairDetail() {
   const { orderNumber } = useParams()
   return <RepairDetailContent key={orderNumber} orderNumber={orderNumber} />
 }
+
+/* ---------- Edición (página propia) ---------- */
+function RepairEditForm({ repair, endpoint, canManage }) {
+  const navigate = useNavigate()
+  const toast = useToast()
+  const technicians = useTechnicians(canManage)
+  const [form, setForm] = useState(() => repairFormValues(repair))
+  const [errors, setErrors] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [requestError, setRequestError] = useState(null)
+  const detailPath = `/reparaciones/${encodeURIComponent(repair.order_number)}`
+
+  async function submit(event) {
+    event.preventDefault()
+    const next = {}
+    if (canManage && !form.reported_problem.trim()) next.reported_problem = 'Describe el problema que reporta el cliente.'
+    if (canManage && !form.received_at) next.received_at = 'Indica la fecha y hora de recepción.'
+    if (canManage) for (const key of ['estimated_cost', 'deposit']) if (!(Number(form[key]) >= 0)) next[key] = 'Escribe un importe en pesos, por ejemplo 950.'
+    if (Object.keys(next).length) { setErrors(next); focusFirstInvalid('repair-edit-form'); return }
+    setSaving(true); setRequestError(null)
+    try {
+      await api.patch(endpoint, repairFormPayload(form, !canManage))
+      toast.success('Cambios guardados.')
+      navigate(detailPath)
+    } catch (error) {
+      setRequestError(error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div>
+        <Link to={detailPath} className="tf-form-page-back"><ArrowLeft size={16} aria-hidden="true" />{repair.order_number}</Link>
+        <h1 className="ct-page-title mt-2">{canManage ? 'Editar orden' : 'Editar diagnóstico'}</h1>
+        <p className="ct-page-description">Para cambiar el estado usa la bitácora de la orden; así queda registro.</p>
+      </div>
+      <form id="repair-edit-form" onSubmit={submit} noValidate className="space-y-6">
+        <RepairFields form={form} setForm={setForm} technicians={technicians.list} technicianError={technicians.error} technicalOnly={!canManage} disabled={saving} errors={errors}
+          onFieldChange={(key) => setErrors((current) => (current[key] ? { ...current, [key]: null } : current))} />
+        {requestError && <ErrorAlert error={requestError} action="guardar los cambios" />}
+        <div className="tf-form-page-actions !m-0 rounded-[var(--tf-radius-card)] border border-[var(--tf-border)]">
+          <Link to={detailPath} className="ct-btn ct-btn-secondary">Cancelar</Link>
+          <Button variant="primary" type="submit" busy={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</Button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+export function RepairEditPage() {
+  const { orderNumber } = useParams()
+  const { profile, user } = useAuth()
+  const { data: repair, loading, error, endpoint, reload } = useRepair(orderNumber)
+  const canManage = MANAGE_ROLES.includes(profile?.role)
+  const canEdit = canManage || (profile?.role === 'TECNICO' && repair?.technician_id === (profile?.id ?? user?.id))
+  if (loading && !repair) return <div className="mx-auto max-w-5xl"><Alert tone="info">Cargando la orden…</Alert></div>
+  if (error || !repair) return <div className="mx-auto max-w-5xl space-y-4"><Link to="/reparaciones" className="tf-form-page-back"><ArrowLeft size={16} aria-hidden="true" />Reparaciones</Link><ErrorAlert error={error ?? { status: 404 }} action="cargar la orden" onRetry={reload} /></div>
+  if (!canEdit) return <div className="mx-auto max-w-5xl"><Alert tone="warning" action={<Link to={`/reparaciones/${encodeURIComponent(orderNumber)}`} className="ct-btn ct-btn-secondary ct-btn-sm">Ver la orden</Link>}>Solo el responsable asignado o el mostrador pueden editar esta orden.</Alert></div>
+  return <RepairEditForm key={repair.id} repair={repair} endpoint={endpoint} canManage={canManage} />
+}
+

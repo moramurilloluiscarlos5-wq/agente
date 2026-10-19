@@ -19,7 +19,7 @@ function Breakdown({ rows, labelOf, empty }) {
             <span className="truncate text-[var(--tf-text-muted)]">{labelOf(row)}</span>
             <span className="tf-num font-semibold text-[var(--tf-text)]">{row.count}</span>
           </div>
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--tf-surface-sunken)]" aria-hidden="true">
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--tf-surface-sunken)]" aria-hidden="true">
             <div className="h-full rounded-full bg-[var(--tf-primary)]" style={{ width: `${Math.max(2, (Number(row.count) / max) * 100)}%` }} />
           </div>
         </li>

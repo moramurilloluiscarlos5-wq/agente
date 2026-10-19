@@ -45,7 +45,6 @@ export const NAV_ITEMS = [
 // Título visible de cada sección (barra superior y pestaña del navegador).
 export function sectionTitle(pathname) {
   if (pathname === '/' || pathname === '/dashboard') return 'Panel de control'
-  if (pathname === '/reparaciones/nueva') return 'Nueva reparación'
   if (pathname.startsWith('/buscar')) return 'Búsqueda'
   const item = NAV_ITEMS.find((entry) => entry.path !== '/' && pathname.startsWith(entry.path))
   return item?.title ?? item?.label ?? 'TallerFlow'

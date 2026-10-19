@@ -34,16 +34,16 @@ export default function ConnectionBanner() {
     <div
       role="status"
       className={`flex flex-wrap items-center justify-center gap-3 px-4 py-2 text-sm ${
-        offline
+        offline || checking
           ? 'border-b border-[rgba(251,191,36,.3)] bg-[var(--tf-warning-soft)] text-[#fcd34d]'
           : 'border-b border-[rgba(74,222,128,.3)] bg-[var(--tf-success-soft)] text-[#86efac]'
       }`}
     >
-      {offline && <AlertTriangle size={15} className="shrink-0 text-[#fcd34d]" />}
-      {checking && <LoaderCircle size={15} className="shrink-0 animate-spin text-[#fcd34d]" />}
-      {apiStatus === API_STATUS.ONLINE && <CheckCircle2 size={15} className="shrink-0 text-[#86efac]" />}
+      {offline && <AlertTriangle size={16} className="shrink-0" aria-hidden="true" />}
+      {checking && <LoaderCircle size={16} className="shrink-0 animate-spin" aria-hidden="true" />}
+      {apiStatus === API_STATUS.ONLINE && <CheckCircle2 size={16} className="shrink-0" aria-hidden="true" />}
       <span>
-        {offline && 'Problemas de conexión con TallerFlow. Reintentando…'}
+        {offline && 'Sin conexión con el servidor. Tus cambios no se guardarán hasta que vuelva; seguimos reintentando.'}
         {checking && 'Comprobando conexión con TallerFlow…'}
         {apiStatus === API_STATUS.ONLINE && 'Conexión restablecida.'}
       </span>
@@ -51,9 +51,9 @@ export default function ConnectionBanner() {
         <button
           type="button"
           onClick={retryApiNow}
-          className="ct-btn ct-btn-secondary px-3 py-1 text-xs"
+          className="ct-btn ct-btn-secondary ct-btn-sm"
         >
-          <RefreshCw size={13} /> Reintentar
+          <RefreshCw size={16} aria-hidden="true" />Reintentar ahora
         </button>
       )}
     </div>

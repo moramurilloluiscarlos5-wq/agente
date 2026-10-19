@@ -30,6 +30,17 @@ const RegisterWorkshop = lazy(() => import('./pages/RegisterWorkshop.jsx'))
 const WorkshopSuspended = lazy(() => import('./pages/WorkshopSuspended.jsx'))
 const DeviceTools = lazy(() => import('./pages/DeviceTools.jsx'))
 
+const PaymentFormPage = lazy(() => import('./pages/Payments.jsx').then((m) => ({ default: m.PaymentFormPage })))
+const QuoteFormPage = lazy(() => import('./pages/Quotes.jsx').then((m) => ({ default: m.QuoteFormPage })))
+const WarrantyFormPage = lazy(() => import('./pages/Warranties.jsx').then((m) => ({ default: m.WarrantyFormPage })))
+const ItemFormPage = lazy(() => import('./pages/Inventory.jsx').then((m) => ({ default: m.ItemFormPage })))
+const StockFormPage = lazy(() => import('./pages/Inventory.jsx').then((m) => ({ default: m.StockFormPage })))
+const RepairEditPage = lazy(() => import('./pages/RepairDetail.jsx').then((m) => ({ default: m.RepairEditPage })))
+const CustomerDetailPage = lazy(() => import('./pages/Customers.jsx').then((m) => ({ default: m.CustomerDetailPage })))
+const DeviceDetailPage = lazy(() => import('./pages/Devices.jsx').then((m) => ({ default: m.DeviceDetailPage })))
+const CustomerFormPage = lazy(() => import('./pages/Customers.jsx').then((m) => ({ default: m.CustomerFormPage })))
+const DeviceFormPage = lazy(() => import('./pages/Devices.jsx').then((m) => ({ default: m.DeviceFormPage })))
+const StaffFormPage = lazy(() => import('./pages/Staff.jsx').then((m) => ({ default: m.StaffFormPage })))
 const Billing = lazy(() => import('./pages/Billing.jsx'))
 const Pricing = lazy(() => import('./pages/Pricing.jsx'))
 
@@ -55,6 +66,7 @@ export default function App() {
           <Route path="/reparaciones" element={<Repairs />} />
           <Route path="/reparaciones/nueva" element={<NewRepair />} />
           <Route path="/reparaciones/:orderNumber" element={<RepairDetail />} />
+          <Route path="/reparaciones/:orderNumber/editar" element={<RepairEditPage />} />
           <Route path="/clientes" element={<Customers />} />
           <Route path="/dispositivos" element={<Devices />} />
           <Route path="/herramientas-dispositivo" element={<RequirePermission permission="devices.view"><DeviceTools /></RequirePermission>} />
@@ -70,6 +82,22 @@ export default function App() {
           <Route path="/personal" element={<RequirePermission permission="users.view"><Staff /></RequirePermission>} />
           <Route path="/auditoria" element={<RequirePermission permission="audit.view"><Audit /></RequirePermission>} />
           <Route path="/roles" element={<RequirePermission permission="roles.view"><Roles /></RequirePermission>} />
+          <Route path="/clientes/nuevo" element={<RequirePermission permission="clients.create"><CustomerFormPage /></RequirePermission>} />
+          <Route path="/clientes/:id/editar" element={<RequirePermission permission="clients.update"><CustomerFormPage /></RequirePermission>} />
+          <Route path="/dispositivos/nuevo" element={<RequirePermission permission="devices.create"><DeviceFormPage /></RequirePermission>} />
+          <Route path="/dispositivos/:id/editar" element={<RequirePermission permission="devices.update"><DeviceFormPage /></RequirePermission>} />
+          <Route path="/cotizaciones/nueva" element={<RequirePermission permission="quotes.create"><QuoteFormPage /></RequirePermission>} />
+          <Route path="/cotizaciones/:id/editar" element={<RequirePermission permission="quotes.update"><QuoteFormPage /></RequirePermission>} />
+          <Route path="/inventario/nuevo" element={<RequirePermission permission="inventory.create"><ItemFormPage /></RequirePermission>} />
+          <Route path="/inventario/:id/editar" element={<RequirePermission permission="inventory.update"><ItemFormPage /></RequirePermission>} />
+          <Route path="/inventario/:id/movimiento" element={<RequirePermission permission="inventory.adjust_stock"><StockFormPage /></RequirePermission>} />
+          <Route path="/pagos/nuevo" element={<RequirePermission permission="payments.create"><PaymentFormPage /></RequirePermission>} />
+          <Route path="/pagos/:id/editar" element={<RequirePermission permission="payments.update"><PaymentFormPage /></RequirePermission>} />
+          <Route path="/garantias/nueva" element={<RequirePermission permission="warranties.create"><WarrantyFormPage /></RequirePermission>} />
+          <Route path="/garantias/:id/editar" element={<RequirePermission permission="warranties.update"><WarrantyFormPage /></RequirePermission>} />
+          <Route path="/personal/nuevo" element={<RequirePermission permission="users.create"><StaffFormPage /></RequirePermission>} />
+          <Route path="/clientes/:id" element={<CustomerDetailPage />} />
+          <Route path="/dispositivos/:id" element={<DeviceDetailPage />} />
           <Route path="/buscar" element={<SearchResults />} />
           <Route path="*" element={<NotFound />} />
         </Route>

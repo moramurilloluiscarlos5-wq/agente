@@ -35,7 +35,7 @@ function clearPrivateSessionCache() {
   if (typeof window === 'undefined') return
   for (const storage of [window.localStorage, window.sessionStorage]) {
     for (const key of Object.keys(storage)) {
-      if (key.startsWith('carlostech-')) storage.removeItem(key)
+      if (key.startsWith('carlostech-') || key.startsWith('tallerflow-draft:')) storage.removeItem(key)
     }
   }
 }

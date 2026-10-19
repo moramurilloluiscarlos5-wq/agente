@@ -47,13 +47,13 @@ export default function RecordPicker({ label, value, onChange, path, renderLabel
     <div className="tf-field" ref={wrapperRef}>
       <label htmlFor={id} className="tf-label">{label}{required && <span className="tf-required"> (obligatorio)</span>}</label>
       {value ? (
-        <div className="flex min-h-[2.375rem] items-center justify-between gap-2 rounded-[var(--tf-radius-control)] border border-[var(--tf-border-strong)] bg-[var(--tf-surface-sunken)] px-3 py-1.5">
+        <div className="flex min-h-10 items-center justify-between gap-2 rounded-[var(--tf-radius-control)] border border-[var(--tf-border-strong)] bg-[var(--tf-surface-sunken)] px-3 py-2">
           <span className="flex min-w-0 items-center gap-2 text-sm text-[var(--tf-text)]"><Check size={14} className="shrink-0 text-[var(--tf-accent)]" aria-hidden="true" /><span className="truncate">{renderLabel(value)}</span></span>
           {!disabled && <button type="button" className="tf-icon-btn -mr-2 h-7 w-7" onClick={() => onChange(null)} aria-label={`Quitar ${label.toLowerCase()}`}><X size={14} /></button>}
         </div>
       ) : (
         <div className="relative">
-          <div className="tf-search min-h-[2.375rem] bg-[var(--tf-surface-sunken)]" style={{ borderColor: error ? 'rgba(248,113,113,.6)' : undefined }}>
+          <div className="tf-search min-h-10 bg-[var(--tf-surface-sunken)]" style={{ borderColor: error ? 'rgba(248,113,113,.6)' : undefined }}>
             <Search size={15} className="shrink-0" aria-hidden="true" />
             <input id={id} type="text" role="combobox" aria-expanded={open} aria-controls={listId} aria-autocomplete="list" aria-invalid={error ? true : undefined}
               aria-activedescendant={open && results[active] ? `${listId}-${active}` : undefined}
@@ -63,13 +63,13 @@ export default function RecordPicker({ label, value, onChange, path, renderLabel
           </div>
           {open && (
             <ul id={listId} role="listbox" className="tf-popover left-0 right-0 mt-1 max-h-60 overflow-y-auto p-1">
-              {failed ? <li className="px-3 py-2.5 text-[0.8125rem] text-[#fca5a5]">No pudimos buscar. Revisa tu conexión.</li>
-                : !loading && !results.length ? <li className="px-3 py-2.5 text-[0.8125rem] text-[var(--tf-text-muted)]">{emptyText}</li>
+              {failed ? <li className="px-3 py-3 text-sm text-[#fca5a5]">No pudimos buscar. Revisa tu conexión.</li>
+                : !loading && !results.length ? <li className="px-3 py-3 text-sm text-[var(--tf-text-muted)]">{emptyText}</li>
                   : results.map((record, index) => (
                     <li key={record.id} id={`${listId}-${index}`} role="option" aria-selected={index === active}
                       onMouseEnter={() => setActive(index)} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(record)}
                       className={`cursor-pointer rounded-md px-3 py-2 ${index === active ? 'bg-[rgba(148,163,184,.1)]' : ''}`}>
-                      <span className="block text-[0.8125rem] text-[var(--tf-text)]">{renderLabel(record)}</span>
+                      <span className="block text-sm text-[var(--tf-text)]">{renderLabel(record)}</span>
                       {renderMeta && <span className="block text-xs text-[var(--tf-text-subtle)]">{renderMeta(record)}</span>}
                     </li>
                   ))}

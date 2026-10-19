@@ -1,153 +1,244 @@
-import { useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { Archive, Filter, Pencil, Plus, Smartphone, X } from 'lucide-react'
+import { useState } from 'react'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Archive, ArrowLeft, Pencil, Plus, Smartphone, Wrench } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader.jsx'
-import { Alert, Button, ConfirmDialog, DataCard, EmptyState, SearchField, TableSkeleton } from '../components/ui/DesignSystem.jsx'
-import { useToast } from '../hooks/useToast.js'
-import { friendlyError } from '../utils/errors.js'
-import { api } from '../services/api.js'
+import RecordPicker from '../components/ui/RecordPicker.jsx'
+import StatusBadge from '../components/ui/StatusBadge.jsx'
+import { Alert, Button, Card, ConfirmDialog, DataCard, DraftNotice, EmptyState, ErrorAlert, FormPage, IconButton, Input, Pagination, SearchField, Skeleton, TableSkeleton, Textarea } from '../components/ui/DesignSystem.jsx'
+import { usePagedResource } from '../hooks/usePagedResource.js'
+import { useDirectoryRecords } from '../hooks/useDirectoryRecords.js'
+import { useDraft } from '../hooks/useDraft.js'
 import { useAuth } from '../hooks/useAuth.js'
-import { useDebouncedValue, useDirectoryRecords } from '../hooks/useDirectoryRecords.js'
+import { useToast } from '../hooks/useToast.js'
+import { api } from '../services/api.js'
+import { friendlyError } from '../utils/errors.js'
+import { focusFirstInvalid } from '../utils/forms.js'
 import { formatDate } from '../utils/formatters.js'
-import DirectoryCustomerPicker from '../components/ui/DirectoryCustomerPicker.jsx'
-import {
-  DirectoryFacts, DirectoryField, DirectoryLoading, DirectoryMessage, DirectoryModal,
-  DirectoryPagination, DirectoryRepairHistory, directoryButtonClass, directoryPrimaryClass,
-} from '../components/ui/DirectoryUi.jsx'
 
-const EMPTY_DEVICE = { customer_id: '', brand: '', model: '', color: '', imei: '', serial_number: '', os: '', physical_condition: '', accessories_received: '', notes: '' }
-const PAGE_SIZE = 12
+const FIELDS = ['brand', 'model', 'color', 'imei', 'serial_number', 'os', 'physical_condition', 'accessories_received', 'notes']
+const EDIT_ROLES = ['OWNER', 'ADMINISTRADOR', 'RECEPCION', 'SUPER_ADMIN']
+const ADMIN_ROLES = ['OWNER', 'ADMINISTRADOR', 'SUPER_ADMIN']
+const deviceName = (device) => [device?.brand, device?.model].filter(Boolean).join(' ') || 'Equipo'
+const customerLabel = (customer) => [customer?.first_name, customer?.last_name].filter(Boolean).join(' ') || 'Cliente'
 
-export default function Devices() {
-  const { profile } = useAuth()
-  const canEdit = ['OWNER', 'ADMINISTRADOR', 'RECEPCION'].includes(profile?.role)
-  const isAdmin = ['OWNER', 'ADMINISTRADOR'].includes(profile?.role)
-  const [params, setParams] = useSearchParams()
-  const selectedId = params.get('id')
-  const filterId = params.get('customer_id') || ''
-  const [query, setQuery] = useState('')
-  const [page, setPage] = useState(1)
-  const [showFilter, setShowFilter] = useState(false)
-  const [editor, setEditor] = useState(null)
-  const [form, setForm] = useState(EMPTY_DEVICE)
-  const [chosenCustomer, setChosenCustomer] = useState(null)
-  const [saving, setSaving] = useState(false)
-  const [formError, setFormError] = useState('')
-  const [notice, setNotice] = useState('')
-  const mutationLock = useRef(false)
-  const [confirmArchive, setConfirmArchive] = useState(false)
+/* ---------- Formulario (página) ---------- */
+function DeviceForm({ initial, presetCustomer }) {
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const toRepair = params.get('volver') === 'reparacion'
   const toast = useToast()
-  const debouncedQuery = useDebouncedValue(query)
-  const listing = useDirectoryRecords(`/devices?${new URLSearchParams({ q: debouncedQuery, page: String(page), limit: String(PAGE_SIZE), ...(filterId ? { customer_id: filterId } : {}) })}`)
-  const detail = useDirectoryRecords(selectedId ? `/devices/${encodeURIComponent(selectedId)}` : null)
-  const linkedCustomer = useDirectoryRecords(filterId ? `/customers/${encodeURIComponent(filterId)}` : null)
-  const device = detail.payload?.data
-  const creatingFromLink = canEdit && (params.get('new') === '1' || params.get('nuevo') === '1')
-  const editing = editor !== null || creatingFromLink
-  const selectedCustomerId = form.customer_id || (creatingFromLink ? filterId : '')
-  const selectedCustomer = chosenCustomer?.id === selectedCustomerId ? chosenCustomer : linkedCustomer.payload?.data?.id === selectedCustomerId ? linkedCustomer.payload.data : null
-
-  function changeField(name, value) { setForm((previous) => ({ ...previous, [name]: value })) }
-
-  function closePanel() {
-    if (mutationLock.current) return
-    setEditor(null)
-    setForm(EMPTY_DEVICE)
-    setChosenCustomer(null)
-    setFormError('')
-    setParams(filterId ? { customer_id: filterId } : {}, { replace: true })
+  const editing = Boolean(initial?.id)
+  const start = {
+    customer: initial?.customer ? { id: initial.customer_id, ...initial.customer } : presetCustomer ?? null,
+    ...Object.fromEntries(FIELDS.map((key) => [key, initial?.[key] ?? ''])),
   }
+  const [form, setForm, draft] = useDraft(editing || presetCustomer ? null : 'device-new', start)
+  const [errors, setErrors] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState(null)
+  const set = (key) => (event) => { const { value } = event.target; setForm((current) => ({ ...current, [key]: value })); setErrors((current) => ({ ...current, [key]: null })) }
+  const back = editing ? `/dispositivos/${initial.id}` : toRepair && presetCustomer ? `/reparaciones/nueva?customer_id=${presetCustomer.id}` : presetCustomer ? `/clientes/${presetCustomer.id}` : '/dispositivos'
 
-  function openEditor(record = null) {
-    setNotice('')
-    setFormError('')
-    setEditor(record || {})
-    setForm(Object.fromEntries(Object.keys(EMPTY_DEVICE).map((key) => [key, record?.[key] ?? (key === 'customer_id' ? filterId : '')])))
-    setChosenCustomer(record?.customer || linkedCustomer.payload?.data || null)
-  }
-
-  async function saveDevice(event) {
+  async function submit(event) {
     event.preventDefault()
-    if (mutationLock.current || !canEdit) return
-    const body = Object.fromEntries(Object.entries({ ...form, customer_id: selectedCustomerId }).map(([key, value]) => [key, value.trim() || null]))
-    if (!body.customer_id || !body.brand || !body.model) {
-      setFormError('Selecciona un cliente y completa la marca y el modelo del equipo.')
-      return
-    }
-    mutationLock.current = true
-    setSaving(true)
-    setFormError('')
+    const next = {}
+    if (!form.customer) next.customer = 'Elige al cliente dueño del equipo.'
+    if (!form.brand.trim()) next.brand = 'Escribe la marca, por ejemplo Samsung.'
+    if (!form.model.trim()) next.model = 'Escribe el modelo, por ejemplo Galaxy A54.'
+    if (Object.keys(next).length) { setErrors(next); focusFirstInvalid('device-form'); return }
+    const body = { customer_id: form.customer.id, ...Object.fromEntries(FIELDS.map((key) => [key, String(form[key] ?? '').trim() || null])) }
+    setSaving(true); setFormError(null)
     try {
-      const response = editor?.id ? await api.patch(`/devices/${editor.id}`, body) : await api.post('/devices', body)
-      toast.success(editor?.id ? 'Datos del equipo actualizados.' : 'Equipo registrado.')
-      setEditor(null)
-      setForm(EMPTY_DEVICE)
-      setChosenCustomer(null)
-      setParams({ ...(filterId ? { customer_id: filterId } : {}), id: response.data.id }, { replace: true })
-      listing.reload()
-      detail.reload()
+      const response = editing ? await api.patch(`/devices/${initial.id}`, body) : await api.post('/devices', body)
+      draft.clear()
+      toast.success(editing ? 'Datos del equipo actualizados.' : `${deviceName(body)} quedó registrado.`)
+      navigate(toRepair ? `/reparaciones/nueva?customer_id=${body.customer_id}&device_id=${response.data.id}` : `/dispositivos/${response.data.id}`, { replace: true })
     } catch (error) {
-      setFormError(friendlyError(error, 'guardar el equipo'))
+      setFormError(error)
     } finally {
-      mutationLock.current = false
-      setSaving(false)
-    }
-  }
-
-  async function archiveDevice() {
-    if (mutationLock.current || !isAdmin || !device) return
-    mutationLock.current = true
-    setSaving(true)
-    setFormError('')
-    try {
-      await api.delete(`/devices/${device.id}`)
-      setConfirmArchive(false)
-      toast.success(`${device.brand} ${device.model} se archivó. Su historial se conserva.`)
-      setParams(filterId ? { customer_id: filterId } : {}, { replace: true })
-      setPage(1)
-      listing.reload()
-    } catch (error) {
-      setConfirmArchive(false)
-      setFormError(friendlyError(error, 'archivar el equipo'))
-    } finally {
-      mutationLock.current = false
       setSaving(false)
     }
   }
 
   return (
-    <div className="space-y-5">
-      <PageHeader title="Dispositivos" description="Equipos de tus clientes y su historial de reparaciones."
-        actions={canEdit && <Button variant="primary" icon={Plus} onClick={() => openEditor()}>Nuevo equipo</Button>} />
-      <DirectoryMessage>{notice}</DirectoryMessage>
-      <DataCard
-        toolbar={<div className="w-full space-y-3">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <SearchField label="Buscar dispositivos" value={query} onChange={(value) => { setQuery(value); setPage(1) }} placeholder="Marca, modelo, IMEI o serie" className="max-w-[22rem]" />
-            <Button variant="secondary" icon={Filter} aria-expanded={showFilter} aria-controls="device-customer-filter" onClick={() => setShowFilter((value) => !value)}>Filtrar por cliente</Button>
-            {filterId && <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--tf-border-strong)] py-1 pl-3 pr-1 text-[0.8125rem] text-[var(--tf-text)]">{linkedCustomer.payload?.data ? `${linkedCustomer.payload.data.first_name} ${linkedCustomer.payload.data.last_name}` : 'Cliente seleccionado'}<button type="button" aria-label="Quitar filtro de cliente" onClick={() => { setParams({}); setPage(1) }} className="tf-icon-btn h-6 w-6"><X size={13} /></button></span>}
+    <FormPage backTo={back} backLabel={editing ? deviceName(initial) : toRepair ? 'Registrar reparación' : presetCustomer ? customerLabel(presetCustomer) : 'Dispositivos'} title={editing ? 'Editar equipo' : 'Registrar equipo'} description="El estado físico y los accesorios protegen al taller ante cualquier reclamo."
+      notice={draft.restored && <DraftNotice onDiscard={draft.discard} />}
+      footer={<><Button onClick={() => navigate(back)} disabled={saving}>Cancelar</Button><Button variant="primary" type="submit" form="device-form" busy={saving}>Guardar equipo</Button></>}>
+      <form id="device-form" onSubmit={submit} noValidate className="tf-form-grid">
+        <div className="tf-span-2">
+          <RecordPicker label="Cliente" required value={form.customer} error={errors.customer}
+            onChange={(customer) => { setForm((current) => ({ ...current, customer })); setErrors((current) => ({ ...current, customer: null })) }}
+            path={(q) => `/customers?limit=6${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+            renderLabel={customerLabel} renderMeta={(customer) => customer.phone || ''} placeholder="María López o 612 123 4567"
+            emptyText="No hay clientes con ese nombre. Regístralo primero en Clientes." />
+        </div>
+        <Input label="Marca" required value={form.brand} onChange={set('brand')} error={errors.brand} maxLength={100} placeholder="Samsung" />
+        <Input label="Modelo" required value={form.model} onChange={set('model')} error={errors.model} maxLength={150} placeholder="Galaxy A54" />
+        <Input label="Color (opcional)" value={form.color} onChange={set('color')} maxLength={100} placeholder="Negro" />
+        <Input label="Sistema operativo (opcional)" value={form.os} onChange={set('os')} maxLength={100} placeholder="Android 14" />
+        <Input label="IMEI (opcional)" value={form.imei} onChange={set('imei')} maxLength={30} inputMode="numeric" placeholder="356938035643809" hint="Marca *#06# en el teléfono para verlo." />
+        <Input label="Número de serie (opcional)" value={form.serial_number} onChange={set('serial_number')} maxLength={100} placeholder="R58N12ABCDE" />
+        <Textarea fieldClassName="tf-span-2" label="Estado físico (opcional)" value={form.physical_condition} onChange={set('physical_condition')} maxLength={5000} placeholder="Pantalla estrellada en la esquina superior, carcasa sin golpes." />
+        <Textarea fieldClassName="tf-span-2" label="Accesorios recibidos (opcional)" value={form.accessories_received} onChange={set('accessories_received')} maxLength={2000} placeholder="Funda y tarjeta SIM." />
+        <Textarea fieldClassName="tf-span-2" label="Notas (opcional)" value={form.notes} onChange={set('notes')} maxLength={5000} placeholder="Tiene patrón de desbloqueo en forma de L." />
+        {formError && <div className="tf-span-2"><ErrorAlert error={formError} action="guardar el equipo" /></div>}
+      </form>
+    </FormPage>
+  )
+}
+
+export function DeviceFormPage() {
+  const { id } = useParams()
+  const [params] = useSearchParams()
+  const presetId = id ? null : params.get('customer_id')
+  const detail = useDirectoryRecords(id ? `/devices/${encodeURIComponent(id)}` : null)
+  const preset = useDirectoryRecords(presetId ? `/customers/${encodeURIComponent(presetId)}` : null)
+  const state = id ? detail : preset
+  if (!id && !presetId) return <DeviceForm />
+  if (state.loading) return <div className="tf-form-page"><Alert tone="info">Cargando…</Alert></div>
+  if (state.error || !state.payload?.data) return <div className="tf-form-page space-y-4"><Link to="/dispositivos" className="tf-form-page-back"><ArrowLeft size={16} aria-hidden="true" />Dispositivos</Link><Alert tone="error" action={<Button size="sm" onClick={state.reload}>Reintentar</Button>}>{state.error || 'No encontramos este registro. Es posible que se haya archivado.'}</Alert></div>
+  return id ? <DeviceForm key={id} initial={detail.payload.data} /> : <DeviceForm key={presetId} presetCustomer={preset.payload.data} />
+}
+
+/* ---------- Detalle ---------- */
+export function DeviceDetailPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const toast = useToast()
+  const { profile } = useAuth()
+  const canEdit = EDIT_ROLES.includes(profile?.role)
+  const isAdmin = ADMIN_ROLES.includes(profile?.role)
+  const detail = useDirectoryRecords(`/devices/${encodeURIComponent(id)}`)
+  const [confirmArchive, setConfirmArchive] = useState(false)
+  const [archiving, setArchiving] = useState(false)
+  const device = detail.payload?.data
+  const repairs = detail.payload?.repairs ?? []
+
+  async function archive() {
+    setArchiving(true)
+    try {
+      await api.delete(`/devices/${device.id}`)
+      toast.success(`${deviceName(device)} se archivó. Su historial se conserva.`)
+      navigate('/dispositivos', { replace: true })
+    } catch (error) {
+      setConfirmArchive(false)
+      toast.error(friendlyError(error, 'archivar el equipo'))
+    } finally {
+      setArchiving(false)
+    }
+  }
+
+  if (detail.loading) return <div className="space-y-6" role="status" aria-label="Cargando equipo"><Skeleton className="h-4 w-24" /><Skeleton className="h-8 w-64" /><div className="tf-card space-y-4 p-6">{[0, 1, 2].map((key) => <Skeleton key={key} className="h-4 w-full max-w-md" />)}</div></div>
+  if (detail.error || !device) return (
+    <div className="space-y-4">
+      <Link to="/dispositivos" className="tf-form-page-back"><ArrowLeft size={16} aria-hidden="true" />Dispositivos</Link>
+      <Alert tone="error" action={<Button size="sm" onClick={detail.reload}>Reintentar</Button>}>{detail.error || 'No encontramos este equipo. Es posible que se haya archivado.'}</Alert>
+    </div>
+  )
+
+  const facts = [
+    ['Color', device.color], ['Sistema operativo', device.os], ['IMEI', device.imei], ['Número de serie', device.serial_number],
+    ['Estado físico', device.physical_condition], ['Accesorios recibidos', device.accessories_received], ['Notas', device.notes], ['Registrado', formatDate(device.created_at)],
+  ]
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <Link to="/dispositivos" className="tf-form-page-back"><ArrowLeft size={16} aria-hidden="true" />Dispositivos</Link>
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="ct-page-title">{deviceName(device)}</h1>
+            <p className="ct-page-description">De <Link to={`/clientes/${device.customer_id}`} className="tf-link">{device.customer ? customerLabel(device.customer) : 'ver cliente'}</Link>{device.customer?.phone ? <span className="tf-num">, {device.customer.phone}</span> : null}</p>
           </div>
-          {showFilter && <div id="device-customer-filter"><DirectoryCustomerPicker label="Filtrar equipos por cliente" value={filterId} selectedCustomer={linkedCustomer.payload?.data} onChange={(record) => { setParams({ customer_id: record.id }); setPage(1); setShowFilter(false) }} /></div>}
-          <DirectoryMessage error>{linkedCustomer.error}</DirectoryMessage>
-        </div>}
-        footer={!listing.error && listing.payload?.count > 0 && <DirectoryPagination page={page} limit={PAGE_SIZE} count={listing.payload?.count ?? 0} onPage={setPage} disabled={listing.loading} />}>
-        {listing.loading ? <TableSkeleton columns={4} rows={6} />
-          : listing.error ? <div className="p-4"><Alert tone="error" action={<Button size="sm" onClick={listing.reload}>Reintentar</Button>}>{listing.error}</Alert></div>
-            : !listing.payload?.data?.length ? <EmptyState icon={Smartphone} title={query || filterId ? 'No encontramos equipos' : 'Todavía no hay equipos'}
-                description={query || filterId ? 'Prueba otra búsqueda o cambia el filtro de cliente.' : 'Registra un equipo y asígnalo a su cliente. También se registran al crear una reparación.'}
-                action={!query && !filterId && canEdit && <Button variant="primary" icon={Plus} onClick={() => openEditor()}>Nuevo equipo</Button>} />
+          {canEdit && <div className="flex flex-wrap gap-2">
+            {isAdmin && <Button variant="ghost" icon={Archive} onClick={() => setConfirmArchive(true)}>Archivar equipo</Button>}
+            <Link to={`/dispositivos/${device.id}/editar`} className="ct-btn ct-btn-secondary"><Pencil size={16} aria-hidden="true" />Editar datos</Link>
+            <Link to={`/reparaciones/nueva?customer_id=${device.customer_id}&device_id=${device.id}`} className="ct-btn ct-btn-primary"><Plus size={16} aria-hidden="true" />Registrar reparación</Link>
+          </div>}
+        </div>
+      </div>
+
+      <Card title="Ficha del equipo">
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {facts.map(([label, value]) => <div key={label}><dt className="text-xs text-[var(--tf-text-subtle)]">{label}</dt><dd className={`mt-1 whitespace-pre-wrap break-words text-sm ${value ? 'text-[var(--tf-text)]' : 'text-[var(--tf-text-subtle)]'}`}>{value || 'Sin registrar'}</dd></div>)}
+        </dl>
+      </Card>
+
+      <Card title="Historial de reparaciones" bodyClassName={null}>
+        {!repairs.length ? <EmptyState icon={Wrench} title="Sin reparaciones todavía" description="Cuando este equipo entre al taller, aquí verás cada orden y su estado."
+          action={canEdit && <Link to={`/reparaciones/nueva?customer_id=${device.customer_id}&device_id=${device.id}`} className="ct-btn ct-btn-primary"><Plus size={16} aria-hidden="true" />Registrar reparación</Link>} className="!py-8" />
+          : <div className="ct-table-shell"><table className="ct-table min-w-[32rem]">
+            <thead><tr><th scope="col">Orden</th><th scope="col">Recibido</th><th scope="col">Estado</th></tr></thead>
+            <tbody>{repairs.map((repair) => (
+              <tr key={repair.id}>
+                <td><Link to={`/reparaciones/${encodeURIComponent(repair.order_number)}`} className="tf-link tf-num font-medium">{repair.order_number}</Link></td>
+                <td className="whitespace-nowrap">{formatDate(repair.received_at || repair.created_at)}</td>
+                <td><StatusBadge status={repair.status} /></td>
+              </tr>))}</tbody>
+          </table></div>}
+      </Card>
+
+      <ConfirmDialog open={confirmArchive} busy={archiving} confirmLabel="Archivar equipo"
+        title={`¿Archivar ${deviceName(device)} de ${customerLabel(device.customer)}?`}
+        description="Dejará de aparecer en la lista de equipos activos. Su historial de reparaciones se conserva."
+        onConfirm={archive} onCancel={() => setConfirmArchive(false)} />
+    </div>
+  )
+}
+
+/* ---------- Lista ---------- */
+export default function Devices() {
+  const { profile } = useAuth()
+  const navigate = useNavigate()
+  const canEdit = EDIT_ROLES.includes(profile?.role)
+  const [params, setParams] = useSearchParams()
+  const customerId = params.get('customer_id') || ''
+  const linked = useDirectoryRecords(customerId ? `/customers/${encodeURIComponent(customerId)}` : null)
+  const list = usePagedResource('/devices', { limit: 12, filters: { customer_id: customerId } })
+  const customer = linked.payload?.data ?? null
+  const filtered = Boolean(list.query || customerId)
+  const clearFilters = () => { list.setQuery(''); setParams({}) }
+
+  // Enlaces antiguos: /dispositivos?id=… y /dispositivos?new=1
+  if (params.get('id')) return <Navigate to={`/dispositivos/${encodeURIComponent(params.get('id'))}`} replace />
+  if (canEdit && (params.get('new') === '1' || params.get('nuevo') === '1')) return <Navigate to={`/dispositivos/nuevo${customerId ? `?customer_id=${encodeURIComponent(customerId)}` : ''}`} replace />
+
+  const newLink = `/dispositivos/nuevo${customerId ? `?customer_id=${encodeURIComponent(customerId)}` : ''}`
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Dispositivos" description="Equipos de tus clientes y su historial de reparaciones."
+        actions={canEdit && <Link to={newLink} className="ct-btn ct-btn-primary"><Plus size={16} aria-hidden="true" />Registrar equipo</Link>} />
+      <DataCard
+        toolbar={<>
+          <SearchField label="Buscar dispositivos" value={list.query} onChange={list.setQuery} placeholder="Samsung, A54 o IMEI" />
+          <div className="min-w-[14rem] flex-1 sm:max-w-[20rem]">
+            <RecordPicker label="Cliente" value={customer && customer.id === customerId ? customer : null}
+              onChange={(record) => setParams(record ? { customer_id: record.id } : {})}
+              path={(q) => `/customers?limit=6${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+              renderLabel={customerLabel} renderMeta={(record) => record.phone || ''} placeholder="Todos los clientes" />
+          </div>
+          {filtered && <Button variant="ghost" onClick={clearFilters}>Quitar filtros</Button>}
+        </>}
+        footer={!list.loading && !list.error && <Pagination page={list.page} limit={list.limit} count={list.count} onPage={list.setPage} label="equipos" />}>
+        {list.error ? <div className="p-4"><ErrorAlert error={list.error} action="cargar los equipos" onRetry={list.reload} /></div>
+          : list.loading && !list.rows.length ? <TableSkeleton columns={4} rows={6} />
+            : !list.rows.length ? (filtered
+              ? <EmptyState icon={Smartphone} title="No encontramos equipos" description="Prueba otra búsqueda o quita el filtro de cliente." action={<Button onClick={clearFilters}>Quitar filtros</Button>} />
+              : <EmptyState icon={Smartphone} title="Todavía no hay equipos" description="Registra un equipo y asígnalo a su cliente. También se registran al crear una reparación."
+                action={canEdit && <Link to={newLink} className="ct-btn ct-btn-primary"><Plus size={16} aria-hidden="true" />Registrar equipo</Link>} />)
               : (
-                <div className="ct-table-shell">
+                <div className="ct-table-shell" aria-busy={list.loading}>
                   <table className="ct-table min-w-[40rem]">
                     <thead><tr><th scope="col">Equipo</th><th scope="col">Cliente</th><th scope="col">IMEI o serie</th><th scope="col">Registrado</th>{canEdit && <th scope="col"><span className="sr-only">Acciones</span></th>}</tr></thead>
                     <tbody>
-                      {listing.payload.data.map((record) => (
+                      {list.rows.map((record) => (
                         <tr key={record.id}>
-                          <td><button type="button" onClick={() => { setNotice(''); setFormError(''); setParams({ ...(filterId ? { customer_id: filterId } : {}), id: record.id }) }} className="text-left font-medium text-[var(--tf-text)] hover:text-[var(--tf-link)]">{record.brand} {record.model}</button>{record.color && <p className="text-xs text-[var(--tf-text-subtle)]">{record.color}</p>}</td>
-                          <td>{record.customer ? `${record.customer.first_name} ${record.customer.last_name}` : '—'}</td>
+                          <td><Link to={`/dispositivos/${record.id}`} className="tf-link font-medium">{deviceName(record)}</Link>{record.color && <p className="text-xs text-[var(--tf-text-subtle)]">{record.color}</p>}</td>
+                          <td>{record.customer ? customerLabel(record.customer) : '—'}</td>
                           <td className="tf-num break-all">{record.imei || record.serial_number || <span className="text-[var(--tf-text-subtle)]">Sin registrar</span>}</td>
                           <td className="whitespace-nowrap">{formatDate(record.created_at)}</td>
-                          {canEdit && <td className="text-right"><button type="button" onClick={() => openEditor(record)} className="tf-icon-btn" aria-label={`Editar ${record.brand} ${record.model}`} title="Editar"><Pencil size={15} /></button></td>}
+                          {canEdit && <td className="text-right"><IconButton label={`Editar ${deviceName(record)}`} icon={Pencil} onClick={() => navigate(`/dispositivos/${record.id}/editar`)} /></td>}
                         </tr>
                       ))}
                     </tbody>
@@ -155,35 +246,6 @@ export default function Devices() {
                 </div>
               )}
       </DataCard>
-
-      {editing ? <DirectoryModal title={editor?.id ? 'Editar equipo' : 'Nuevo equipo'} onClose={closePanel} busy={saving}>
-        <form onSubmit={saveDevice} className="space-y-5"><DirectoryMessage error>{formError || (creatingFromLink ? linkedCustomer.error : '')}</DirectoryMessage>
-          <DirectoryCustomerPicker value={selectedCustomerId} selectedCustomer={selectedCustomer} disabled={saving} onChange={(record) => { changeField('customer_id', record.id); setChosenCustomer(record) }} />
-          <fieldset disabled={saving} className="grid gap-4 sm:grid-cols-2">
-            <DirectoryField label="Marca" name="brand" value={form.brand} onChange={changeField} required maxLength={100} placeholder="Ej. Samsung" />
-            <DirectoryField label="Modelo" name="model" value={form.model} onChange={changeField} required maxLength={150} placeholder="Ej. Galaxy A54" />
-            <DirectoryField label="Color" name="color" value={form.color} onChange={changeField} maxLength={100} />
-            <DirectoryField label="IMEI" name="imei" value={form.imei} onChange={changeField} maxLength={30} inputMode="numeric" />
-            <DirectoryField label="Número de serie" name="serial_number" value={form.serial_number} onChange={changeField} maxLength={100} />
-            <DirectoryField label="Sistema operativo" name="os" value={form.os} onChange={changeField} maxLength={100} placeholder="Ej. Android 14" />
-            <DirectoryField label="Estado físico" name="physical_condition" value={form.physical_condition} onChange={changeField} textarea maxLength={5000} placeholder="Pantalla, carcasa, golpes o rayones visibles…" />
-            <DirectoryField label="Accesorios recibidos" name="accessories_received" value={form.accessories_received} onChange={changeField} textarea maxLength={2000} placeholder="Cargador, funda, tarjeta SIM…" />
-            <DirectoryField label="Notas" name="notes" value={form.notes} onChange={changeField} textarea maxLength={5000} />
-          </fieldset>
-          <div className="flex justify-end gap-3"><button type="button" onClick={closePanel} disabled={saving} className={directoryButtonClass}>Cancelar</button><button type="submit" disabled={saving} className={directoryPrimaryClass}>{saving ? 'Guardando…' : 'Guardar equipo'}</button></div>
-        </form>
-      </DirectoryModal> : selectedId && <DirectoryModal title={device ? `${device.brand} ${device.model}` : 'Detalle del equipo'} onClose={closePanel} busy={saving}>
-        <DirectoryMessage>{notice}</DirectoryMessage><DirectoryMessage error>{formError || detail.error}</DirectoryMessage>
-        {detail.loading ? <DirectoryLoading /> : device ? <>
-          <div className="rounded-[var(--tf-radius-control)] border border-[var(--tf-border)] bg-[var(--tf-surface-sunken)] p-3"><p className="text-xs text-[var(--tf-text-subtle)]">Cliente</p><Link to={`/clientes?id=${device.customer_id}`} className="tf-link mt-1 inline-block">{device.customer ? `${device.customer.first_name} ${device.customer.last_name}` : 'Ver cliente'}</Link>{device.customer?.phone && <p className="tf-num mt-1 text-[0.8125rem] text-[var(--tf-text-muted)]">{device.customer.phone}</p>}</div>
-          <DirectoryFacts items={[[ 'Color', device.color ], [ 'IMEI', device.imei ], [ 'Número de serie', device.serial_number ], [ 'Sistema operativo', device.os ], [ 'Estado físico', device.physical_condition ], [ 'Accesorios recibidos', device.accessories_received ], [ 'Notas', device.notes ], [ 'Fecha de registro', formatDate(device.created_at) ]]} />
-          {canEdit && <div className="flex flex-wrap gap-2"><button type="button" onClick={() => openEditor(device)} disabled={saving} className={directoryButtonClass}><Pencil size={16} />Editar</button><Link to={`/reparaciones/nueva?customer_id=${device.customer_id}&device_id=${device.id}`} className={directoryPrimaryClass}><Plus size={16} />Nueva reparación</Link>{isAdmin && <button type="button" onClick={() => setConfirmArchive(true)} disabled={saving} className="ct-btn ct-btn-danger"><Archive size={15} />Archivar</button>}</div>}
-          <DirectoryRepairHistory repairs={detail.payload.repairs} />
-        </> : detail.error && <button type="button" onClick={detail.reload} className={directoryButtonClass}>Reintentar</button>}
-      </DirectoryModal>}
-      <ConfirmDialog open={confirmArchive} title="¿Archivar este equipo?" busy={saving} confirmLabel="Archivar equipo"
-        description={device ? `${device.brand} ${device.model} dejará de aparecer en la lista de equipos activos. Su historial de reparaciones se conserva.` : ''}
-        onConfirm={archiveDevice} onCancel={() => setConfirmArchive(false)} />
     </div>
   )
 }

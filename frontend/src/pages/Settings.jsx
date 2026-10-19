@@ -5,36 +5,58 @@ import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import PageHeader from '../components/ui/PageHeader.jsx'
 import LicenseCard from '../components/billing/LicenseCard.jsx'
+import { Alert, Card, ErrorAlert, Skeleton } from '../components/ui/DesignSystem.jsx'
 
-const tabs = [
+const SECTIONS = [
   { label: 'Mi taller', path: '/configuracion', icon: SettingsIcon, end: true },
-  { label: 'Licencia y pagos', path: '/facturacion', icon: CreditCard },
-  { label: 'Usuarios', path: '/personal', icon: Users },
-  { label: 'Roles y permisos', path: '/roles', icon: ShieldCheck },
-  { label: 'WhatsApp', path: '/comunicaciones', icon: MessageCircle },
-  { label: 'Device Agent', path: '/herramientas-dispositivo', icon: Bot },
+  { label: 'Licencia y pagos', path: '/facturacion', icon: CreditCard, roles: ['OWNER', 'ADMINISTRADOR', 'SUPER_ADMIN'] },
+  { label: 'Personal', path: '/personal', icon: Users, permission: 'users.view' },
+  { label: 'Roles y permisos', path: '/roles', icon: ShieldCheck, roles: ['SUPER_ADMIN'] },
+  { label: 'WhatsApp', path: '/comunicaciones', icon: MessageCircle, permission: 'whatsapp.view' },
+  { label: 'Agente de dispositivos', path: '/herramientas-dispositivo', icon: Bot, permission: 'devices.view' },
 ]
 
 export default function Settings() {
-  const { profile } = useAuth()
-  const canSeeLicense = ['OWNER', 'ADMINISTRADOR'].includes(profile?.role)
-  const [status, setStatus] = useState(null)
-  const [error, setError] = useState('')
+  const { profile, hasPermission } = useAuth()
+  const canSeeLicense = ['OWNER', 'ADMINISTRADOR', 'SUPER_ADMIN'].includes(profile?.role)
+  const [state, setState] = useState({ key: -1, status: null, error: null })
+  const [revision, setRevision] = useState(0)
+  const sections = SECTIONS.filter((item) => (!item.roles || item.roles.includes(profile?.role)) && (!item.permission || hasPermission(item.permission)))
 
   useEffect(() => {
-    api.get('/whatsapp/status').then((response) => setStatus(response.data)).catch((err) => setError(err.message))
-  }, [])
+    let active = true
+    api.get('/whatsapp/status').then((response) => { if (active) setState({ key: revision, status: response.data, error: null }) })
+      .catch((error) => { if (active) setState({ key: revision, status: null, error }) })
+    return () => { active = false }
+  }, [revision])
 
-  return <div className="ct-page space-y-6">
-    <PageHeader title="Configuración del negocio" description="Administra integraciones y accesos sin mezclar la operación diaria." />
-    <div className="grid gap-5 lg:grid-cols-[13rem_minmax(0,1fr)]">
-      <nav aria-label="Secciones de configuración" className="ct-surface h-fit p-2">
-        {tabs.map(({ label, path, icon: Icon, end }) => <NavLink key={path} to={path} end={end} className={({ isActive }) => `flex items-center gap-2 rounded-md px-3 py-2.5 text-sm transition ${isActive ? 'bg-[rgba(148,163,184,.08)] text-[var(--tf-text)]' : 'text-[var(--tf-text-subtle)] hover:bg-[rgba(148,163,184,.08)] hover:text-[var(--tf-text)]'}`}><Icon size={16} strokeWidth={1.8} />{label}</NavLink>)}
-      </nav>
-      <div className="space-y-5">
-      <section className="ct-surface-raised max-w-2xl p-6"><div className="flex items-center gap-3 border-b border-[var(--tf-border)] pb-4"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--tf-success-soft)] text-[#86efac]"><MessageCircle size={18} /></span><div><h2 className="font-semibold text-[var(--tf-text)]">WhatsApp Business</h2><p className="mt-0.5 text-xs text-[var(--tf-text-subtle)]">Estado de la integración del taller</p></div></div>{error ? <p className="mt-5 rounded-lg border border-[rgba(248,113,113,.32)] bg-[var(--tf-danger-soft)] p-3 text-sm text-[#fca5a5]">{error}</p> : <p className={`mt-5 rounded-lg border p-3 text-sm ${status?.configured || status?.simulate ? 'border-[rgba(74,222,128,.3)] bg-[var(--tf-success-soft)] text-[#86efac]' : 'border-[rgba(251,191,36,.3)] bg-[var(--tf-warning-soft)] text-[#fcd34d]'}`}>{status?.simulate ? 'Modo simulado activado explícitamente.' : status?.configured ? 'Integración de WhatsApp configurada.' : 'Integración de WhatsApp no configurada.'}</p>}<p className="mt-4 text-sm leading-6 text-[var(--tf-text-muted)]">Los tokens se configuran exclusivamente en el backend. El frontend nunca recibe credenciales de Meta.</p><Link to="/comunicaciones" className="mt-5 ct-btn ct-btn-primary"><MessageCircle size={16} />Gestionar automatizaciones</Link></section>
-      {canSeeLicense && <LicenseCard />}
+  const { status } = state
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Configuración" description="Integraciones, accesos y suscripción del taller." />
+      <div className="grid items-start gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
+        <nav aria-label="Secciones de configuración" className="tf-card p-2">
+          <ul className="space-y-1">
+            {sections.map(({ label, path, icon: Icon, end }) => (
+              <li key={path}><NavLink to={path} end={end} className={({ isActive }) => `tf-nav-link ${isActive ? 'is-active' : ''}`}><Icon size={18} strokeWidth={1.8} aria-hidden="true" />{label}</NavLink></li>
+            ))}
+          </ul>
+        </nav>
+        <div className="min-w-0 space-y-6">
+          <Card title="WhatsApp Business" description="Avisos de reparación para tus clientes" className="max-w-3xl">
+            {state.key !== revision ? <Skeleton className="h-10 w-full" />
+              : state.error ? <ErrorAlert error={state.error} action="consultar WhatsApp" onRetry={() => setRevision((value) => value + 1)} />
+                : <div className="space-y-4">
+                  <Alert tone={status?.simulate ? 'info' : status?.configured ? 'success' : 'warning'}>
+                    {status?.simulate ? 'Modo de prueba: los mensajes se registran pero no salen a WhatsApp.' : status?.configured ? 'Conectado. Los avisos se envían a los clientes que los autorizaron.' : 'Sin conectar. Pide a soporte que configure la cuenta de WhatsApp Business del taller.'}
+                  </Alert>
+                  <p className="text-sm text-[var(--tf-text-muted)]">Las credenciales de Meta se guardan solo en el servidor; nadie del equipo puede verlas desde aquí.</p>
+                  {hasPermission('whatsapp.view') && <Link to="/comunicaciones" className="ct-btn ct-btn-secondary"><MessageCircle size={16} aria-hidden="true" />Configurar avisos automáticos</Link>}
+                </div>}
+          </Card>
+          {canSeeLicense && <LicenseCard />}
+        </div>
       </div>
     </div>
-  </div>
+  )
 }

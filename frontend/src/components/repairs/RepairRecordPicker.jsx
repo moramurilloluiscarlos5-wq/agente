@@ -41,7 +41,7 @@ export default function RepairRecordPicker({ endpoint, label, selected, onSelect
         {loading ? <p className="py-4 text-sm text-[var(--tf-text-muted)]">Buscando {label}…</p>
           : error ? <div role="alert" className="space-y-2 text-sm text-[#fca5a5]"><p>{error}</p><button type="button" className={repairSecondaryClass} onClick={() => setRevision((value) => value + 1)}>Reintentar</button></div>
           : result.data.length === 0 ? <p className="py-4 text-sm text-[var(--tf-text-subtle)]">No se encontraron resultados.</p>
-          : result.data.map((record) => <button type="button" key={record.id} aria-pressed={selected?.id === record.id} onClick={() => onSelect(record)} className={`block w-full rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${selected?.id === record.id ? 'border-[var(--tf-accent)] bg-[var(--tf-accent-soft)] text-[var(--tf-link)]' : 'border-[var(--tf-border)] text-[var(--tf-text-muted)] hover:border-[var(--tf-border)] hover:bg-[rgba(148,163,184,.08)]'}`}>{describe(record)}</button>)}
+          : result.data.map((record) => <button type="button" key={record.id} aria-pressed={selected?.id === record.id} onClick={() => onSelect(record)} className={`block w-full rounded-lg border px-3 py-3 text-left text-sm transition-colors ${selected?.id === record.id ? 'border-[var(--tf-accent)] bg-[var(--tf-accent-soft)] text-[var(--tf-link)]' : 'border-[var(--tf-border)] text-[var(--tf-text-muted)] hover:border-[var(--tf-border)] hover:bg-[rgba(148,163,184,.08)]'}`}>{describe(record)}</button>)}
       </div>
       {!error && <div className="flex items-center justify-between gap-2 text-xs text-[var(--tf-text-subtle)]">
         <span>{result.count} resultado{result.count === 1 ? '' : 's'} · {page} / {pages}</span>

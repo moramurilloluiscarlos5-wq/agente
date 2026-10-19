@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Plus, Wrench } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader.jsx'
-import { Alert, Button, DataCard, EmptyState, Pagination, SearchField, TableSkeleton } from '../components/ui/DesignSystem.jsx'
+import { Button, DataCard, EmptyState, ErrorAlert, FilterSelect, Pagination, SearchField, TableSkeleton } from '../components/ui/DesignSystem.jsx'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { REPAIR_STATUSES } from '../utils/constants.js'
 import { formatCurrency, formatDate } from '../utils/formatters.js'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
 import { customerName, deviceName } from '../components/repairs/repairForm.js'
-import { friendlyError } from '../utils/errors.js'
 
 export default function Repairs() {
   const { profile } = useAuth()
@@ -17,13 +16,13 @@ export default function Repairs() {
   const query = params.get('q') ?? ''
   const status = params.get('status') ?? ''
   const page = Math.max(1, Number(params.get('page')) || 1)
-  const [result, setResult] = useState({ data: [], count: 0, key: '', error: '' })
+  const [result, setResult] = useState({ data: [], count: 0, key: '', error: null })
   const [revision, setRevision] = useState(0)
   const limit = 15
   const filters = params.toString()
   const requestKey = JSON.stringify([filters, page, revision])
   const loading = result.key !== requestKey
-  const error = loading ? '' : result.error
+  const error = loading ? null : result.error
   const canCreate = ['OWNER', 'ADMINISTRADOR', 'RECEPCION', 'SUPER_ADMIN'].includes(profile?.role)
 
   useEffect(() => {
@@ -34,9 +33,9 @@ export default function Repairs() {
         requestParams.set('page', String(page))
         requestParams.set('limit', String(limit))
         const response = await api.get(`/repairs?${requestParams}`)
-        if (active) setResult({ ...response, key: requestKey, error: '' })
+        if (active) setResult({ ...response, key: requestKey, error: null })
       } catch (err) {
-        if (active) setResult({ data: [], count: 0, key: requestKey, error: friendlyError(err, 'cargar las reparaciones') })
+        if (active) setResult({ data: [], count: 0, key: requestKey, error: err })
       }
     }, 250)
     return () => { active = false; clearTimeout(timer) }
@@ -53,28 +52,28 @@ export default function Repairs() {
   const filtered = Boolean(query || status || params.get('customer_id') || params.get('device_id'))
   const statusLabel = REPAIR_STATUSES[status]?.label
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader title="Reparaciones"
         description={profile?.role === 'TECNICO' ? 'Órdenes asignadas a ti y su avance en el taller.' : 'Recepción, seguimiento y entrega de los equipos del taller.'}
-        actions={canCreate && <Link className="ct-btn ct-btn-primary" to="/reparaciones/nueva"><Plus size={15} aria-hidden="true" />Nueva reparación</Link>} />
+        actions={canCreate && <Link className="ct-btn ct-btn-primary" to="/reparaciones/nueva"><Plus size={16} aria-hidden="true" />Registrar reparación</Link>} />
 
       <DataCard
         toolbar={<>
-          <SearchField label="Buscar reparaciones" value={query} onChange={(value) => updateFilter('q', value)} placeholder="Orden, cliente, equipo o problema" />
-          <select aria-label="Filtrar por estado" className="ct-select" value={status} onChange={(event) => updateFilter('status', event.target.value)}>
-            <option value="">Todos los estados</option>
+          <SearchField label="Buscar reparaciones" value={query} onChange={(value) => updateFilter('q', value)} placeholder="CAR-0042, María o iPhone" />
+          <FilterSelect label="Estado" ariaLabel="Filtrar por estado" value={status} onChange={(value) => updateFilter('status', value)}>
+            <option value="">Todos</option>
             {Object.entries(REPAIR_STATUSES).map(([value, config]) => <option key={value} value={value}>{config.label}</option>)}
-          </select>
-          {filtered && <Button variant="ghost" size="sm" onClick={() => setParams({})}>Quitar filtros</Button>}
+          </FilterSelect>
+          {filtered && <Button variant="ghost" onClick={() => setParams({})}>Quitar filtros</Button>}
         </>}
         footer={!loading && !error && <Pagination page={page} limit={limit} count={result.count} onPage={(value) => updateFilter('page', String(value))} label="órdenes" />}>
         <div aria-live="polite">
-          {error ? <div className="p-4"><Alert tone="error" action={<Button size="sm" onClick={() => setRevision((value) => value + 1)}>Reintentar</Button>}>{error}</Alert></div>
+          {error ? <div className="p-4"><ErrorAlert error={error} action="cargar las reparaciones" onRetry={() => setRevision((value) => value + 1)} /></div>
             : loading && !result.data.length ? <TableSkeleton columns={6} rows={6} />
               : result.data.length === 0 ? (
                 <EmptyState icon={Wrench} title={filtered ? (statusLabel ? `No hay órdenes en “${statusLabel}”` : 'Ninguna orden coincide') : 'No hay reparaciones todavía'}
                   description={filtered ? 'Prueba con otra búsqueda o cambia los filtros.' : 'Cuando recibas un equipo, regístralo aquí para darle seguimiento hasta la entrega.'}
-                  action={!filtered && canCreate && <Link className="ct-btn ct-btn-primary" to="/reparaciones/nueva"><Plus size={15} aria-hidden="true" />Registrar la primera</Link>} />
+                  action={filtered ? <Button onClick={() => setParams({})}>Quitar filtros</Button> : canCreate && <Link className="ct-btn ct-btn-primary" to="/reparaciones/nueva"><Plus size={16} aria-hidden="true" />Registrar reparación</Link>} />
               ) : (
                 <div className="ct-table-shell" aria-busy={loading}>
                   <table className="ct-table min-w-[54rem]">
@@ -84,9 +83,9 @@ export default function Repairs() {
                         const late = repair.estimated_delivery_at && !['entregado', 'cancelado'].includes(repair.status) && new Date(repair.estimated_delivery_at) < new Date()
                         return (
                           <tr key={repair.id}>
-                            <td><Link className="tf-link tf-num" to={`/reparaciones/${encodeURIComponent(repair.order_number)}`}>{repair.order_number}</Link><p className="mt-0.5 text-xs text-[var(--tf-text-subtle)]">{formatDate(repair.received_at)}</p></td>
-                            <td><p className="text-[var(--tf-text)]">{customerName(repair.customer)}</p><p className="mt-0.5 text-xs text-[var(--tf-text-subtle)]">{repair.customer?.phone || '—'}</p></td>
-                            <td className="max-w-[16rem]"><p className="text-[var(--tf-text)]">{deviceName(repair.device ?? repair)}</p><p className="mt-0.5 truncate text-xs text-[var(--tf-text-subtle)]">{repair.reported_problem}</p></td>
+                            <td><Link className="tf-link tf-num" to={`/reparaciones/${encodeURIComponent(repair.order_number)}`}>{repair.order_number}</Link><p className="mt-1 text-xs text-[var(--tf-text-subtle)]">{formatDate(repair.received_at)}</p></td>
+                            <td><p className="text-[var(--tf-text)]">{customerName(repair.customer)}</p><p className="mt-1 text-xs text-[var(--tf-text-subtle)]">{repair.customer?.phone || '—'}</p></td>
+                            <td className="max-w-[16rem]"><p className="text-[var(--tf-text)]">{deviceName(repair.device ?? repair)}</p><p className="mt-1 truncate text-xs text-[var(--tf-text-subtle)]">{repair.reported_problem}</p></td>
                             <td><StatusBadge status={repair.status} /></td>
                             <td>{repair.technician?.full_name || <span className="text-[var(--tf-text-subtle)]">Sin asignar</span>}</td>
                             <td className="tf-cell-num">{formatCurrency(repair.estimated_cost)}</td>

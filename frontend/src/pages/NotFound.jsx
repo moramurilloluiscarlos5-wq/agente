@@ -1,15 +1,12 @@
 import { Link } from 'react-router-dom'
-import { AlertTriangle } from 'lucide-react'
+import { Compass } from 'lucide-react'
+import { EmptyState } from '../components/ui/DesignSystem.jsx'
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center text-center">
-      <AlertTriangle className="mb-4 text-[#fcd34d]" size={40} />
-      <h1 className="text-xl font-semibold text-[var(--tf-text)]">Página no encontrada</h1>
-      <p className="mt-2 text-sm text-[var(--tf-text-subtle)]">La ruta que buscas no existe o fue movida.</p>
-      <Link to="/" className="mt-5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-[var(--tf-text)]">
-        Volver al panel
-      </Link>
-    </div>
+    <section className="tf-card mx-auto mt-8 max-w-xl">
+      <EmptyState icon={Compass} title="No encontramos esta página" description="El enlace puede estar incompleto o la página cambió de lugar. Vuelve al panel o usa la búsqueda superior."
+        action={<Link to="/" className="ct-btn ct-btn-primary">Volver al panel</Link>} />
+    </section>
   )
 }

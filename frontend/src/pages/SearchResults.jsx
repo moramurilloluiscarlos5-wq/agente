@@ -1,21 +1,29 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ClipboardList, FileText, Search, Smartphone, UserRound } from 'lucide-react'
-import { friendlyError } from '../utils/errors.js'
+import PageHeader from '../components/ui/PageHeader.jsx'
+import StatusBadge from '../components/ui/StatusBadge.jsx'
+import { Badge, Card, EmptyState, ErrorAlert, Skeleton } from '../components/ui/DesignSystem.jsx'
+import { useAuth } from '../hooks/useAuth.js'
 import { api } from '../services/api.js'
+import { QUOTE_STATUSES } from '../utils/constants.js'
+import { formatCurrency } from '../utils/formatters.js'
 
 const emptyData = { repairs: [], customers: [], devices: [], quotes: [] }
+const fullName = (person) => [person?.first_name, person?.last_name].filter(Boolean).join(' ')
 
-function ResultSection({ icon: Icon, title, count, children }) {
+function ResultCard({ icon: Icon, title, items, children }) {
+  if (!items.length) return null
   return (
-    <section className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 font-semibold text-[var(--tf-text)]"><Icon size={17} className="text-[var(--tf-link)]" /> {title}</h2>
-        <span className="text-xs text-[var(--tf-text-subtle)]">{count} resultado{count === 1 ? '' : 's'}</span>
-      </div>
-      {children}
-    </section>
+    <Card title={<span className="inline-flex items-center gap-2"><Icon size={16} className="text-[var(--tf-text-subtle)]" aria-hidden="true" />{title}</span>} actions={<span className="tf-num text-xs text-[var(--tf-text-subtle)]">{items.length} resultado{items.length === 1 ? '' : 's'}</span>} bodyClassName={null}>
+      <ul className="tf-list">{children}</ul>
+    </Card>
   )
+}
+
+function Row({ to, primary, secondary, aside }) {
+  const body = <><span className="min-w-0"><span className={`block truncate text-sm font-medium ${to ? 'text-[var(--tf-link)]' : 'text-[var(--tf-text)]'}`}>{primary}</span>{secondary && <span className="block truncate text-sm text-[var(--tf-text-muted)]">{secondary}</span>}</span>{aside && <span className="shrink-0">{aside}</span>}</>
+  return <li>{to ? <Link to={to} className="tf-list-row hover:bg-[rgba(148,163,184,.05)]">{body}</Link> : <div className="tf-list-row">{body}</div>}</li>
 }
 
 export default function SearchResults() {
@@ -25,57 +33,47 @@ export default function SearchResults() {
 }
 
 function SearchResultsContent({ query }) {
-  const [data, setData] = useState(emptyData)
-  const [loading, setLoading] = useState(Boolean(query))
-  const [error, setError] = useState('')
+  const { hasPermission } = useAuth()
+  const [state, setState] = useState({ data: emptyData, error: null, done: !query })
+  const [revision, setRevision] = useState(0)
 
   useEffect(() => {
+    if (!query) return undefined
     let active = true
-    if (!query.trim()) {
-      return () => { active = false }
-    }
-
-    api.get(`/search?q=${encodeURIComponent(query)}`).then((response) => {
-      if (active) setData({ ...emptyData, ...(response.data ?? {}) })
-    }).catch((err) => {
-      if (active) setError(friendlyError(err, 'buscar'))
-    }).finally(() => {
-      if (active) setLoading(false)
-    })
+    api.get(`/search?q=${encodeURIComponent(query)}`)
+      .then((response) => { if (active) setState({ data: { ...emptyData, ...(response.data ?? {}) }, error: null, done: true }) })
+      .catch((error) => { if (active) setState({ data: emptyData, error, done: true }) })
     return () => { active = false }
-  }, [query])
+  }, [query, revision])
 
+  const { data, error, done } = state
   const total = Object.values(data).reduce((sum, items) => sum + (Array.isArray(items) ? items.length : 0), 0)
+  const focusSearch = () => document.querySelector('header [role="search"] input')?.focus()
 
   return (
     <div className="space-y-6">
-      <header>
-        <div className="flex items-center gap-2 text-[var(--tf-link)]"><Search size={18} /><span className="text-sm font-medium">Búsqueda global</span></div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{query ? `Resultados para "${query}"` : 'Buscador global'}</h1>
-        <p className="mt-1 text-sm text-[var(--tf-text-muted)]">Clientes, órdenes, equipos y cotizaciones disponibles para tu rol.</p>
-      </header>
-
-      {!query && <div className="rounded-[var(--tf-radius-card)] border border-dashed border-[var(--tf-border)] p-10 text-center text-sm text-[var(--tf-text-muted)]">Usa el buscador superior para encontrar registros.</div>}
-      {loading && <p role="status" className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] p-8 text-center text-sm text-[var(--tf-text-muted)]">Buscando registros…</p>}
-      {error && <p role="alert" className="rounded-[var(--tf-radius-card)] border border-[rgba(248,113,113,.32)] bg-[var(--tf-danger-soft)] p-4 text-sm text-[#fca5a5]">{error}</p>}
-      {!loading && !error && query && <>
-        <p className="text-sm text-[var(--tf-text-muted)]">{total} coincidencia{total === 1 ? '' : 's'} encontradas</p>
-        {total === 0 && <div className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] p-10 text-center text-sm text-[var(--tf-text-muted)]">No se encontraron registros para esta búsqueda.</div>}
-        <div className="grid gap-4 xl:grid-cols-2">
-          <ResultSection icon={ClipboardList} title="Reparaciones" count={data.repairs.length}>
-            <div className="space-y-2">{data.repairs.map((item) => <Link key={item.id} to={`/reparaciones/${encodeURIComponent(item.order_number)}`} className="block rounded-lg border border-[var(--tf-border)] p-3 transition hover:border-[var(--tf-border-strong)] hover:bg-[rgba(148,163,184,.08)]"><div className="flex items-center justify-between gap-3"><span className="font-medium text-[var(--tf-link)]">{item.order_number}</span><span className="text-xs text-[var(--tf-text-subtle)]">{item.status}</span></div><p className="mt-1 text-sm text-[var(--tf-text)]">{item.brand || item.device?.brand} {item.model || item.device?.model}</p><p className="mt-1 truncate text-xs text-[var(--tf-text-muted)]">{item.reported_problem}</p></Link>)}</div>
-          </ResultSection>
-          <ResultSection icon={UserRound} title="Clientes" count={data.customers.length}>
-            <div className="space-y-2">{data.customers.map((item) => <Link key={item.id} to={`/clientes?id=${encodeURIComponent(item.id)}`} className="block rounded-lg border border-[var(--tf-border)] p-3 transition hover:border-[var(--tf-border-strong)] hover:bg-[rgba(148,163,184,.08)]"><p className="font-medium text-[var(--tf-text)]">{item.first_name} {item.last_name}</p><p className="mt-1 text-sm text-[var(--tf-text-muted)]">{item.phone || item.email || 'Sin contacto'}</p></Link>)}</div>
-          </ResultSection>
-          <ResultSection icon={Smartphone} title="Dispositivos" count={data.devices.length}>
-            <div className="space-y-2">{data.devices.map((item) => <Link key={item.id} to={`/dispositivos?id=${encodeURIComponent(item.id)}`} className="block rounded-lg border border-[var(--tf-border)] p-3 transition hover:border-[var(--tf-border-strong)] hover:bg-[rgba(148,163,184,.08)]"><p className="font-medium text-[var(--tf-text)]">{item.brand} {item.model}</p><p className="mt-1 text-sm text-[var(--tf-text-muted)]">IMEI: {item.imei || 'Sin registrar'} · {item.customer ? `${item.customer.first_name} ${item.customer.last_name}` : 'Sin cliente'}</p></Link>)}</div>
-          </ResultSection>
-          <ResultSection icon={FileText} title="Cotizaciones" count={data.quotes.length}>
-            <div className="space-y-2">{data.quotes.map((item) => <Link key={item.id} to={`/cotizaciones?q=${encodeURIComponent(item.quote_number)}`} className="block rounded-lg border border-[var(--tf-border)] p-3 transition hover:border-[var(--tf-border-strong)] hover:bg-[rgba(148,163,184,.08)]"><div className="flex items-center justify-between gap-3"><span className="font-medium text-[var(--tf-link)]">{item.quote_number}</span><span className="text-xs text-[var(--tf-text-subtle)]">{item.status}</span></div><p className="mt-1 text-sm text-[var(--tf-text-muted)]">Total: {item.total}</p></Link>)}</div>
-          </ResultSection>
-        </div>
-      </>}
+      <PageHeader title={query ? `Resultados para “${query}”` : 'Buscar en el taller'} description={query && done && !error ? `${total} coincidencia${total === 1 ? '' : 's'} en clientes, órdenes, equipos y cotizaciones.` : 'Clientes, órdenes, equipos y cotizaciones a los que tienes acceso.'} />
+      {!query ? <section className="tf-card"><EmptyState icon={Search} title="Escribe qué buscas" description="Busca por nombre del cliente, número de orden, modelo o IMEI desde la barra superior." action={<button type="button" className="ct-btn ct-btn-primary" onClick={focusSearch}>Ir a la búsqueda</button>} /></section>
+        : !done ? <div className="grid gap-6 xl:grid-cols-2" role="status" aria-label="Buscando">{[0, 1].map((key) => <div key={key} className="tf-card space-y-4 p-6"><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-2/3" /></div>)}</div>
+          : error ? <ErrorAlert error={error} action="buscar" onRetry={() => { setState((current) => ({ ...current, done: false })); setRevision((value) => value + 1) }} />
+            : total === 0 ? <section className="tf-card"><EmptyState icon={Search} title="Sin coincidencias" description="Revisa la ortografía o busca con menos palabras, por ejemplo solo el apellido o los últimos dígitos del IMEI." action={<button type="button" className="ct-btn ct-btn-secondary" onClick={focusSearch}>Buscar otra cosa</button>} /></section>
+              : <div className="grid items-start gap-6 xl:grid-cols-2">
+                <ResultCard icon={ClipboardList} title="Reparaciones" items={data.repairs}>
+                  {data.repairs.map((item) => <Row key={item.id} to={`/reparaciones/${encodeURIComponent(item.order_number)}`} primary={item.order_number}
+                    secondary={[[item.brand || item.device?.brand, item.model || item.device?.model].filter(Boolean).join(' '), item.reported_problem].filter(Boolean).join(': ')} aside={<StatusBadge status={item.status} />} />)}
+                </ResultCard>
+                <ResultCard icon={UserRound} title="Clientes" items={data.customers}>
+                  {data.customers.map((item) => <Row key={item.id} to={`/clientes/${encodeURIComponent(item.id)}`} primary={fullName(item) || 'Cliente'} secondary={item.phone || item.email || 'Sin contacto'} />)}
+                </ResultCard>
+                <ResultCard icon={Smartphone} title="Dispositivos" items={data.devices}>
+                  {data.devices.map((item) => <Row key={item.id} to={`/dispositivos/${encodeURIComponent(item.id)}`} primary={[item.brand, item.model].filter(Boolean).join(' ') || 'Equipo'}
+                    secondary={[item.imei ? `IMEI ${item.imei}` : null, item.customer ? fullName(item.customer) : null].filter(Boolean).join(', ') || 'Sin IMEI'} />)}
+                </ResultCard>
+                <ResultCard icon={FileText} title="Cotizaciones" items={data.quotes}>
+                  {data.quotes.map((item) => <Row key={item.id} to={hasPermission('quotes.update') ? `/cotizaciones/${item.id}/editar` : null} primary={item.quote_number}
+                    secondary={`Total ${formatCurrency(item.total)}`} aside={QUOTE_STATUSES[item.status] && <Badge tone={QUOTE_STATUSES[item.status].tone}>{QUOTE_STATUSES[item.status].label}</Badge>} />)}
+                </ResultCard>
+              </div>}
     </div>
   )
 }

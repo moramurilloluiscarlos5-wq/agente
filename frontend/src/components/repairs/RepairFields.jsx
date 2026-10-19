@@ -1,63 +1,61 @@
-import { Children, cloneElement, isValidElement, useId } from 'react'
-import { repairInputClass } from './repairForm.js'
+import { Card, Input, Select, Textarea } from '../ui/DesignSystem.jsx'
 
-export function RepairField({ label, children, wide = false }) {
-  const id = useId()
-  return <div className={`grid gap-1.5 text-sm text-[var(--tf-text-muted)] ${wide ? 'sm:col-span-2' : ''}`}><label htmlFor={id}>{label}</label>{Children.map(children, (child) => isValidElement(child) && ['input', 'select', 'textarea'].includes(child.type) ? cloneElement(child, { id }) : child)}</div>
-}
+const CHECKS = { powers_on: 'Enciende', charges: 'Carga', displays_image: 'Muestra imagen', touch_works: 'Funciona el táctil' }
 
-export default function RepairFields({ form, setForm, technicians = [], technicalOnly = false, technicianError = '', disabled = false }) {
-  const change = (key, value) => setForm((previous) => ({ ...previous, [key]: value }))
-  const textArea = (key, label, required = false) => (
-    <RepairField label={label} wide>
-      <textarea className={repairInputClass} rows={3} maxLength={10000} value={form[key]} onChange={(event) => change(key, event.target.value)} required={required} />
-    </RepairField>
-  )
+// Campos compartidos por "Registrar reparación" y la edición dentro del detalle.
+export default function RepairFields({ form, setForm, technicians = [], technicalOnly = false, technicianError = '', disabled = false, errors = {}, onFieldChange }) {
+  const change = (key) => (event) => {
+    const { type, checked, value } = event.target
+    setForm((previous) => ({ ...previous, [key]: type === 'checkbox' ? checked : value }))
+    onFieldChange?.(key)
+  }
   return (
-    <fieldset disabled={disabled} className="space-y-6">
+    <fieldset disabled={disabled} className="min-w-0 space-y-6">
       {!technicalOnly && <>
-        <section className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5">
-          <h2 className="mb-4 font-semibold">Recepción del equipo</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {textArea('reported_problem', 'Problema reportado *', true)}
-            {textArea('symptoms', 'Síntomas observados')}
-            {textArea('physical_condition', 'Estado físico al recibir')}
-            {textArea('accessories_received', 'Accesorios recibidos')}
-            <RepairField label="Fecha de recepción *"><input className={repairInputClass} type="datetime-local" value={form.received_at} onChange={(event) => change('received_at', event.target.value)} required /></RepairField>
-            <RepairField label="Entrega estimada"><input className={repairInputClass} type="datetime-local" min={form.received_at} value={form.estimated_delivery_at} onChange={(event) => change('estimated_delivery_at', event.target.value)} /></RepairField>
-            <div className="flex flex-wrap gap-5 sm:col-span-2">
-              <label className="flex items-center gap-2 text-sm text-[var(--tf-text-muted)]"><input type="checkbox" className="accent-[var(--tf-primary)]" checked={form.is_water_damaged} onChange={(event) => change('is_water_damaged', event.target.checked)} /> Daño por líquido</label>
-              <label className="flex items-center gap-2 text-sm text-[var(--tf-text-muted)]"><input type="checkbox" className="accent-[var(--tf-primary)]" checked={form.is_dropped} onChange={(event) => change('is_dropped', event.target.checked)} /> Presenta golpes o caída</label>
-            </div>
-            {Object.entries({ powers_on: 'Enciende', charges: 'Carga', displays_image: 'Muestra imagen', touch_works: 'Funciona el táctil' }).map(([key, label]) => (
-              <RepairField key={key} label={label}><select className={repairInputClass} value={form[key]} onChange={(event) => change(key, event.target.value)}><option value="">Sin revisar</option><option value="true">Sí</option><option value="false">No</option></select></RepairField>
-            ))}
+        <Card title="Recepción del equipo" description="Lo que el cliente reporta y cómo llega el equipo.">
+          <div className="tf-form-grid">
+            <Textarea fieldClassName="tf-span-2" label="Problema reportado" required maxLength={10000} value={form.reported_problem} onChange={change('reported_problem')} error={errors.reported_problem} placeholder="No carga después de una caída." />
+            <Textarea label="Síntomas observados (opcional)" maxLength={10000} value={form.symptoms} onChange={change('symptoms')} placeholder="Se calienta al conectar el cargador." />
+            <Textarea label="Estado físico al recibir (opcional)" maxLength={10000} value={form.physical_condition} onChange={change('physical_condition')} placeholder="Esquina superior estrellada." />
+            <Textarea fieldClassName="tf-span-2" label="Accesorios recibidos (opcional)" maxLength={10000} value={form.accessories_received} onChange={change('accessories_received')} placeholder="Funda y tarjeta SIM." className="min-h-[4rem]" />
+            <Input label="Fecha de recepción" required type="datetime-local" value={form.received_at} onChange={change('received_at')} error={errors.received_at} />
+            <Input label="Entrega estimada (opcional)" type="datetime-local" min={form.received_at} value={form.estimated_delivery_at} onChange={change('estimated_delivery_at')} hint="Aparece en el panel como próxima entrega." />
+            <fieldset className="tf-span-2">
+              <legend className="tf-label">Revisión rápida al recibir</legend>
+              <div className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {Object.entries(CHECKS).map(([key, label]) => (
+                  <Select key={key} label={label} value={form[key]} onChange={change(key)}>
+                    <option value="">Sin revisar</option><option value="true">Sí</option><option value="false">No</option>
+                  </Select>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+                <label className="inline-flex min-h-10 items-center gap-2 text-sm text-[var(--tf-text-muted)]"><input type="checkbox" className="h-4 w-4 accent-[var(--tf-primary)]" checked={form.is_water_damaged} onChange={change('is_water_damaged')} />Daño por líquido</label>
+                <label className="inline-flex min-h-10 items-center gap-2 text-sm text-[var(--tf-text-muted)]"><input type="checkbox" className="h-4 w-4 accent-[var(--tf-primary)]" checked={form.is_dropped} onChange={change('is_dropped')} />Presenta golpes o caída</label>
+              </div>
+            </fieldset>
           </div>
-        </section>
-        <section className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5">
-          <h2 className="mb-4 font-semibold">Asignación y estimación</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <RepairField label="Responsable" wide>
-              <select className={repairInputClass} value={form.technician_id} onChange={(event) => change('technician_id', event.target.value)} disabled={Boolean(technicianError)}>
-                <option value="">Sin asignar</option>
-                {form.technician_id && !technicians.some((person) => person.id === form.technician_id) && <option value={form.technician_id}>Responsable actual (no disponible)</option>}
-                {technicians.map((person) => <option key={person.id} value={person.id}>{person.full_name || 'Sin nombre'}</option>)}
-              </select>
-              {technicianError && <span role="alert" className="text-xs text-[#fcd34d]">{technicianError}</span>}
-            </RepairField>
-            <RepairField label="Costo estimado (MXN)"><input className={repairInputClass} type="number" min="0" max="99999999.99" step="0.01" value={form.estimated_cost} onChange={(event) => change('estimated_cost', event.target.value)} required /></RepairField>
-            <RepairField label="Anticipo recibido (MXN)"><input className={repairInputClass} type="number" min="0" max="99999999.99" step="0.01" value={form.deposit} onChange={(event) => change('deposit', event.target.value)} required /></RepairField>
-            <p className="text-xs text-[var(--tf-text-subtle)] sm:col-span-2">La estimación puede cambiar después del diagnóstico.</p>
+        </Card>
+
+        <Card title="Asignación y estimación" description="La estimación puede cambiar después del diagnóstico.">
+          <div className="tf-form-grid">
+            <Select fieldClassName="tf-span-2" label="Responsable" value={form.technician_id} onChange={change('technician_id')} disabled={Boolean(technicianError)} error={technicianError || undefined}>
+              <option value="">Sin asignar</option>
+              {form.technician_id && !technicians.some((person) => person.id === form.technician_id) && <option value={form.technician_id}>Responsable actual (ya no está disponible)</option>}
+              {technicians.map((person) => <option key={person.id} value={person.id}>{person.full_name || 'Sin nombre'}</option>)}
+            </Select>
+            <Input label="Costo estimado (MXN)" type="number" inputMode="decimal" min="0" max="99999999.99" step="0.01" value={form.estimated_cost} onChange={change('estimated_cost')} error={errors.estimated_cost} placeholder="950.00" />
+            <Input label="Anticipo recibido (MXN)" type="number" inputMode="decimal" min="0" max="99999999.99" step="0.01" value={form.deposit} onChange={change('deposit')} error={errors.deposit} placeholder="150.00" />
           </div>
-        </section>
+        </Card>
       </>}
-      <section className="rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-5">
-        <h2 className="mb-4 font-semibold">Diagnóstico y notas</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {textArea('initial_diagnosis', 'Diagnóstico inicial')}
-          {textArea('internal_notes', 'Notas internas')}
+
+      <Card title="Diagnóstico y notas">
+        <div className="tf-form-grid">
+          <Textarea label="Diagnóstico inicial (opcional)" maxLength={10000} value={form.initial_diagnosis} onChange={change('initial_diagnosis')} placeholder="Puerto de carga con sulfato." />
+          <Textarea label="Notas internas (opcional)" maxLength={10000} value={form.internal_notes} onChange={change('internal_notes')} hint="Solo las ve el equipo del taller." />
         </div>
-      </section>
+      </Card>
     </fieldset>
   )
 }
