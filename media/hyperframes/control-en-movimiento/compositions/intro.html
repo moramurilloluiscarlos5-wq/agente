@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="UTF-8" /><title>01 Introducción</title></head>
+  <body>
+    <template>
+      <style>
+        #root { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+        .intro-group { position: relative; display: flex; flex-direction: column; align-items: center; gap: 30px; }
+        .intro-horizon { position: absolute; left: 50%; top: 66px; width: 640px; height: 1px; margin-left: -320px; background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.7), transparent); }
+        .intro-mark { display: block; width: 132px; height: 132px; }
+        .intro-word { display: flex; font-size: 46px; font-weight: 600; letter-spacing: -0.035em; color: #f3f6fa; }
+        .intro-word span { display: inline-block; }
+        .intro-word .intro-flow { color: #8fb4ff; }
+        .intro-tag { font-size: 17px; font-weight: 500; letter-spacing: 0.32em; text-transform: uppercase; color: var(--muted); }
+      </style>
+      <div id="root" data-composition-id="intro" data-width="1920" data-height="1080">
+        <div id="intro-group" class="intro-group">
+          <div id="intro-horizon" class="intro-horizon"></div>
+          <svg id="intro-mark" class="intro-mark" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+            <rect x="1" y="1" width="98" height="98" rx="24" fill="#0f1623" stroke="#22304a" stroke-width="2" />
+            <path id="intro-t" d="M19.2 29h57.4L71 41.7H53.5v36.9H39.4V41.7H19.2V29Z" fill="#f8fafc" />
+            <path id="intro-c" d="M19.2 45.6h14.6v4.5h-7.3l-7.3-4.5Z" fill="#38bdf8" />
+            <path id="intro-f" d="M60.6 48.2h22.8l-5.6 9.5h-7.7v7.7h8.5l-4.5 10.1H60.6V48.2Z" fill="#2563eb" />
+          </svg>
+          <div id="intro-word" class="intro-word"><span>T</span><span>a</span><span>l</span><span>l</span><span>e</span><span>r</span><span class="intro-flow">F</span><span class="intro-flow">l</span><span class="intro-flow">o</span><span class="intro-flow">w</span></div>
+          <p id="intro-tag" class="intro-tag">Control en movimiento</p>
+        </div>
+      </div>
+      <script>
+        const tl = gsap.timeline({ paused: true });
+        const out = "power3.out";
+        tl.fromTo("#intro-horizon", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 1.1, ease: "expo.out" }, 0.35)
+          .to("#intro-horizon", { opacity: 0, duration: 0.8, ease: "power1.in" }, 1.5)
+          .fromTo("#intro-mark", { opacity: 0, y: 26, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 1.1, ease: out }, 0.55)
+          .fromTo("#intro-t", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.7, ease: out }, 0.85)
+          .fromTo("#intro-c", { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.5, ease: out }, 1.05)
+          .fromTo("#intro-f", { opacity: 0, x: 12 }, { opacity: 1, x: 0, duration: 0.7, ease: out }, 1.1)
+          .fromTo("#intro-word span", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6, ease: out, stagger: 0.035 }, 1.15)
+          .fromTo("#intro-tag", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.9, ease: out }, 1.55)
+          .to("#intro-group", { opacity: 0, y: -36, filter: "blur(6px)", duration: 0.75, ease: "power2.in" }, 2.55);
+        window.__timelines["intro"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

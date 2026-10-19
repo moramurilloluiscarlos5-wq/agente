@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="UTF-8" /><title>Ambiente</title></head>
+  <body>
+    <template>
+      <style>
+        #root { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+        .amb-glow { position: absolute; border-radius: 50%; filter: blur(90px); }
+        #amb-glow-a { left: 560px; top: 160px; width: 900px; height: 720px; background: radial-gradient(closest-side, rgba(30, 64, 140, 0.55), rgba(11, 20, 38, 0) 100%); }
+        #amb-glow-b { left: 980px; top: 420px; width: 760px; height: 600px; background: radial-gradient(closest-side, rgba(14, 40, 92, 0.5), rgba(11, 20, 38, 0) 100%); }
+        .amb-grid {
+          position: absolute; inset: 0; opacity: 0.55;
+          background-image: radial-gradient(rgba(148, 163, 184, 0.16) 1px, transparent 1.2px);
+          background-size: 40px 40px;
+          -webkit-mask-image: radial-gradient(ellipse 52% 58% at 50% 50%, #000 0%, transparent 100%);
+          mask-image: radial-gradient(ellipse 52% 58% at 50% 50%, #000 0%, transparent 100%);
+        }
+        .amb-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, rgba(3, 4, 7, 0.85) 100%); }
+      </style>
+      <div id="root" data-composition-id="ambient" data-width="1920" data-height="1080">
+        <div id="amb-glow-a" class="amb-glow"></div>
+        <div id="amb-glow-b" class="amb-glow"></div>
+        <div class="amb-grid"></div>
+        <div class="amb-vignette"></div>
+      </div>
+      <script>
+        // Luz ambiental: ida y vuelta exacta en 16 s, el primer y el último cuadro coinciden.
+        const tl = gsap.timeline({ paused: true });
+        tl.fromTo("#amb-glow-a", { x: -140, y: 0 }, { x: 140, y: 40, duration: 8, ease: "sine.inOut" }, 0)
+          .to("#amb-glow-a", { x: -140, y: 0, duration: 8, ease: "sine.inOut" }, 8)
+          .fromTo("#amb-glow-b", { x: 120, y: 0, opacity: 0.7 }, { x: -120, y: -50, opacity: 1, duration: 8, ease: "sine.inOut" }, 0)
+          .to("#amb-glow-b", { x: 120, y: 0, opacity: 0.7, duration: 8, ease: "sine.inOut" }, 8);
+        window.__timelines["ambient"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

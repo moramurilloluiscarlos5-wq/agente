@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>TallerFlow — Control en movimiento</title>
+    <!-- GSAP e Inter van empaquetados en assets/: el render no depende de la red. -->
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Inter"; font-weight: 400; src: url("assets/fonts/inter-latin-400-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Inter"; font-weight: 500; src: url("assets/fonts/inter-latin-500-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Inter"; font-weight: 600; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Inter"; font-weight: 700; src: url("assets/fonts/inter-latin-700-normal.woff2") format("woff2"); }
+
+      /* Paleta compartida por todas las escenas: grafito, azul medianoche y un solo acento eléctrico. */
+      :root {
+        --bg: #06080c;
+        --surface-2: #111a28;
+        --line: rgba(148, 163, 184, 0.13);
+        --line-strong: rgba(148, 163, 184, 0.22);
+        --text: #e8edf4;
+        --muted: #93a0b4;
+        --blue: #3b82f6;
+        --blue-soft: rgba(59, 130, 246, 0.16);
+        --cyan: #38bdf8;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+      body { font-family: "Inter", ui-sans-serif, system-ui, sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
+      #main { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+
+      /* Piezas compartidas entre escenas */
+      .ic { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+      .dot { display: block; width: 7px; height: 7px; border-radius: 50%; }
+      .pill { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 12px; border-radius: 999px; font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+      .pill-blue { background: var(--blue-soft); color: #9cc2ff; }
+      .pill-amber { background: rgba(251, 191, 36, 0.13); color: #fcd57a; }
+      .pill-cyan { background: rgba(56, 189, 248, 0.13); color: #8fdcff; }
+      .pill-green { background: rgba(74, 222, 128, 0.13); color: #93ecb3; }
+    </style>
+  </head>
+  <body>
+    <!--
+      TALLER FLOW — CONTROL EN MOVIMIENTO (16 s, 1920×1080, bucle).
+      01 Introducción → 02 Gestión inteligente → 03 Flujo de trabajo → 04 Ecosistema → 05 Cierre.
+      El primer y el último cuadro muestran solo el ambiente, así el bucle no tiene salto.
+      La acción principal vive en la columna central (~900 px): en el login el video se recorta con object-fit: cover.
+    -->
+    <div id="main" data-composition-id="main" data-start="0" data-duration="16" data-width="1920" data-height="1080">
+      <div id="ambient" data-composition-id="ambient" data-composition-src="compositions/ambient.html" data-start="0" data-duration="16" data-track-index="0" data-width="1920" data-height="1080"></div>
+      <div id="intro" data-composition-id="intro" data-composition-src="compositions/intro.html" data-start="0" data-duration="3.4" data-track-index="1" data-width="1920" data-height="1080"></div>
+      <div id="dashboard" data-composition-id="dashboard" data-composition-src="compositions/dashboard.html" data-start="2.7" data-duration="4.85" data-track-index="2" data-width="1920" data-height="1080"></div>
+      <div id="flujo" data-composition-id="flujo" data-composition-src="compositions/flujo.html" data-start="7.3" data-duration="4.6" data-track-index="3" data-width="1920" data-height="1080"></div>
+      <div id="ecosistema" data-composition-id="ecosistema" data-composition-src="compositions/ecosistema.html" data-start="11.4" data-duration="4.6" data-track-index="4" data-width="1920" data-height="1080"></div>
+    </div>
+    <script>
+      // Cada escena registra su propia línea de tiempo; la raíz solo marca la duración total.
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>

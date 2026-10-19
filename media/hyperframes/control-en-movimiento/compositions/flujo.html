@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="UTF-8" /><title>03 Flujo de trabajo</title></head>
+  <body>
+    <template>
+      <style>
+        #root { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+        .flow-ticket { width: 880px; padding: 34px 40px 30px; border: 1px solid var(--line-strong); border-radius: 20px; background: linear-gradient(180deg, rgba(17, 26, 40, 0.97), rgba(9, 13, 21, 0.98)); box-shadow: 0 40px 120px rgba(0, 0, 0, 0.55); }
+        .flow-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+        .flow-kicker { font-size: 14px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #8794aa; }
+        .flow-title { margin-top: 8px; font-size: 34px; font-weight: 600; letter-spacing: -0.03em; }
+        .flow-sub { margin-top: 6px; font-size: 18px; color: var(--muted); }
+        .flow-status { position: relative; width: 190px; height: 36px; }
+        .flow-status .pill { position: absolute; right: 0; top: 0; height: 36px; padding: 0 16px; font-size: 15px; }
+        .flow-pipeline { position: relative; margin-top: 46px; height: 132px; }
+        .flow-track { position: absolute; left: 100px; right: 100px; top: 27px; height: 2px; background: rgba(148, 163, 184, 0.16); border-radius: 2px; }
+        .flow-fill { display: block; width: 100%; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #2563eb, #60a5fa); transform-origin: left center; box-shadow: 0 0 18px rgba(59, 130, 246, 0.6); }
+        .flow-stages { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, 1fr); }
+        .flow-stage { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+        .flow-node { position: relative; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--line-strong); background: #0b111b; color: #5d6b82; }
+        .flow-on { position: absolute; inset: -1px; display: grid; place-items: center; border-radius: 50%; border: 1px solid rgba(96, 165, 250, 0.9); background: radial-gradient(circle at 50% 35%, #1d3a75, #0f1d3a); color: #dbe8ff; box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.12), 0 0 30px rgba(59, 130, 246, 0.45); }
+        .flow-on.flow-done { border-color: rgba(74, 222, 128, 0.85); background: radial-gradient(circle at 50% 35%, #14532d, #0b2a19); color: #dcfce7; box-shadow: 0 0 0 6px rgba(74, 222, 128, 0.1), 0 0 30px rgba(74, 222, 128, 0.35); }
+        .flow-name { font-size: 18px; font-weight: 600; color: #dbe4f0; }
+        .flow-time { font-size: 14px; font-weight: 500; color: #8794aa; font-variant-numeric: tabular-nums; }
+        .flow-log { margin-top: 14px; padding-top: 18px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; }
+        .flow-line { display: flex; align-items: center; gap: 12px; font-size: 16px; color: #b6c2d3; }
+        .flow-line .dot { background: var(--blue); }
+      </style>
+      <div id="root" data-composition-id="flujo" data-width="1920" data-height="1080">
+        <div id="flow-ticket" class="flow-ticket">
+          <div class="flow-head">
+            <div>
+              <p class="flow-kicker">Orden de reparación</p>
+              <p class="flow-title">TF-0142</p>
+              <p class="flow-sub">iPhone 13 · Cambio de pantalla</p>
+            </div>
+            <div class="flow-status" data-layout-allow-overlap>
+              <span id="flow-st-0" data-layout-allow-overlap class="pill pill-cyan">Recibido</span>
+              <span id="flow-st-1" data-layout-allow-overlap class="pill pill-amber">Diagnóstico</span>
+              <span id="flow-st-2" data-layout-allow-overlap class="pill pill-blue">En reparación</span>
+              <span id="flow-st-3" data-layout-allow-overlap class="pill pill-green">Entregado</span>
+            </div>
+          </div>
+          <div class="flow-pipeline">
+            <div class="flow-track"><span id="flow-fill" class="flow-fill"></span></div>
+            <div class="flow-stages">
+              <div class="flow-stage">
+                <div class="flow-node"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg>
+                  <span id="flow-on-0" class="flow-on"><svg class="ic" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg></span></div>
+                <p class="flow-name">Recibido</p><p class="flow-time">09:12</p>
+              </div>
+              <div class="flow-stage">
+                <div class="flow-node"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                  <span id="flow-on-1" class="flow-on"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg></span></div>
+                <p class="flow-name">Diagnóstico</p><p class="flow-time">09:40</p>
+              </div>
+              <div class="flow-stage">
+                <div class="flow-node"><svg class="ic" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg>
+                  <span id="flow-on-2" class="flow-on"><svg class="ic" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" /></svg></span></div>
+                <p class="flow-name">Reparación</p><p class="flow-time">11:25</p>
+              </div>
+              <div class="flow-stage">
+                <div class="flow-node"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
+                  <span id="flow-on-3" class="flow-on flow-done"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg></span></div>
+                <p class="flow-name">Entregado</p><p class="flow-time">17:05</p>
+              </div>
+            </div>
+          </div>
+          <div class="flow-log">
+            <p id="flow-log-0" class="flow-line"><i class="dot"></i>Equipo recibido en mostrador</p>
+            <p id="flow-log-1" class="flow-line"><i class="dot"></i>Diagnóstico: pantalla dañada</p>
+            <p id="flow-log-2" class="flow-line"><i class="dot"></i>Repuesto descontado del inventario</p>
+            <p id="flow-log-3" class="flow-line"><i class="dot" style="background:#4ade80"></i>Entregado · cliente notificado</p>
+          </div>
+        </div>
+      </div>
+      <script>
+        const tl = gsap.timeline({ paused: true });
+        const out = "power3.out";
+        tl.fromTo("#flow-ticket", { opacity: 0, y: 40, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: "expo.out" }, 0.3)
+          .set("#flow-fill", { scaleX: 0 }, 0)
+          .set(["#flow-st-1", "#flow-st-2", "#flow-st-3"], { opacity: 0 }, 0);
+        // Recibido → Diagnóstico → Reparación → Entregado
+        [0.65, 1.45, 2.25, 3.05].forEach((t, i) => {
+          tl.fromTo(`#flow-on-${i}`, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(2)" }, t)
+            .fromTo(`#flow-log-${i}`, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.45, ease: out }, t + 0.1);
+          if (i > 0) {
+            tl.to("#flow-fill", { scaleX: i / 3, duration: 0.6, ease: "power2.inOut" }, t - 0.5)
+              .to(`#flow-st-${i - 1}`, { opacity: 0, y: -6, duration: 0.25, ease: "power1.in" }, t)
+              .fromTo(`#flow-st-${i}`, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.3, ease: out, immediateRender: false }, t + 0.24);
+          }
+        });
+        tl.to("#flow-ticket", { opacity: 0, scale: 0.72, duration: 0.6, ease: "power2.in" }, 3.95);
+        window.__timelines["flujo"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

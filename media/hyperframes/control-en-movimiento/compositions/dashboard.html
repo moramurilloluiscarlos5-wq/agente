@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="UTF-8" /><title>02 Gestión inteligente</title></head>
+  <body>
+    <template>
+      <style>
+        #root { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; perspective: 1800px; }
+        .dash-card { width: 900px; border: 1px solid var(--line-strong); border-radius: 18px; background: linear-gradient(180deg, rgba(17, 26, 40, 0.96), rgba(10, 15, 24, 0.98)); box-shadow: 0 40px 120px rgba(0, 0, 0, 0.55); overflow: hidden; }
+        .dash-top { display: flex; align-items: center; gap: 14px; height: 64px; padding: 0 22px; border-bottom: 1px solid var(--line); }
+        .dash-top .dash-mark { width: 28px; height: 28px; }
+        .dash-title { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+        .dash-search { margin-left: auto; display: flex; align-items: center; gap: 10px; width: 300px; height: 38px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); font-size: 15px; background: rgba(6, 9, 14, 0.5); }
+        .dash-search .ic { width: 17px; height: 17px; }
+        .dash-avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line-strong); color: #c7d2e2; font-size: 13px; font-weight: 600; }
+        .dash-body { display: flex; }
+        .dash-rail { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 64px; padding: 20px 0; border-right: 1px solid var(--line); color: #64748b; }
+        .dash-rail .ic { width: 20px; height: 20px; }
+        .dash-rail .dash-on { color: var(--cyan); }
+        .dash-main { flex: 1; display: flex; flex-direction: column; gap: 20px; padding: 22px; }
+        .dash-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        .dash-kpi { padding: 16px 16px 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(6, 9, 14, 0.45); }
+        .dash-kpi-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--muted); }
+        .dash-kpi-value { margin-top: 8px; font-size: 36px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+        .dash-kpi-bar { margin-top: 12px; height: 4px; border-radius: 4px; background: rgba(148, 163, 184, 0.12); overflow: hidden; }
+        .dash-kpi-bar i { display: block; height: 100%; border-radius: 4px; transform-origin: left center; }
+        .dash-row { display: grid; grid-template-columns: 1fr 236px; gap: 14px; }
+        .dash-panel { border: 1px solid var(--line); border-radius: 12px; background: rgba(6, 9, 14, 0.45); padding: 16px 18px; }
+        .dash-panel h3 { font-size: 15px; font-weight: 600; color: #cfd8e5; margin-bottom: 10px; }
+        .dash-order { position: relative; display: flex; align-items: center; gap: 14px; height: 50px; border-top: 1px solid var(--line); font-size: 16px; }
+        .dash-order-id { width: 92px; font-weight: 600; font-variant-numeric: tabular-nums; color: #dbe4f0; }
+        .dash-order-dev { flex: 1; color: var(--muted); }
+        .dash-focus { position: absolute; left: -10px; right: -10px; top: 4px; bottom: 4px; border: 1px solid rgba(59, 130, 246, 0.55); border-radius: 10px; background: rgba(59, 130, 246, 0.07); }
+        .dash-bars { display: flex; align-items: flex-end; justify-content: space-between; height: 150px; padding-top: 8px; }
+        .dash-bar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; width: 22px; height: 100%; }
+        .dash-bar i { display: block; width: 100%; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, #4f8cff, rgba(59, 130, 246, 0.35)); transform-origin: bottom center; }
+        .dash-bar span { font-size: 12.5px; font-weight: 500; color: #8794aa; }
+      </style>
+      <div id="root" data-composition-id="dashboard" data-width="1920" data-height="1080">
+        <!-- Datos demostrativos: sin personas reales. -->
+        <div id="dash-card" class="dash-card">
+          <div class="dash-top">
+            <svg class="dash-mark" viewBox="0 0 100 100" fill="none" aria-hidden="true"><rect x="1" y="1" width="98" height="98" rx="24" fill="#111827" stroke="#1f2a3d" stroke-width="2" /><path d="M19.2 29h57.4L71 41.7H53.5v36.9H39.4V41.7H19.2V29Z" fill="#f8fafc" /><path d="M19.2 45.6h14.6v4.5h-7.3l-7.3-4.5Z" fill="#38bdf8" /><path d="M60.6 48.2h22.8l-5.6 9.5h-7.7v7.7h8.5l-4.5 10.1H60.6V48.2Z" fill="#2563eb" /></svg>
+            <span class="dash-title">Panel de control</span>
+            <div class="dash-search"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>Buscar orden o equipo</div>
+            <span class="dash-avatar">TF</span>
+          </div>
+          <div class="dash-body">
+            <div class="dash-rail" aria-hidden="true">
+              <svg class="ic dash-on" viewBox="0 0 24 24"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
+              <svg class="ic" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M12 11h4" /><path d="M12 16h4" /><path d="M8 11h.01" /><path d="M8 16h.01" /></svg>
+              <svg class="ic" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+              <svg class="ic" viewBox="0 0 24 24"><path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></svg>
+              <svg class="ic" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2" /><path d="M2 10h20" /></svg>
+              <svg class="ic" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><path d="m9 12 2 2 4-4" /></svg>
+            </div>
+            <div class="dash-main">
+              <div class="dash-kpis">
+                <div class="dash-kpi"><p class="dash-kpi-label"><i class="dot" style="background:#94a3b8"></i>Recibidos</p><p class="dash-kpi-value" data-count="8">0</p><div class="dash-kpi-bar"><i style="background:#94a3b8;width:34%"></i></div></div>
+                <div class="dash-kpi"><p class="dash-kpi-label"><i class="dot" style="background:#fbbf24"></i>Diagnóstico</p><p class="dash-kpi-value" data-count="5">0</p><div class="dash-kpi-bar"><i style="background:#fbbf24;width:22%"></i></div></div>
+                <div class="dash-kpi"><p class="dash-kpi-label"><i class="dot" style="background:#3b82f6"></i>En reparación</p><p class="dash-kpi-value" data-count="12">0</p><div class="dash-kpi-bar"><i style="background:#3b82f6;width:58%"></i></div></div>
+                <div class="dash-kpi"><p class="dash-kpi-label"><i class="dot" style="background:#4ade80"></i>Listos</p><p class="dash-kpi-value" data-count="6">0</p><div class="dash-kpi-bar"><i style="background:#4ade80;width:28%"></i></div></div>
+              </div>
+              <div class="dash-row">
+                <div class="dash-panel">
+                  <h3>Órdenes recientes</h3>
+                  <div class="dash-order"><span id="dash-focus" class="dash-focus"></span><span class="dash-order-id">TF-0142</span><span class="dash-order-dev">iPhone 13 · Pantalla</span><span class="pill pill-blue">En reparación</span></div>
+                  <div class="dash-order"><span class="dash-order-id">TF-0141</span><span class="dash-order-dev">Galaxy A54 · Batería</span><span class="pill pill-green">Listo</span></div>
+                  <div class="dash-order"><span class="dash-order-id">TF-0140</span><span class="dash-order-dev">Pixel 7 · Sin encender</span><span class="pill pill-amber">Diagnóstico</span></div>
+                  <div class="dash-order"><span class="dash-order-id">TF-0139</span><span class="dash-order-dev">Moto G84 · Puerto de carga</span><span class="pill pill-cyan">Recibido</span></div>
+                </div>
+                <div class="dash-panel">
+                  <h3>Carga semanal</h3>
+                  <div class="dash-bars">
+                    <div class="dash-bar"><i style="height:48%"></i><span>L</span></div>
+                    <div class="dash-bar"><i style="height:66%"></i><span>M</span></div>
+                    <div class="dash-bar"><i style="height:57%"></i><span>M</span></div>
+                    <div class="dash-bar"><i style="height:84%"></i><span>J</span></div>
+                    <div class="dash-bar"><i style="height:72%"></i><span>V</span></div>
+                    <div class="dash-bar"><i style="height:38%"></i><span>S</span></div>
+                    <div class="dash-bar"><i style="height:16%"></i><span>D</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <script>
+        const tl = gsap.timeline({ paused: true });
+        const out = "power3.out";
+        tl.fromTo("#dash-card", { opacity: 0, y: 70, rotationX: 14, scale: 0.95 }, { opacity: 1, y: 0, rotationX: 0, scale: 1, duration: 1.3, ease: "expo.out" }, 0.15)
+          .fromTo("#dash-card .dash-kpi", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.55, ease: out, stagger: 0.08 }, 0.6)
+          .fromTo("#dash-card .dash-kpi-bar i", { scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: out, stagger: 0.08 }, 0.85)
+          .fromTo("#dash-card .dash-order", { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.5, ease: out, stagger: 0.09 }, 1.05)
+          .fromTo("#dash-card .dash-bar i", { scaleY: 0 }, { scaleY: 1, duration: 0.8, ease: out, stagger: 0.06 }, 1.2)
+          // La orden TF-0142 se destaca: es la que sigue la escena 03.
+          .fromTo("#dash-focus", { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: 0.5, ease: out }, 3.5)
+          .to("#dash-card", { opacity: 0, scale: 1.06, y: -20, filter: "blur(4px)", duration: 0.5, ease: "power2.in" }, 4.3);
+        // Contadores: el valor depende solo del progreso del tween, así que es seguro al buscar cualquier cuadro.
+        document.querySelectorAll("#dash-card .dash-kpi-value").forEach((el, i) => {
+          const proxy = { v: 0 };
+          tl.fromTo(proxy, { v: 0 }, { v: Number(el.dataset.count), duration: 1.2, ease: "power2.out", onUpdate: () => { el.textContent = String(Math.round(proxy.v)); } }, 0.75 + i * 0.08);
+        });
+        window.__timelines["dashboard"] = tl;
+      </script>
+    </template>
+  </body>
+</html>
