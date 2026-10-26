@@ -5,6 +5,7 @@ import PageHeader from '../components/ui/PageHeader.jsx'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
 import { Button, Card, ErrorAlert, EmptyState, Skeleton } from '../components/ui/DesignSystem.jsx'
 import CountUp from '../components/ui/CountUp.jsx'
+import FirstSteps from '../components/dashboard/FirstSteps.jsx'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { formatCurrency, formatDate, formatRelative } from '../utils/formatters.js'
@@ -129,6 +130,7 @@ export default function Dashboard() {
       {loading && !data && !error && <DashboardSkeleton />}
 
       {data && stats && <>
+        <FirstSteps data={data} />
         <WorkshopFlow stats={stats} />
 
         <div className="ct-kpi-grid">

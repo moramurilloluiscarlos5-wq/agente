@@ -42,6 +42,23 @@ test('el panel permite buscar con teclado y cerrar notificaciones', async ({ pag
   await page.screenshot({ path: testInfo.outputPath('dashboard-desktop.png'), fullPage: true, animations: 'disabled' })
 })
 
+test('primeros pasos marca lo hecho con datos reales y se puede ocultar', async ({ page }, testInfo) => {
+  await setup(page)
+  await page.addInitScript((id) => localStorage.setItem(`tf-tour-done:${id}`, '1'), owner.id)
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('/')
+  const card = page.getByTestId('first-steps')
+  await expect(card).toContainText('Llevas 3 de 4')
+  await expect(card.getByRole('link', { name: 'Ver reparaciones' })).toBeVisible()
+  await expect(card.getByRole('link', { name: 'Agregar personal' })).toHaveCount(0)
+  await page.screenshot({ path: testInfo.outputPath('first-steps.png'), fullPage: true, animations: 'disabled' })
+  await card.getByRole('button', { name: 'Ocultar primeros pasos' }).click()
+  await expect(card).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Panel de control' })).toBeVisible()
+  await expect(page.getByTestId('first-steps')).toHaveCount(0)
+})
+
 test('personal filtra miembros y muestra al propietario con su rol correcto', async ({ page }, testInfo) => {
   await setup(page)
   await page.setViewportSize({ width: 1440, height: 1000 })

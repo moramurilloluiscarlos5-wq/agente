@@ -31,7 +31,7 @@ try {
   if (!SECRET && state.secret) SECRET = state.secret
   if (!WORKSHOP_ID && state.workshop_id) WORKSHOP_ID = state.workshop_id
 } catch { /* first run: pairing creates the state file */ }
-if (SECRET.length < 32) console.warn('Device Agent requiere pairing desde CARLOSTECH AI antes de ejecutar comandos.')
+if (SECRET.length < 32) console.warn('Device Agent requiere vincularse desde TallerFlow antes de ejecutar comandos.')
 if (!WORKSHOP_ID) console.warn('DEVICE_AGENT_WORKSHOP_ID no está configurado; el agente rechazará tokens de cualquier taller.')
 
 function savePairingState() {
@@ -74,7 +74,7 @@ function paired() {
 function healthPayload() {
   // `service` es el identificador canónico pedido por la UI; `agent` se
   // conserva por compatibilidad con instalaciones existentes del instalador.
-  return { status: 'ok', service: 'CarlosTech Device Agent', agent: 'CarlosTech Device Agent', version: AGENT_VERSION }
+  return { status: 'ok', service: 'TallerFlow Device Agent', agent: 'TallerFlow Device Agent', version: AGENT_VERSION }
 }
 
 function pairingPayload() {
@@ -97,7 +97,7 @@ async function pairWithBackend(body) {
   SECRET = result.data.secret
   WORKSHOP_ID = result.data.workshop_id
   savePairingState()
-  log('info', 'Device Agent vinculado a CARLOSTECH AI.', { event: 'agent.paired' })
+  log('info', 'Device Agent vinculado a TallerFlow.', { event: 'agent.paired' })
   return { paired: true, agent_id: AGENT_ID, workshop_id: WORKSHOP_ID, version: AGENT_VERSION }
 }
 
@@ -443,4 +443,4 @@ async function poll() {
   if (fastbootKey !== JSON.stringify(lastFastboot)) { broadcast({ type: 'devices.changed', data: { adb: adb.devices, fastboot: fastboot.devices, adb_error: adb.error, fastboot_error: fastboot.error } }); lastFastboot = fastboot.devices }
 }
 
-server.listen(PORT, HOST, () => { log('info', `CarlosTech Device Agent listo en http://${HOST}:${PORT}`, { event: 'agent.ready', version: AGENT_VERSION, pairing_required: !paired() }); poll(); setInterval(poll, POLL_MS) })
+server.listen(PORT, HOST, () => { log('info', `TallerFlow Device Agent listo en http://${HOST}:${PORT}`, { event: 'agent.ready', version: AGENT_VERSION, pairing_required: !paired() }); poll(); setInterval(poll, POLL_MS) })

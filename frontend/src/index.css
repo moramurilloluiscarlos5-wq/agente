@@ -477,6 +477,9 @@ button:not(:disabled), a, summary, label[for], select { cursor: pointer; }
 .tf-list { list-style: none; margin: 0; padding: 0; }
 .tf-list > li + li { border-top: 1px solid rgb(var(--tf-ink-rgb) / 0.07); }
 .tf-list-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 1.5rem; }
+.tf-steps-progress { height: 0.25rem; margin: 0 1.5rem 0.5rem; border-radius: 999px; background: rgb(var(--tf-ink-rgb) / 0.08); overflow: hidden; }
+.tf-steps-progress > span { display: block; height: 100%; border-radius: inherit; background: rgb(var(--tf-success-rgb)); transition: width var(--tf-dur-4) var(--tf-ease); }
+.tf-step.is-done .tf-step-title { color: var(--tf-text-muted); text-decoration: line-through; }
 
 /* ---------- Brand ---------- */
 .tf-brand { display: inline-flex; align-items: center; gap: 0.75rem; flex-shrink: 0; color: var(--tf-text); }
