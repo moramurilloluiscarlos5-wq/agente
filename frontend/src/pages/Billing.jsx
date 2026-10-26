@@ -12,6 +12,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import { useToast } from '../hooks/useToast.js'
 
 const PAID = ['active', 'past_due']
+const CONFIRM_CHECKS = 20
 const longDate = (value) => (value ? new Date(value).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : null)
 const planLabel = (plan) => `${TIER_NAMES[plan.tier] ?? plan.name} ${plan.interval === 'year' ? 'anual' : 'mensual'}`
 
@@ -38,13 +39,16 @@ export default function Billing() {
   }, [])
 
   // Tras volver de Mercado Pago la notificación puede tardar unos segundos en activar la licencia.
+  // Se revisa durante un minuto; si no llega (pago sin terminar o aviso lento) se deja de insistir.
   const success = params.get('checkout') === 'success'
   const pending = success && subscription && subscription.status !== 'active'
+  const [checks, setChecks] = useState(0)
+  const waiting = pending && checks < CONFIRM_CHECKS
   useEffect(() => {
-    if (!pending) return undefined
-    const timer = setTimeout(() => setReloadKey((key) => key + 1), 3000)
+    if (!waiting) return undefined
+    const timer = setTimeout(() => { setChecks((count) => count + 1); setReloadKey((key) => key + 1) }, 3000)
     return () => clearTimeout(timer)
-  }, [pending, reloadKey])
+  }, [waiting, reloadKey])
   // Al activarse, el menú debe reflejar lo que incluye el plan nuevo (una sola vez).
   const refreshed = useRef(false)
   useEffect(() => {
@@ -123,7 +127,7 @@ export default function Billing() {
       {!paid && params.get('plan') && <BuySteps current={2} />}
       <PageHeader title="Facturación" description="Tu plan de TallerFlow, su estado y los pagos con Mercado Pago." />
       {message && <div role="alert" className="tf-alert tf-alert-warning max-w-3xl">{message}</div>}
-      {success && <Alert tone={pending ? 'info' : 'success'} className="max-w-3xl">{pending ? 'Pago recibido. Estamos activando tu licencia con Mercado Pago…' : 'Listo, tu licencia está activa.'}</Alert>}
+      {success && subscription && <Alert tone={pending ? 'info' : 'success'} className="max-w-3xl">{!pending ? 'Listo, tu licencia está activa.' : waiting ? 'Estamos confirmando tu pago con Mercado Pago…' : 'Mercado Pago todavía no confirma tu pago. Si ya pagaste, tu licencia se activa en unos minutos: recarga esta página. Si no terminaste el pago, elige tu plan otra vez.'}</Alert>}
       {error && <ErrorAlert error={error.err} action={error.action} className="max-w-3xl" />}
       {!paymentsReady && !disabled && <Alert tone="info" className="max-w-3xl" title="Mercado Pago todavía no está conectado">Puedes revisar los planes; podrás contratarlos en cuanto se configure Mercado Pago en el servidor.</Alert>}
       <LicenseCard key={reloadKey} onLoaded={setSubscription} />

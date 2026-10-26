@@ -144,6 +144,18 @@ test('facturación: contratar confirma el plan y envía solo el plan y el correo
   expect(checkout).not.toMatch(/workshop|status|amount|price/)
 })
 
+test('al volver de Mercado Pago sin pago confirmado deja de esperar y explica qué hacer', async ({ page }) => {
+  await page.clock.install()
+  const calls = await setup(page, { subscription: { status: 'trialing', plan: null, trial_end: '2030-01-01T00:00:00Z', has_billing_account: false, license: license({ reason: 'trialing' }) } })
+  await page.goto('/facturacion?checkout=success')
+  await expect(page.getByRole('status').filter({ hasText: 'Estamos confirmando tu pago' })).toBeVisible()
+  for (let i = 0; i < 25; i += 1) await page.clock.runFor(3000)
+  await expect(page.getByText('Mercado Pago todavía no confirma tu pago')).toBeVisible()
+  const polls = calls.filter((call) => call.startsWith('GET /billing/subscription')).length
+  await page.clock.runFor(30_000)
+  expect(calls.filter((call) => call.startsWith('GET /billing/subscription')).length).toBe(polls)
+})
+
 test('configuración muestra plan, estado, próximo cobro y usuarios del plan', async ({ page }) => {
   await setup(page, { subscription: activeSubscription })
   await page.goto('/configuracion')

@@ -8,7 +8,7 @@ import { createLicenseMiddleware, invalidateLicenseCache, requireFeature } from 
 import { assertBillingConfig, loadBillingConfig, licensingEnabled } from '../config/billing.js'
 import { entitlementsFor, minimumTierFor } from '../config/plans.js'
 import { LICENSE_MESSAGES, checkLicensingSchema, ensureTrialSubscription, entitlementsForSubscription, evaluateLicense, licenseSummary, mapPreapprovalStatus, planForPreapproval } from '../services/billingService.js'
-import { createMercadoPagoClient, signNotification, verifyNotificationSignature } from '../services/mercadoPago.js'
+import { MercadoPagoError, checkoutProblem, createMercadoPagoClient, signNotification, verifyNotificationSignature } from '../services/mercadoPago.js'
 
 // Estas pruebas asumen licencias activas aunque el .env local las apague (LICENSING_ENABLED=false).
 process.env.LICENSING_ENABLED = 'true'
@@ -462,6 +462,22 @@ test('rutas: checkout valida rol, taller, estado, plan, correo, duplicados y con
   assert.equal(subscribed.body.code, 'ALREADY_SUBSCRIBED')
   const unconfigured = await call(owner, { plan: 'plus_monthly', payer_email: 'a@b.co' }, { env: {} })
   assert.deepEqual([unconfigured.status, unconfigured.body.code], [503, 'BILLING_NOT_CONFIGURED'])
+})
+
+test('rutas: un rechazo de Mercado Pago por el pagador se explica con un 400 claro; otros fallos siguen como 502', async (t) => {
+  const rejecting = (message, providerStatus = 400) => ({ ...mpStub(), createPreapproval: async () => { throw new MercadoPagoError('rechazo', { providerStatus, providerMessage: message }) } })
+  const same = await (await serveBilling(t, seededDb(null), owner, { mp: rejecting('Payer and collector cannot be the same user') }))('/checkout', { plan: 'plus_monthly', payer_email: 'yo@taller.com' })
+  assert.deepEqual([same.status, same.body.code], [400, 'PAYMENT_REJECTED'])
+  assert.match(same.body.message, /misma cuenta de Mercado Pago/)
+  const country = await (await serveBilling(t, seededDb(null), owner, { mp: rejecting('Cannot operate between different countries') }))('/checkout', { plan: 'plus_monthly', payer_email: 'yo@taller.com' })
+  assert.match(country.body.message, /otro país/)
+  const outage = await (await serveBilling(t, seededDb(null), owner, { mp: rejecting('internal', 500) }))('/checkout', { plan: 'plus_monthly', payer_email: 'yo@taller.com' })
+  assert.equal(outage.status, 502)
+})
+
+test('cliente de Mercado Pago: guarda las causas del rechazo para el log', async () => {
+  const client = createMercadoPagoClient({ accessToken: 'TEST-token', fetchImpl: async () => new Response(JSON.stringify({ message: 'Invalid', cause: [{ code: 'x1', description: 'payer_email invalid' }] }), { status: 400 }) })
+  await assert.rejects(client.createPreapproval({}), (error) => error.providerCauses[0] === 'x1 payer_email invalid' && checkoutProblem(error) !== null)
 })
 
 test('rutas: checkout aplica el limitador de peticiones', async (t) => {

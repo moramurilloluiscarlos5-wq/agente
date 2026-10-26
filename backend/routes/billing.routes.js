@@ -7,7 +7,7 @@ import { invalidateLicenseCache } from '../middleware/license.js'
 import { loadBillingConfig, trialDaysFromEnv, graceDaysFromEnv, licensingEnabled } from '../config/billing.js'
 import { FEATURES, TIERS } from '../config/plans.js'
 import { countActiveUsers, createBillingProcessor, getWorkshopSubscription, preapprovalRequest, serializeSubscription } from '../services/billingService.js'
-import { createMercadoPagoClient, verifyNotificationSignature } from '../services/mercadoPago.js'
+import { checkoutProblem, createMercadoPagoClient, verifyNotificationSignature } from '../services/mercadoPago.js'
 import { auditSafe, writeAudit } from '../services/auditService.js'
 
 const PAID_STATUSES = ['active', 'past_due']
@@ -82,7 +82,16 @@ export function createBillingRouter({
     const email = await payerEmail(req)
     if (email === false) return res.status(400).json({ message: 'Escribe un correo válido, por ejemplo nombre@correo.com.' })
     if (!email) return res.status(400).json({ message: 'Escribe el correo de tu cuenta de Mercado Pago para continuar.' })
-    const preapproval = await ctx.mp.createPreapproval(preapprovalRequest({ plan, workshopId: ctx.workshopId, payerEmail: email, appPublicUrl: ctx.config.appPublicUrl }))
+    let preapproval
+    try {
+      preapproval = await ctx.mp.createPreapproval(preapprovalRequest({ plan, workshopId: ctx.workshopId, payerEmail: email, appPublicUrl: ctx.config.appPublicUrl }))
+    } catch (error) {
+      // El motivo de Mercado Pago queda en el log (sin correo ni claves) para poder diagnosticar.
+      console.error('Mercado Pago rechazó la suscripción', { status: error?.providerStatus ?? null, message: error?.providerMessage ?? null, causes: error?.providerCauses ?? [] })
+      const problem = checkoutProblem(error)
+      if (problem) return res.status(400).json({ code: 'PAYMENT_REJECTED', message: problem })
+      throw error
+    }
     if (!preapproval?.init_point) return res.status(502).json({ code: 'PAYMENT_PROVIDER_ERROR', message: 'Mercado Pago no devolvió el enlace de pago. Inténtalo de nuevo.' })
     await auditSafe(writeAudit({ db, req, userId: req.authUserId, workshopId: ctx.workshopId, action: 'CHECKOUT_STARTED', entity: 'subscriptions', entityId: ctx.workshopId, description: `${action} (${plan.code})`, newValues: { plan: plan.code } }))
     return res.json({ data: { url: preapproval.init_point } })
