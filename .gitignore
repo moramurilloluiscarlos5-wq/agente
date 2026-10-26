@@ -36,3 +36,4 @@ CarlosTech_Recovery_Final/
 # HyperFrames: renders y caché locales
 media/hyperframes/*/renders/
 media/hyperframes/*/.hyperframes/
+.playwright-mcp/

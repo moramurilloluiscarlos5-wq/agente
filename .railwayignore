@@ -27,3 +27,4 @@ database/
 .claude/
 deploy-log.txt
 promo-video/
+.playwright-mcp/
