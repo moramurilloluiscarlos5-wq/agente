@@ -1,0 +1,525 @@
+{
+ "hook": {
+  "text": "¿Otra vez se perdió el papelito de una reparación?",
+  "duration": 3.264,
+  "words": [
+   {
+    "text": "Otra",
+    "start": 0.096291,
+    "end": 0.339332
+   },
+   {
+    "text": "vez",
+    "start": 0.350916,
+    "end": 0.524541
+   },
+   {
+    "text": "se",
+    "start": 0.536125,
+    "end": 0.628708
+   },
+   {
+    "text": "perdió",
+    "start": 0.640291,
+    "end": 0.906499
+   },
+   {
+    "text": "el",
+    "start": 0.918041,
+    "end": 0.975916
+   },
+   {
+    "text": "papelito",
+    "start": 0.9875,
+    "end": 1.473625
+   },
+   {
+    "text": "de",
+    "start": 1.485166,
+    "end": 1.577749
+   },
+   {
+    "text": "una",
+    "start": 1.589333,
+    "end": 1.762958
+   },
+   {
+    "text": "reparación",
+    "start": 1.774541,
+    "end": 2.445832
+   }
+  ]
+ },
+ "reveal": {
+  "text": "Con TallerFlow, tu taller queda en orden.",
+  "duration": 3.264,
+  "words": [
+   {
+    "text": "Con",
+    "start": 0.096291,
+    "end": 0.258332
+   },
+   {
+    "text": "TallerFlow",
+    "start": 0.269916,
+    "end": 0.871749
+   },
+   {
+    "text": "tu",
+    "start": 1.137958,
+    "end": 1.242124
+   },
+   {
+    "text": "taller",
+    "start": 1.253708,
+    "end": 1.670374
+   },
+   {
+    "text": "queda",
+    "start": 1.681958,
+    "end": 1.982874
+   },
+   {
+    "text": "en",
+    "start": 1.994458,
+    "end": 2.087041
+   },
+   {
+    "text": "orden",
+    "start": 2.098625,
+    "end": 2.445833
+   }
+  ]
+ },
+ "recibe": {
+  "text": "Paso uno: recibe el equipo. Registras al cliente, su celular y la falla en segundos.",
+  "duration": 6.912,
+  "words": [
+   {
+    "text": "Paso",
+    "start": 0.096291,
+    "end": 0.385624
+   },
+   {
+    "text": "uno",
+    "start": 0.397208,
+    "end": 0.698124
+   },
+   {
+    "text": "recibe",
+    "start": 0.999083,
+    "end": 1.531499
+   },
+   {
+    "text": "el",
+    "start": 1.543041,
+    "end": 1.624041
+   },
+   {
+    "text": "equipo",
+    "start": 1.635666,
+    "end": 2.040749
+   },
+   {
+    "text": "Registras",
+    "start": 2.835666,
+    "end": 3.368082
+   },
+   {
+    "text": "al",
+    "start": 3.379625,
+    "end": 3.472208
+   },
+   {
+    "text": "cliente",
+    "start": 3.483791,
+    "end": 3.877291
+   },
+   {
+    "text": "su",
+    "start": 4.166666,
+    "end": 4.282416
+   },
+   {
+    "text": "celular",
+    "start": 4.294,
+    "end": 4.768541
+   },
+   {
+    "text": "y",
+    "start": 4.780083,
+    "end": 4.837958
+   },
+   {
+    "text": "la",
+    "start": 4.849541,
+    "end": 4.965291
+   },
+   {
+    "text": "falla",
+    "start": 4.976833,
+    "end": 5.324041
+   },
+   {
+    "text": "en",
+    "start": 5.335666,
+    "end": 5.428249
+   },
+   {
+    "text": "segundos",
+    "start": 5.439833,
+    "end": 6.087999
+   }
+  ]
+ },
+ "avisa": {
+  "text": "Paso dos: avisa cada avance. Cambias el estado y tu cliente recibe el aviso al instante.",
+  "duration": 6.936,
+  "words": [
+   {
+    "text": "Paso",
+    "start": 0.096291,
+    "end": 0.385624
+   },
+   {
+    "text": "dos",
+    "start": 0.397208,
+    "end": 0.779166
+   },
+   {
+    "text": "avisa",
+    "start": 1.033791,
+    "end": 1.450457
+   },
+   {
+    "text": "cada",
+    "start": 1.462041,
+    "end": 1.855541
+   },
+   {
+    "text": "avance",
+    "start": 1.867125,
+    "end": 2.330083
+   },
+   {
+    "text": "Cambias",
+    "start": 3.136583,
+    "end": 3.472249
+   },
+   {
+    "text": "el",
+    "start": 3.483791,
+    "end": 3.564791
+   },
+   {
+    "text": "estado",
+    "start": 3.576375,
+    "end": 3.923583
+   },
+   {
+    "text": "y",
+    "start": 3.935166,
+    "end": 4.016166
+   },
+   {
+    "text": "tu",
+    "start": 4.027791,
+    "end": 4.155124
+   },
+   {
+    "text": "cliente",
+    "start": 4.166666,
+    "end": 4.525457
+   },
+   {
+    "text": "recibe",
+    "start": 4.537041,
+    "end": 5.011582
+   },
+   {
+    "text": "el",
+    "start": 5.023166,
+    "end": 5.127332
+   },
+   {
+    "text": "aviso",
+    "start": 5.138875,
+    "end": 5.474541
+   },
+   {
+    "text": "al",
+    "start": 5.486125,
+    "end": 5.555583
+   },
+   {
+    "text": "instante",
+    "start": 5.567125,
+    "end": 6.122666
+   }
+  ]
+ },
+ "cliente": {
+  "text": "Paso tres: tu cliente sigue su reparación desde el celular, sin tener que llamarte.",
+  "duration": 5.376,
+  "words": [
+   {
+    "text": "Paso",
+    "start": 0.096291,
+    "end": 0.327791
+   },
+   {
+    "text": "tres",
+    "start": 0.339333,
+    "end": 0.698124
+   },
+   {
+    "text": "tu",
+    "start": 0.964333,
+    "end": 1.091666
+   },
+   {
+    "text": "cliente",
+    "start": 1.10325,
+    "end": 1.49675
+   },
+   {
+    "text": "sigue",
+    "start": 1.508333,
+    "end": 1.739833
+   },
+   {
+    "text": "su",
+    "start": 1.751375,
+    "end": 1.867125
+   },
+   {
+    "text": "reparación",
+    "start": 1.878708,
+    "end": 2.445833
+   },
+   {
+    "text": "desde",
+    "start": 2.457416,
+    "end": 2.642582
+   },
+   {
+    "text": "el",
+    "start": 2.654166,
+    "end": 2.723624
+   },
+   {
+    "text": "celular",
+    "start": 2.735166,
+    "end": 3.117124
+   },
+   {
+    "text": "sin",
+    "start": 3.418041,
+    "end": 3.591666
+   },
+   {
+    "text": "tener",
+    "start": 3.60325,
+    "end": 3.892583
+   },
+   {
+    "text": "que",
+    "start": 3.904166,
+    "end": 3.996749
+   },
+   {
+    "text": "llamarte",
+    "start": 4.008333,
+    "end": 4.552333
+   }
+  ]
+ },
+ "panel": {
+  "text": "Y en tu panel ves todo el taller: qué se repara, qué falta y cuánto cobraste.",
+  "duration": 5.184,
+  "words": [
+   {
+    "text": "Y",
+    "start": 0.096291,
+    "end": 0.188874
+   },
+   {
+    "text": "en",
+    "start": 0.200458,
+    "end": 0.293041
+   },
+   {
+    "text": "tu",
+    "start": 0.304625,
+    "end": 0.385625
+   },
+   {
+    "text": "panel",
+    "start": 0.397208,
+    "end": 0.744416
+   },
+   {
+    "text": "ves",
+    "start": 0.756,
+    "end": 1.010625
+   },
+   {
+    "text": "todo",
+    "start": 1.022208,
+    "end": 1.242124
+   },
+   {
+    "text": "el",
+    "start": 1.253708,
+    "end": 1.334708
+   },
+   {
+    "text": "taller",
+    "start": 1.346291,
+    "end": 1.681957
+   },
+   {
+    "text": "qué",
+    "start": 1.982875,
+    "end": 2.087041
+   },
+   {
+    "text": "se",
+    "start": 2.098625,
+    "end": 2.214375
+   },
+   {
+    "text": "repara",
+    "start": 2.225916,
+    "end": 2.607874
+   },
+   {
+    "text": "qué",
+    "start": 2.897208,
+    "end": 3.001374
+   },
+   {
+    "text": "falta",
+    "start": 3.012958,
+    "end": 3.441208
+   },
+   {
+    "text": "y",
+    "start": 3.452791,
+    "end": 3.545374
+   },
+   {
+    "text": "cuánto",
+    "start": 3.556958,
+    "end": 3.811583
+   },
+   {
+    "text": "cobraste",
+    "start": 3.823166,
+    "end": 4.367166
+   }
+  ]
+ },
+ "modulos": {
+  "text": "Además: cotizaciones, garantías, inventario y reportes.",
+  "duration": 5.088,
+  "words": [
+   {
+    "text": "Además",
+    "start": 0.096291,
+    "end": 0.663416
+   },
+   {
+    "text": "cotizaciones",
+    "start": 0.860166,
+    "end": 1.716666
+   },
+   {
+    "text": "garantías",
+    "start": 1.936583,
+    "end": 2.642583
+   },
+   {
+    "text": "inventario",
+    "start": 2.8625,
+    "end": 3.4875
+   },
+   {
+    "text": "y",
+    "start": 3.499083,
+    "end": 3.591666
+   },
+   {
+    "text": "reportes",
+    "start": 3.60325,
+    "end": 4.274541
+   }
+  ]
+ },
+ "cierre": {
+  "text": "TallerFlow. Tu taller merece verse así. El link está en la bio.",
+  "duration": 5.88,
+  "words": [
+   {
+    "text": "TallerFlow",
+    "start": 0.096291,
+    "end": 0.813874
+   },
+   {
+    "text": "Tu",
+    "start": 1.620375,
+    "end": 1.747708
+   },
+   {
+    "text": "taller",
+    "start": 1.75925,
+    "end": 2.118041
+   },
+   {
+    "text": "merece",
+    "start": 2.129625,
+    "end": 2.5
+   },
+   {
+    "text": "verse",
+    "start": 2.511583,
+    "end": 2.835666
+   },
+   {
+    "text": "así",
+    "start": 2.847208,
+    "end": 3.159708
+   },
+   {
+    "text": "El",
+    "start": 3.969916,
+    "end": 4.131957
+   },
+   {
+    "text": "link",
+    "start": 4.1435,
+    "end": 4.386541
+   },
+   {
+    "text": "está",
+    "start": 4.398166,
+    "end": 4.664374
+   },
+   {
+    "text": "en",
+    "start": 4.675916,
+    "end": 4.733791
+   },
+   {
+    "text": "la",
+    "start": 4.745375,
+    "end": 4.826375
+   },
+   {
+    "text": "bio",
+    "start": 4.837958,
+    "end": 5.069458
+   }
+  ]
+ }
+}
