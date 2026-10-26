@@ -180,22 +180,40 @@ export function createOperationsRouter({ db = supabaseAdmin, authenticate = [req
     res.json({ data, history })
   }))
 
+  // Las funciones de la base no reciben la fecha de recepción (usan now()): se guarda aparte,
+  // ya validada y dentro del taller de la sesión.
+  function splitReceivedAt(values) {
+    const { received_at: receivedAt, ...rest } = values
+    if (receivedAt != null && Date.parse(receivedAt) > Date.now() + 86_400_000) fail('La fecha de recepción no puede ser futura')
+    return [receivedAt ?? null, rest]
+  }
+
+  async function saveReceivedAt(number, receivedAt, profile) {
+    if (!receivedAt) return
+    const { error } = await scopeRepairs(db.from('repair_orders').update({ received_at: receivedAt }).eq('order_number', number).is('deleted_at', null), profile)
+    databaseError(error)
+  }
+
   router.post('/repairs', writers, requirePermission('repairs.create'), asyncRoute(async (req, res) => {
-    const values = validatePayload('repair', req.body)
+    const [receivedAt, values] = splitReceivedAt(validatePayload('repair', req.body))
     await validateLinks(values, {}, req)
     const { data: created, error } = await db.rpc('create_repair_order', { p_data: values, p_actor: req.profile.id })
     databaseError(error)
+    await saveReceivedAt(created.order_number, receivedAt, req.profile)
     const data = await repairRecord(created.order_number, req.profile)
     void auditSafe(writeAudit({ db, req, action: 'REPAIR_CREATED', entity: 'repair_orders', entityId: data.id, description: `Orden ${data.order_number} creada`, newValues: data }))
     res.status(201).json({ data })
   }))
 
   router.patch('/repairs/:orderNumber', requirePermission('repairs.update'), asyncRoute(async (req, res) => {
-    const values = validatePayload('repair', req.body, { partial: true, role: req.profile.role })
+    const [receivedAt, values] = splitReceivedAt(validatePayload('repair', req.body, { partial: true, role: req.profile.role }))
     const existing = await repairRecord(req.params.orderNumber, req.profile)
     await validateLinks(values, existing, req)
-    const { error } = await db.rpc('update_repair_order', { p_order_number: existing.order_number, p_data: values, p_actor: req.profile.id })
-    databaseError(error)
+    if (Object.keys(values).length) {
+      const { error } = await db.rpc('update_repair_order', { p_order_number: existing.order_number, p_data: values, p_actor: req.profile.id })
+      databaseError(error)
+    }
+    await saveReceivedAt(existing.order_number, receivedAt, req.profile)
     const data = await repairRecord(existing.order_number, req.profile)
     res.json({ data })
   }))

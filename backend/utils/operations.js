@@ -55,7 +55,7 @@ const repairFields = {
   physical_condition: text(5000), is_water_damaged: bool, is_dropped: bool, powers_on: bool,
   charges: bool, displays_image: bool, touch_works: bool, accessories_received: text(2000),
   initial_diagnosis: text(5000), estimated_cost: money, deposit: money,
-  estimated_delivery_at: { type: 'date' }, technician_id: id(), internal_notes: text(5000),
+  estimated_delivery_at: { type: 'date' }, received_at: { type: 'date' }, technician_id: id(), internal_notes: text(5000),
 }
 export const TECHNICIAN_REPAIR_FIELDS = ['initial_diagnosis', 'internal_notes', 'symptoms', 'powers_on', 'charges', 'displays_image', 'touch_works']
 

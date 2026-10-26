@@ -23,6 +23,13 @@ test('repair intake requires matching identifiers and safe money representation'
   assert.throws(() => validatePayload('repair', { ...base, status: 'entregado' }), { status: 400 })
 })
 
+test('repair intake accepts the reception date the form sends', () => {
+  const base = { customer_id: ID, device_id: OTHER, reported_problem: 'No enciende' }
+  assert.equal(validatePayload('repair', { ...base, received_at: '2026-10-26T06:16:00.000Z' }).received_at, '2026-10-26T06:16:00.000Z')
+  assert.throws(() => validatePayload('repair', { ...base, received_at: 'ayer' }), { status: 400 })
+  assert.throws(() => validatePayload('repair', { received_at: '2026-10-26T06:16:00.000Z' }, { partial: true, role: 'TECNICO' }), { status: 403 })
+})
+
 test('technicians cannot change money, assignees, owners or lifecycle fields', () => {
   const options = { partial: true, role: 'TECNICO' }
   assert.deepEqual(validatePayload('repair', { initial_diagnosis: 'Conector dañado', charges: false }, options), { initial_diagnosis: 'Conector dañado', charges: false })
@@ -83,6 +90,18 @@ test('API does not return another technician order or its history', async (t) =>
   const result = await request(t, { path: '/repairs/CAR-2026-0001', response: { data: { id: OTHER, technician_id: OTHER }, error: null } })
   assert.equal(result.status, 404)
   assert.equal(result.calls.filter(([method]) => method === 'from').length, 1)
+})
+
+test('editing only the reception date saves it inside the workshop without the database function', async (t) => {
+  const order = { id: ID, order_number: 'CAR-2026-0001', workshop_id: WORKSHOP, technician_id: ID, customer_id: ID, device_id: OTHER }
+  const receivedAt = '2026-10-20T15:30:00.000Z'
+  const result = await request(t, { method: 'PATCH', path: '/repairs/CAR-2026-0001', role: 'ADMINISTRADOR', body: { received_at: receivedAt }, response: { data: order, error: null } })
+  assert.equal(result.status, 200)
+  assert.equal(result.calls.some(([method]) => method === 'rpc'), false)
+  assert.ok(result.calls.some(([method, values]) => method === 'update' && values?.received_at === receivedAt))
+  assert.ok(result.calls.some(([method, field, value]) => method === 'eq' && field === 'workshop_id' && value === WORKSHOP))
+  const future = await request(t, { method: 'PATCH', path: '/repairs/CAR-2026-0001', role: 'ADMINISTRADOR', body: { received_at: '2099-01-01T00:00:00.000Z' }, response: { data: order, error: null } })
+  assert.equal(future.status, 400)
 })
 
 test('only administrators may archive customers or devices', async (t) => {
