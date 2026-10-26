@@ -97,13 +97,6 @@ export const MODULE_HELP = {
   },
 }
 
-// Ayuda de la página actual. El panel responde en "/" y en "/dashboard".
-export function helpFor(pathname) {
-  const path = pathname === '/dashboard' ? '/' : pathname.replace(/\/+$/, '') || '/'
-  const help = MODULE_HELP[path]
-  return help ? { path, ...help } : null
-}
-
 // El recorrido de un equipo por el taller y la opción del menú que atiende cada paso.
 // Los tonos son los mismos del flujo del panel de control.
 export const JOURNEY = [

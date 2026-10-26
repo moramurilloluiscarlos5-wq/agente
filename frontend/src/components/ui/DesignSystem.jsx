@@ -295,7 +295,7 @@ export function Pagination({ page, limit, count, onPage, label = 'registros' }) 
 }
 
 /* ---------- Superficies superpuestas ---------- */
-export function Dialog({ open, title, description, onClose, children, footer, wide = false, sheet = false, labelledBy }) {
+export function Dialog({ open, title, description, onClose, children, footer, wide = false, sheet = false, labelledBy, top }) {
   const panelRef = useRef(null)
   const titleId = useId()
   useEffect(() => {
@@ -323,6 +323,7 @@ export function Dialog({ open, title, description, onClose, children, footer, wi
   return createPortal(
     <div className={`tf-backdrop ${sheet ? 'is-sheet' : ''}`} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.() }}>
       <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={labelledBy || titleId} className={sheet ? 'tf-sheet' : `tf-dialog ${wide ? 'tf-dialog-wide' : ''}`}>
+        {top}
         <div className="tf-dialog-header">
           <div className="min-w-0"><h2 id={titleId}>{title}</h2>{description && <p>{description}</p>}</div>
           <IconButton label="Cerrar" icon={X} iconSize={18} className="-mr-2 -mt-1" onClick={onClose} />

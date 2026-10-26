@@ -4,8 +4,6 @@ import { api, API_BASE_URL } from '../services/api.js'
 import { openDeviceAgent } from '../services/deviceAgent.js'
 import DeviceAgentRelease from '../components/DeviceAgentRelease.jsx'
 import { ConfirmDialog } from '../components/ui/DesignSystem.jsx'
-import { SectionHelpButton, SectionHelpPanel } from '../components/ui/SectionHelp.jsx'
-import { useSectionHelp } from '../hooks/useSectionHelp.js'
 
 const panel = 'tf-card p-6'
 const button = 'ct-btn ct-btn-secondary'
@@ -15,7 +13,6 @@ function value(value) { return value === null || value === undefined || value ==
 function prettyBytes(kb) { if (!Number.isFinite(kb)) return 'No disponible'; const gb = kb / 1024 / 1024; return `${gb >= 1 ? gb.toFixed(1) + ' GB' : Math.round(kb / 1024) + ' MB'}` }
 
 export default function DeviceTools() {
-  const help = useSectionHelp()
   const [agent, setAgent] = useState(null)
   const [devices, setDevices] = useState([])
   const [fastbootDevices, setFastbootDevices] = useState([])
@@ -195,8 +192,7 @@ export default function DeviceTools() {
   ] : [], [info])
 
   return <div className="ct-page space-y-6">
-    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="ct-page-title">Herramientas ADB y Fastboot</h1><p className="mt-1 text-sm text-[var(--tf-text-muted)]">El teléfono se conecta por USB a la computadora del técnico. Los comandos se ejecutan ahí, con el agente de TallerFlow.</p></div><div className="flex flex-wrap items-center gap-2"><SectionHelpButton {...help} /><button className={button} onClick={checkAgent} disabled={checkingAgent || Boolean(busy)}><ShieldCheck size={15} /> Comprobar instalación</button><div className="flex items-center gap-2 rounded-lg border border-[var(--tf-border)] bg-[var(--tf-surface)] px-3 py-2 text-xs text-[var(--tf-text-muted)]"><Usb size={15} className={agent ? 'text-[var(--tf-success-ink)]' : 'text-[var(--tf-warning-ink)]'} />{agentStatus}</div></div></header>
-    <SectionHelpPanel {...help} />
+    <header className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="ct-page-title">Herramientas ADB y Fastboot</h1><p className="mt-1 text-sm text-[var(--tf-text-muted)]">El teléfono se conecta por USB a la computadora del técnico. Los comandos se ejecutan ahí, con el agente de TallerFlow.</p></div><div className="flex flex-wrap items-center gap-2"><button className={button} onClick={checkAgent} disabled={checkingAgent || Boolean(busy)}><ShieldCheck size={15} /> Comprobar instalación</button><div className="flex items-center gap-2 rounded-lg border border-[var(--tf-border)] bg-[var(--tf-surface)] px-3 py-2 text-xs text-[var(--tf-text-muted)]"><Usb size={15} className={agent ? 'text-[var(--tf-success-ink)]' : 'text-[var(--tf-warning-ink)]'} />{agentStatus}</div></div></header>
     {error && <div role="alert" className="flex items-start gap-3 rounded-[var(--tf-radius-card)] border border-[rgb(var(--tf-danger-rgb)/.32)] bg-[var(--tf-danger-soft)] p-4 text-sm text-[var(--tf-danger-ink)]"><AlertTriangle size={18} className="mt-1 shrink-0" />{error}</div>}
     {notice && <div className="rounded-[var(--tf-radius-card)] border border-[rgb(var(--tf-success-rgb)/.3)] bg-[var(--tf-success-soft)] p-4 text-sm text-[var(--tf-success-ink)]">{notice}</div>}
     {agent && !checkingAgent && !agentPairing && !currentList.length && <section className="flex items-start gap-3 rounded-[var(--tf-radius-card)] border border-[var(--tf-border)] bg-[var(--tf-surface)] p-4 text-sm text-[var(--tf-text-muted)]"><Smartphone size={18} className="mt-1 shrink-0 text-[var(--tf-text-muted)]" /><div><p className="font-semibold">No se detectó ningún dispositivo conectado.</p><p className="mt-1 text-[var(--tf-text-muted)]">Conecta el teléfono por USB y confirma la autorización en la pantalla del equipo.</p></div></section>}

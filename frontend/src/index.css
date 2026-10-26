@@ -517,9 +517,30 @@ button:not(:disabled), a, summary, label[for], select { cursor: pointer; }
 .tf-list { list-style: none; margin: 0; padding: 0; }
 .tf-list > li + li { border-top: 1px solid rgb(var(--tf-ink-rgb) / 0.07); }
 .tf-list-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 1.5rem; }
-.tf-steps-progress { height: 0.25rem; margin: 0 1.5rem 0.5rem; border-radius: 999px; background: rgb(var(--tf-ink-rgb) / 0.08); overflow: hidden; }
-.tf-steps-progress > span { display: block; height: 100%; border-radius: inherit; background: rgb(var(--tf-success-rgb)); transition: width var(--tf-dur-4) var(--tf-ease); }
-.tf-step.is-done .tf-step-title { color: var(--tf-text-muted); text-decoration: line-through; }
+/* ---------- Bienvenida: pasos numerados arriba de la ventana ---------- */
+.tf-stepper { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); margin: 0; padding: 1.25rem 1.5rem; list-style: none; border-bottom: 1px solid var(--tf-border); background: var(--tf-surface-sunken); border-radius: var(--tf-radius-dialog) var(--tf-radius-dialog) 0 0; }
+.tf-stepper-step { position: relative; min-width: 0; }
+/* La línea que une cada paso con el siguiente; se pinta de verde cuando el paso ya pasó. */
+.tf-stepper-step::after { content: ""; position: absolute; top: 1rem; left: 2.75rem; right: 0.5rem; height: 2px; border-radius: 2px; background: var(--tf-border-strong); }
+.tf-stepper-step:last-child::after { display: none; }
+.tf-stepper-step.is-done::after { background: var(--tf-primary); }
+.tf-stepper-button { display: grid; justify-items: start; gap: 0.5rem; width: 100%; padding: 0; border-radius: 8px; text-align: left; }
+.tf-stepper-dot { position: relative; z-index: 1; display: grid; width: 2rem; height: 2rem; place-items: center; border: 2px solid var(--tf-border-strong); border-radius: 999px; background: var(--tf-surface); color: var(--tf-text-subtle); font-size: 0.875rem; font-weight: 700; transition: background-color var(--tf-dur-2), border-color var(--tf-dur-2), color var(--tf-dur-2); }
+.tf-stepper-step.is-done .tf-stepper-dot { border-color: var(--tf-primary); background: var(--tf-primary); color: #fff; }
+.tf-stepper-step.is-current .tf-stepper-dot { border-color: var(--tf-primary); background: var(--tf-surface); color: var(--tf-primary-ink); box-shadow: 0 0 0 4px rgb(var(--tf-primary-rgb) / 0.16); }
+.tf-stepper-label { display: grid; color: var(--tf-text-muted); font-size: 0.8125rem; font-weight: 600; line-height: 1.3; }
+.tf-stepper-label > span { color: var(--tf-text-subtle); font-size: 0.75rem; font-weight: 500; }
+.tf-stepper-step.is-current .tf-stepper-label { color: var(--tf-text); }
+.tf-welcome-body { max-width: 34rem; color: var(--tf-text-muted); font-size: 1rem; line-height: 1.6; }
+.tf-welcome-journey { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.75rem; margin: 1.25rem 0 0; padding: 0; list-style: none; }
+.tf-welcome-journey li { position: relative; display: inline-flex; align-items: center; gap: 0.5rem; color: var(--tf-text); font-size: 0.9375rem; font-weight: 600; }
+.tf-welcome-journey li + li::before { content: ""; position: absolute; left: -1.25rem; width: 0.75rem; height: 2px; border-radius: 2px; background: var(--tf-border-strong); }
+.tf-welcome-done { display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem; color: var(--tf-success-ink); font-size: 0.9375rem; font-weight: 600; }
+@media (max-width: 520px) {
+  .tf-stepper { padding: 1rem; }
+  .tf-stepper-label { display: none; }
+  .tf-stepper-step::after { left: 2.5rem; }
+}
 
 /* ---------- Brand ---------- */
 .tf-brand { display: inline-flex; align-items: center; gap: 0.75rem; flex-shrink: 0; color: var(--tf-text); }
@@ -560,25 +581,6 @@ button:not(:disabled), a, summary, label[for], select { cursor: pointer; }
 .tf-tooltip.is-right { animation: tf-tip-right 0.14s var(--tf-ease) both; }
 .tf-tooltip.is-right::before { content: ""; position: absolute; left: -5px; top: var(--tf-arrow-y, 50%); width: 9px; height: 9px; margin-top: -4.5px; border-bottom: 1px solid var(--tf-border-strong); border-left: 1px solid var(--tf-border-strong); background: var(--tf-overlay); transform: rotate(45deg); }
 @keyframes tf-tip-right { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
-
-/* ---------- Ayuda de la sección ("Cómo funciona") ---------- */
-.ct-page-intro > * + * { margin-top: 1.25rem; }
-.tf-help { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 1rem; padding: 1.25rem 3.5rem 1.25rem 1.25rem; border: 1px solid rgb(var(--tf-accent-rgb) / 0.2); border-radius: var(--tf-radius-card); background: rgb(var(--tf-accent-rgb) / 0.045); animation: tf-pop 0.18s var(--tf-ease) both; transform-origin: top center; }
-.tf-help-icon { display: grid; width: 2.25rem; height: 2.25rem; place-items: center; border-radius: 9px; background: var(--tf-accent-soft); color: var(--tf-accent); }
-.tf-help-title { color: var(--tf-text); font-size: 0.875rem; font-weight: 600; }
-.tf-help-text { max-width: 44rem; margin-top: 0.25rem; color: var(--tf-text-muted); font-size: 0.875rem; line-height: 1.55; }
-.tf-help-tasks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem 1.5rem; margin: 1rem 0 0; padding: 0; list-style: none; }
-.tf-help-tasks li { display: flex; gap: 0.5rem; color: var(--tf-text); font-size: 0.8125rem; line-height: 1.5; }
-.tf-help-tasks svg { margin-top: 0.1875rem; flex-shrink: 0; color: var(--tf-accent); }
-.tf-help-footer { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1.5rem; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgb(var(--tf-accent-rgb) / 0.12); font-size: 0.8125rem; }
-.tf-help-footer p { color: var(--tf-text-muted); }
-.tf-help-footer strong { color: var(--tf-text); font-weight: 600; }
-.tf-help-close { position: absolute; top: 0.75rem; right: 0.75rem; }
-@media (max-width: 960px) { .tf-help-tasks { grid-template-columns: 1fr; } }
-@media (max-width: 520px) {
-  .tf-help { grid-template-columns: minmax(0, 1fr); padding: 1rem 3rem 1rem 1rem; }
-  .tf-help-icon { display: none; }
-}
 
 /* ---------- Barra de filtros con etiquetas visibles ---------- */
 .tf-toolbar { align-items: flex-end; }

@@ -5,7 +5,7 @@ const env = loadEnv('development', process.cwd(), 'VITE_')
 const owner = { id: '11111111-1111-4111-8111-111111111111', full_name: 'Carlos Martínez', role: 'OWNER', is_active: true, workshop_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', workshop: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Taller Centro', status: 'ACTIVE' }, workspace_access: 'ACTIVE', permissions: ['*'], permissionsSource: 'rbac' }
 const staff = [owner, { id: 'tech-1', full_name: 'Ana López', role: 'TECNICO', is_active: true, email: 'ana@example.invalid' }, { id: 'desk-1', full_name: 'Luis García', role: 'RECEPCION', is_active: false }]
 
-async function setup(page) {
+async function setup(page, profile = owner) {
   const exp = Math.floor(Date.now() / 1000) + 3600
   const user = { id: owner.id, email: 'qa@example.invalid', app_metadata: { provider: 'email' }, user_metadata: {}, aud: 'authenticated' }
   const access_token = [Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url'), Buffer.from(JSON.stringify({ sub: user.id, exp, role: 'authenticated' })).toString('base64url'), 'test-signature'].join('.')
@@ -14,7 +14,7 @@ async function setup(page) {
   await page.route(`${env.VITE_SUPABASE_URL}/auth/v1/**`, (route) => route.fulfill({ json: session }))
   await page.route(/\/api\//, (route) => {
     const path = new URL(route.request().url()).pathname.replace(/^\/api/, '')
-    if (path === '/auth/me') return route.fulfill({ json: { profile: owner, workshop: owner.workshop, workspace_access: 'ACTIVE' } })
+    if (path === '/auth/me') return route.fulfill({ json: { profile, workshop: owner.workshop, workspace_access: 'ACTIVE' } })
     if (path === '/health') return route.fulfill({ json: { status: 'ok' } })
     if (path === '/auth/users') return route.fulfill({ json: { data: staff } })
     if (path === '/dashboard') return route.fulfill({ json: { data: {
@@ -42,20 +42,35 @@ test('el panel permite buscar con teclado y cerrar notificaciones', async ({ pag
   await page.screenshot({ path: testInfo.outputPath('dashboard-desktop.png'), fullPage: true, animations: 'disabled' })
 })
 
-test('primeros pasos marca lo hecho con datos reales y se puede ocultar', async ({ page }, testInfo) => {
-  await setup(page)
+test('el dueño que entra por primera vez ve la bienvenida con pasos y no se repite', async ({ page }, testInfo) => {
+  await setup(page, { ...owner, last_login_at: null })
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/')
-  const card = page.getByTestId('first-steps')
-  await expect(card).toContainText('Llevas 2 de 3')
-  await expect(card.getByRole('link', { name: 'Ver reparaciones' })).toBeVisible()
-  await expect(card.getByRole('link', { name: 'Agregar personal' })).toHaveCount(0)
-  await page.screenshot({ path: testInfo.outputPath('first-steps.png'), fullPage: true, animations: 'disabled' })
-  await card.getByRole('button', { name: 'Ocultar primeros pasos' }).click()
-  await expect(card).toHaveCount(0)
+  const dialog = page.getByRole('dialog', { name: 'Te damos la bienvenida a TallerFlow' })
+  await expect(dialog).toBeVisible()
+  const steps = page.getByRole('list', { name: 'Pasos para empezar' })
+  await expect(steps.getByRole('listitem')).toHaveCount(4)
+  await expect(steps.getByRole('button', { name: 'Paso 2: Primera orden, hecho' })).toBeVisible()
+  await page.screenshot({ path: testInfo.outputPath('welcome.png'), animations: 'disabled' })
+  await dialog.getByRole('button', { name: 'Siguiente' }).click()
+  await expect(page.getByRole('dialog', { name: 'Registra tu primera reparación' })).toContainText('Este paso ya está hecho.')
+  await steps.getByRole('button', { name: /Paso 4/ }).click()
+  const last = page.getByRole('dialog', { name: 'Entrega y comparte el seguimiento' })
+  await expect(last.getByRole('link', { name: 'Ver reparaciones' })).toBeVisible()
+  await last.getByRole('button', { name: 'Terminar' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Panel de control' })).toBeVisible()
-  await expect(page.getByTestId('first-steps')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Panel de control', level: 1 })).toBeVisible()
+  await page.waitForTimeout(800)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('las páginas ya no muestran la ayuda "Para qué sirve"', async ({ page }) => {
+  await setup(page)
+  await page.goto('/reparaciones')
+  await expect(page.getByRole('heading', { name: 'Reparaciones', level: 1 })).toBeVisible()
+  await expect(page.getByText('Para qué sirve')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Cómo funciona' })).toHaveCount(0)
 })
 
 test('personal filtra miembros y muestra al propietario con su rol correcto', async ({ page }, testInfo) => {

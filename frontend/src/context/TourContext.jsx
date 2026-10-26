@@ -17,7 +17,7 @@ function saveDone(userId) {
   try { window.localStorage.setItem(tourDoneKey(userId), '1') } catch { /* Preferencia opcional. */ }
 }
 
-// Recorrido guiado del sistema. Arranca solo en el primer inicio de sesión de cada persona
+// Recorrido guiado del sistema. Arranca solo en el primer inicio de sesión del personal
 // (el servidor aún no tiene registrado uno anterior) y se repite desde "Recorrido guiado".
 export function TourProvider({ children }) {
   const { profile } = useAuth()
@@ -45,7 +45,8 @@ export function TourProvider({ children }) {
   }
   const prev = () => { if (tour?.index > 0) setTour({ ...tour, index: tour.index - 1 }) }
 
-  const firstSession = profile?.last_login_at === null
+  // Dueños y administradores reciben la bienvenida con pasos del panel; el resto del equipo, el recorrido.
+  const firstSession = profile?.last_login_at === null && !['OWNER', 'ADMINISTRADOR'].includes(profile?.role)
   useEffect(() => {
     if (!firstSession || autoStarted.current || !['/', '/dashboard'].includes(pathname) || readDone(profile?.id)) return undefined
     const timer = setTimeout(() => { autoStarted.current = true; start() }, 900)

@@ -58,8 +58,8 @@ test('el último paso termina el recorrido y señala dónde repetirlo', async ({
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
-test('en el primer inicio de sesión el recorrido arranca solo y no se repite', async ({ page }) => {
-  await setup(page, { ...owner, last_login_at: null })
+test('en el primer inicio de sesión del personal el recorrido arranca solo y no se repite', async ({ page }) => {
+  await setup(page, { ...owner, role: 'TECNICO', last_login_at: null })
   await page.goto('/')
   await expect(page.getByRole('dialog', { name: 'Te damos la bienvenida a TallerFlow' })).toBeVisible()
   await page.getByRole('button', { name: 'Omitir' }).click()
