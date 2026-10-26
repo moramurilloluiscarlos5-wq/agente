@@ -32,3 +32,7 @@ CarlosTech_Recovery_Final/
 
 # Enlace local de la CLI de Railway
 .railway/
+
+# HyperFrames: renders y caché locales
+media/hyperframes/*/renders/
+media/hyperframes/*/.hyperframes/

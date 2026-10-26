@@ -45,18 +45,29 @@ const activeSubscription = {
   license: license(), entitlements: { tier: 'pro', name: 'Pro', trial: false, max_users: 10, features: PRO_FEATURES }, usage: { active_users: 4, max_users: 10 },
 }
 
-test('/precios es público, muestra Plus, Pro y Max y lleva al registro sin sesión', async ({ page }) => {
+test('/precios es público, muestra Plus, Pro y Max y la compra sigue al registro con el plan elegido', async ({ page }) => {
   await page.route(/\/api\//, (route) => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/billing/plans') ? { data: plans, trial_days: 14 } : { data: [] } }))
   await page.goto('/precios')
-  await expect(page.getByRole('heading', { name: 'Un plan para cada tamaño de taller' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Licencia de activación' })).toBeVisible()
+  await expect(page.getByRole('list', { name: 'Pasos para activar tu taller' })).toContainText('Elige tu plan')
   await expect(page.getByRole('article', { name: 'Plan Plus' })).toContainText('Hasta 3 usuarios')
   await expect(page.getByRole('article', { name: 'Plan Pro' })).toContainText('$549')
   await expect(page.getByRole('article', { name: 'Plan Max' })).toContainText('Diagnóstico IA')
   await page.getByRole('button', { name: /Anual/ }).click()
   await expect(page.getByRole('article', { name: 'Plan Pro' })).toContainText('$5,490')
   await expect(page.getByRole('article', { name: 'Plan Pro' })).toContainText('ahorras')
-  await page.getByRole('button', { name: 'Empezar prueba gratis' }).first().click()
-  await expect(page).toHaveURL(/\/registro/)
+  await page.getByRole('button', { name: 'Comprar Pro' }).click()
+  await expect(page).toHaveURL(/\/registro\?plan=pro_yearly$/)
+})
+
+test('con las licencias apagadas el registro sigue libre desde /precios', async ({ page }) => {
+  await page.route(/\/api\//, (route) => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/billing/plans') ? { data: [], trial_days: 0, disabled: true } : { data: [] } }))
+  await page.goto('/precios')
+  await page.getByRole('link', { name: 'Crear mi taller' }).click()
+  await expect(page).toHaveURL(/\/registro$/)
+  await expect(page.getByRole('heading', { name: 'Crea tu taller en TallerFlow', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Crear mi taller', exact: true })).toBeVisible()
+  await expect(page.getByRole('list', { name: 'Pasos para activar tu taller' })).toHaveCount(0)
 })
 
 test('un 402 LICENSE_REQUIRED redirige a /facturacion con un mensaje claro', async ({ page }) => {

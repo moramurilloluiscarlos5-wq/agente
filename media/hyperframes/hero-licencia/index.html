@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1200, height=1200" />
+    <title>TallerFlow — Hero de acceso</title>
+    <!-- GSAP y Schibsted Grotesk van empaquetados en assets/: el render no depende de la red. -->
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Schibsted Grotesk"; font-weight: 400 900; src: url("assets/fonts/SchibstedGrotesk.ttf") format("truetype"); }
+      /* Identidad "Placa": verde de tarjeta de circuito, soldadura dorada y blanco. */
+      :root {
+        --board: #0e6b55;
+        --board-deep: #063a2e;
+        --gold: #e6b62e;
+        --gold-ink: #2a1d00;
+        --ink: #0f1f1a;
+        --muted: #5b716a;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1200px; height: 1200px; overflow: hidden; background: var(--board-deep); }
+      body { font-family: "Schibsted Grotesk", sans-serif; color: #fff; -webkit-font-smoothing: antialiased; }
+      #main { position: relative; width: 100%; height: 100%; overflow: hidden; }
+      .ic { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    </style>
+  </head>
+  <body>
+    <!--
+      HERO DE ACCESO (12 s, 1200×1200, bucle). Va de fondo en el panel izquierdo del login.
+      Panel en vivo → el cliente ve su reparación → licencia activada con pago seguro.
+      Toda la acción vive en la franja superior (y 40–760): abajo el login pone el titular sobre un degradado.
+      El primer y el último cuadro muestran solo el fondo de placa, así el bucle no tiene salto.
+    -->
+    <div id="main" data-composition-id="main" data-start="0" data-duration="12" data-width="1200" data-height="1200">
+      <div id="ambient" data-composition-id="ambient" data-composition-src="compositions/ambient.html" data-start="0" data-duration="12" data-track-index="0" data-track-kind="graphics" data-width="1200" data-height="1200"></div>
+      <div id="panel" data-composition-id="panel" data-composition-src="compositions/panel.html" data-start="0" data-duration="4.4" data-track-index="1" data-track-kind="graphics" data-width="1200" data-height="1200"></div>
+      <div id="cliente" data-composition-id="cliente" data-composition-src="compositions/cliente.html" data-start="3.9" data-duration="4.5" data-track-index="2" data-track-kind="graphics" data-width="1200" data-height="1200"></div>
+      <div id="licencia" data-composition-id="licencia" data-composition-src="compositions/licencia.html" data-start="7.9" data-duration="4.1" data-track-index="3" data-track-kind="graphics" data-width="1200" data-height="1200"></div>
+    </div>
+    <script>
+      // Cada escena registra su propia línea de tiempo; la raíz solo marca la duración total.
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>

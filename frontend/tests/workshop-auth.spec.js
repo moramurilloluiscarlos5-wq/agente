@@ -95,9 +95,7 @@ test('SUPER_ADMIN usa el panel existente sin onboarding', async ({ page }) => {
 })
 
 async function registrationForm(page) {
-  await page.goto('/login')
-  await page.getByRole('link', { name: 'Registra tu taller', exact: true }).click()
-  await expect(page).toHaveURL(/\/registro$/)
+  await page.goto('/registro?plan=plus_monthly')
   await page.getByLabel('Nombre completo').fill('Nuevo Owner')
   await page.getByLabel('Correo electrónico', { exact: true }).fill('new@example.invalid')
   await page.getByLabel('Contraseña', { exact: true }).fill('Example123!')
@@ -110,7 +108,7 @@ test('nuevo registro y doble submit crean una sola solicitud y muestran bienveni
   await registrationForm(page)
   await page.locator('form').evaluate((form) => { form.requestSubmit(); form.requestSubmit() })
   await expect(page.getByRole('heading', { name: 'Tu taller está listo', exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Registrar primer cliente' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Continuar al pago' })).toHaveAttribute('href', '/facturacion?plan=plus_monthly')
   expect(state.registrations).toBe(1)
   await page.getByRole('link', { name: 'Ir a mi taller' }).click()
   await expect(page.getByText('Resumen de Taller nuevo', { exact: true })).toBeVisible()
@@ -119,10 +117,10 @@ test('nuevo registro y doble submit crean una sola solicitud y muestran bienveni
 test('correo duplicado muestra error sin sesión ni éxito falso', async ({ page }) => {
   await setup(page, { duplicate: true })
   await registrationForm(page)
-  await page.getByRole('button', { name: 'Crear mi taller', exact: true }).click()
+  await page.getByRole('button', { name: 'Crear mi taller y continuar al pago', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('Ya existe una cuenta')
   await expect(page.getByRole('heading', { name: 'Tu taller está listo', exact: true })).toHaveCount(0)
-  await expect(page).toHaveURL(/\/registro$/)
+  await expect(page).toHaveURL(/\/registro\?plan=plus_monthly$/)
 })
 
 test('logout A, login B elimina datos y cache del taller anterior', async ({ page }) => {

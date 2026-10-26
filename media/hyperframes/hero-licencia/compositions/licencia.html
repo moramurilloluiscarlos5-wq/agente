@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="UTF-8" /><title>Licencia activada</title></head>
+  <body>
+    <template>
+      <style>
+        #root { position: absolute; inset: 0; perspective: 1800px; }
+        .lc-card { position: absolute; left: 200px; top: 110px; width: 800px; padding: 44px 48px; border-radius: 36px; background: #fff; color: var(--ink); box-shadow: 0 60px 120px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.4); }
+        .lc-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .lc-kicker { font-size: 32px; font-weight: 600; color: var(--muted); }
+        .lc-plan { margin-top: 6px; font-size: 58px; font-weight: 900; letter-spacing: -0.04em; line-height: 1; }
+        .lc-status { display: flex; align-items: center; gap: 12px; padding: 14px 22px; border-radius: 999px; background: rgba(22,163,74,0.12); color: #166534; font-size: 32px; font-weight: 800; }
+        .lc-check { width: 34px; height: 34px; }
+        .lc-check path { fill: none; stroke: #16a34a; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+        .lc-rows { margin-top: 34px; padding-top: 28px; border-top: 2px dashed rgba(16,40,32,0.14); display: grid; gap: 22px; }
+        .lc-row { display: flex; align-items: center; gap: 18px; font-size: 32px; font-weight: 600; color: #24423a; }
+        .lc-row .ic { color: #0e6b55; }
+        .lc-row strong { font-weight: 800; color: var(--ink); }
+        .lc-seal { position: absolute; left: 900px; top: 480px; display: grid; width: 150px; height: 150px; place-items: center; border-radius: 50%; background: var(--gold); color: var(--gold-ink); box-shadow: 0 0 0 12px rgba(230,182,46,0.22), 0 24px 60px rgba(0,0,0,0.35); }
+        .lc-seal .ic { width: 70px; height: 70px; stroke-width: 2.2; }
+      </style>
+      <div id="root" data-composition-id="licencia" data-width="1200" data-height="1200">
+        <div id="lc-card" class="lc-card">
+          <div class="lc-head">
+            <div>
+              <p class="lc-kicker">Licencia de activación</p>
+              <p class="lc-plan">TallerFlow Pro</p>
+            </div>
+            <div id="lc-status" class="lc-status">
+              <svg class="lc-check" viewBox="0 0 24 24"><path id="lc-check-path" d="M5 12.5l4.2 4.2L19 7" /></svg>Activa
+            </div>
+          </div>
+          <div class="lc-rows">
+            <div id="lc-row1" class="lc-row"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2.5" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg><span>Pago seguro con <strong>Mercado Pago</strong></span></div>
+            <div id="lc-row2" class="lc-row"><svg class="ic" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" /></svg><span>Renovación automática cada mes</span></div>
+            <div id="lc-row3" class="lc-row"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3Z" /><path d="M9 12l2 2 4-4" /></svg><span>Cada taller ve solo su información</span></div>
+          </div>
+        </div>
+        <div id="lc-seal" class="lc-seal"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3Z" /><path d="M9 12l2 2 4-4" /></svg></div>
+      </div>
+      <script>
+        const tl = gsap.timeline({ paused: true });
+        tl.fromTo("#lc-card", { opacity: 0, y: 80, rotateX: 14, scale: 0.94 }, { opacity: 1, y: 0, rotateX: 0, scale: 1, duration: 1, ease: "expo.out" }, 0.45)
+          .fromTo("#lc-check-path", { strokeDasharray: 24, strokeDashoffset: 24 }, { strokeDashoffset: 0, duration: 0.5, ease: "power2.out" }, 1.15)
+          .fromTo("#lc-status", { scale: 0.85 }, { scale: 1, duration: 0.5, ease: "back.out(2.4)" }, 1.15)
+          .fromTo(["#lc-row1", "#lc-row2", "#lc-row3"], { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.5, ease: "power3.out", stagger: 0.18 }, 1.35)
+          .fromTo("#lc-seal", { opacity: 0, scale: 0.3, rotate: -40 }, { opacity: 1, scale: 1, rotate: 0, duration: 0.7, ease: "back.out(1.8)" }, 1.6)
+          .to(["#lc-card", "#lc-seal"], { opacity: 0, y: -40, filter: "blur(8px)", duration: 0.55, ease: "power2.in" }, 3.4);
+        window.__timelines["licencia"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

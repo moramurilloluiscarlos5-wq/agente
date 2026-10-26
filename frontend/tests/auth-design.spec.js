@@ -39,7 +39,7 @@ for (const [width, height] of [[1920, 1080], [1440, 900], [1366, 768], [768, 102
     await page.setViewportSize({ width, height })
     for (const [path, heading, submit] of [
       ['/login', 'Iniciar sesión', 'Iniciar sesión'],
-      ['/registro', 'Crea tu taller en TallerFlow', 'Crear mi taller'],
+      ['/registro?plan=pro_monthly', 'Crea tu taller en TallerFlow', 'Crear mi taller y continuar al pago'],
     ]) {
       await page.goto(path)
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible()
@@ -128,14 +128,15 @@ test('el límite de reenvío muestra una indicación útil para volver a intenta
 
 test('registro rechaza contraseñas diferentes antes de enviar datos', async ({ page }) => {
   const state = await mockAuth(page)
-  await page.goto('/registro')
+  await page.goto('/registro?plan=pro_monthly')
   await page.getByLabel('Nombre completo').fill('Propietario de prueba')
   await page.getByLabel('Correo electrónico', { exact: true }).fill('qa@example.invalid')
   await page.getByLabel('Contraseña', { exact: true }).fill('Example123!')
   await page.getByLabel('Confirmar contraseña', { exact: true }).fill('Different123!')
   await page.getByLabel('Nombre del taller').fill('Taller de prueba')
-  await page.getByRole('button', { name: 'Crear mi taller', exact: true }).click()
+  await page.getByRole('button', { name: 'Crear mi taller y continuar al pago', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('Las contraseñas no coinciden.')
-  expect(state.apiCalls).toEqual([])
+  // Solo se leyó el plan elegido para mostrarlo; el registro no llegó a enviarse.
+  expect(state.apiCalls.filter((path) => path !== '/api/billing/plans')).toEqual([])
   expect(state.authCalls).toEqual([])
 })

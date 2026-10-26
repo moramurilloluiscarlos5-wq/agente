@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="UTF-8" /><title>Fondo de placa</title></head>
+  <body>
+    <template>
+      <style>
+        #root { position: absolute; inset: 0; overflow: hidden; background: radial-gradient(110% 80% at 50% 30%, #12806a 0%, #0e6b55 40%, #063a2e 100%); }
+        .amb-grid { position: absolute; inset: -40px; background-image: radial-gradient(circle, rgba(255,255,255,0.10) 2.4px, transparent 3px); background-size: 48px 48px; }
+        .amb-light { position: absolute; left: 600px; top: 380px; width: 900px; height: 900px; margin: -450px 0 0 -450px; border-radius: 50%; background: radial-gradient(circle, rgba(230,182,46,0.22), transparent 62%); }
+        .amb-traces { position: absolute; inset: 0; }
+        .amb-traces path { fill: none; stroke: rgba(230,182,46,0.35); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+        .amb-traces circle { fill: #e6b62e; }
+      </style>
+      <div id="root" data-composition-id="ambient" data-width="1200" data-height="1200">
+        <div id="amb-grid" class="amb-grid"></div>
+        <div id="amb-light" class="amb-light"></div>
+        <!-- Pistas de cobre en las orillas: enmarcan la escena sin tapar el centro. -->
+        <svg id="amb-traces" class="amb-traces" viewBox="0 0 1200 1200" data-layout-allow-overflow>
+          <path id="amb-t1" d="M -10 200 H 90 L 150 260 V 520" />
+          <path id="amb-t2" d="M 1210 160 H 1100 L 1050 210 V 470" />
+          <path id="amb-t3" d="M -10 860 H 120 L 170 810 V 700" />
+          <path id="amb-t4" d="M 1210 900 H 1080 L 1030 850 V 720" />
+          <circle cx="150" cy="520" r="9" /><circle cx="1050" cy="470" r="9" /><circle cx="170" cy="700" r="9" /><circle cx="1030" cy="720" r="9" />
+        </svg>
+      </div>
+      <script>
+        const tl = gsap.timeline({ paused: true });
+        // La luz da una vuelta completa en 12 s y la rejilla avanza una celda: el bucle cierra igual que abrió.
+        tl.fromTo("#amb-light", { x: -140, y: 0 }, { x: 140, y: 60, duration: 6, ease: "sine.inOut" }, 0)
+          .to("#amb-light", { x: -140, y: 0, duration: 6, ease: "sine.inOut" }, 6)
+          .fromTo("#amb-grid", { x: 0 }, { x: 48, duration: 12, ease: "none" }, 0)
+          .fromTo("#amb-traces path", { opacity: 0.55 }, { opacity: 1, duration: 3, ease: "sine.inOut", yoyo: true, repeat: 3 }, 0);
+        window.__timelines["ambient"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

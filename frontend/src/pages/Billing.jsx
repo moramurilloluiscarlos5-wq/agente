@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader.jsx'
+import BuySteps from '../components/auth/BuySteps.jsx'
 import LicenseCard from '../components/billing/LicenseCard.jsx'
 import PlanCards from '../components/billing/PlanCards.jsx'
 import { Alert, Button, ConfirmDialog, Dialog, ErrorAlert, Input } from '../components/ui/DesignSystem.jsx'
@@ -118,6 +119,8 @@ export default function Billing() {
 
   return (
     <div className="space-y-6" data-mp-subscriptions-page="without-plan-pending">
+      {/* Paso 3 de la compra: llega aquí con el plan elegido y sin licencia activa. */}
+      {!paid && params.get('plan') && <BuySteps current={2} />}
       <PageHeader title="Facturación" description="Tu plan de TallerFlow, su estado y los pagos con Mercado Pago." />
       {message && <div role="alert" className="tf-alert tf-alert-warning max-w-3xl">{message}</div>}
       {success && <Alert tone={pending ? 'info' : 'success'} className="max-w-3xl">{pending ? 'Pago recibido. Estamos activando tu licencia con Mercado Pago…' : 'Listo, tu licencia está activa.'}</Alert>}

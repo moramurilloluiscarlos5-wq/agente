@@ -4,11 +4,11 @@ import { loadEnv } from 'vite'
 const env = loadEnv('development', process.cwd(), 'VITE_')
 const owner = { id: '11111111-1111-4111-8111-111111111111', full_name: 'Carlos Martínez', role: 'OWNER', is_active: true, workshop_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', workshop: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Taller Centro', status: 'ACTIVE' }, workspace_access: 'ACTIVE', permissions: ['*'], permissionsSource: 'rbac' }
 
-const REGISTER_MODULE = '**/src/pages/RegisterWorkshop.jsx*'
+const PRICING_MODULE = '**/src/pages/Pricing.jsx*'
 const INVENTORY_MODULE = '**/src/pages/Inventory.jsx*'
 // Lo que devolvía el servidor antes: index.html (200) en lugar de un 404 para un asset que ya no existe.
 const staleChunk = (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>spa</title>' })
-const registerHeading = (page) => page.getByRole('heading', { name: 'Crea tu taller en TallerFlow', exact: true })
+const pricingHeading = (page) => page.getByRole('heading', { name: 'Licencia de activación', exact: true })
 
 async function mockPublicNetwork(page) {
   await page.route(`${env.VITE_SUPABASE_URL}/auth/v1/**`, (route) => route.fulfill({ json: {} }))
@@ -31,9 +31,9 @@ async function signIn(page) {
 }
 
 // Navegación dentro de la SPA (sin recargar) hacia una pantalla cuyo JavaScript aún no se había descargado.
-async function openRegistration(page) {
+async function openPricing(page) {
   await page.goto('/login')
-  await page.getByRole('link', { name: 'Registra tu taller' }).click()
+  await page.getByRole('link', { name: /Comprar licencia de activación/ }).click()
 }
 
 function countLoads(page) {
@@ -45,20 +45,20 @@ function countLoads(page) {
 test('si falta el JavaScript de una pantalla tras un deploy, la app recarga sola y se recupera', async ({ page }) => {
   await mockPublicNetwork(page)
   let requests = 0
-  await page.route(REGISTER_MODULE, (route) => (requests++ === 0 ? staleChunk(route) : route.continue()))
+  await page.route(PRICING_MODULE, (route) => (requests++ === 0 ? staleChunk(route) : route.continue()))
 
-  await openRegistration(page)
+  await openPricing(page)
 
-  await expect(registerHeading(page)).toBeVisible()
+  await expect(pricingHeading(page)).toBeVisible()
   expect(requests).toBeGreaterThanOrEqual(2)
 })
 
 test('si el fallo persiste no hay bucle de recargas: se avisa y "Recargar" recupera cuando el deploy termina', async ({ page }) => {
   await mockPublicNetwork(page)
-  await page.route(REGISTER_MODULE, staleChunk)
+  await page.route(PRICING_MODULE, staleChunk)
   const loads = countLoads(page)
 
-  await openRegistration(page)
+  await openPricing(page)
 
   const notice = page.getByRole('alert').filter({ hasText: 'Hay una versión nueva de TallerFlow' })
   await expect(notice).toBeVisible()
@@ -67,17 +67,17 @@ test('si el fallo persiste no hay bucle de recargas: se avisa y "Recargar" recup
   expect(loads.value).toBe(settled)
   await expect(notice).toBeVisible()
 
-  await page.unroute(REGISTER_MODULE)
+  await page.unroute(PRICING_MODULE)
   await notice.getByRole('button', { name: 'Recargar' }).click()
-  await expect(registerHeading(page)).toBeVisible()
+  await expect(pricingHeading(page)).toBeVisible()
 })
 
 test('un error que no es de versión muestra el aviso genérico y no recarga solo', async ({ page }) => {
   await mockPublicNetwork(page)
-  await page.route(REGISTER_MODULE, (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'throw new Error("boom")' }))
+  await page.route(PRICING_MODULE, (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: 'throw new Error("boom")' }))
   const loads = countLoads(page)
 
-  await openRegistration(page)
+  await openPricing(page)
 
   const notice = page.getByRole('alert').filter({ hasText: 'No pudimos mostrar esta pantalla' })
   await expect(notice).toBeVisible()

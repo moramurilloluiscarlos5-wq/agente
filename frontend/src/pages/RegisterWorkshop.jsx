@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import { ArrowRight, CheckCircle2, LoaderCircle } from 'lucide-react'
 import AuthLayout from '../components/auth/AuthLayout.jsx'
 import AuthField from '../components/auth/AuthField.jsx'
+import BuySteps from '../components/auth/BuySteps.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { api } from '../services/api.js'
 import { supabase } from '../services/supabase.js'
 import { workspaceDestination } from '../utils/workspace.js'
-import { daysText } from '../utils/billing.js'
+import { daysText, formatPrice, TIER_NAMES } from '../utils/billing.js'
 
 function registrationError(error, existingUser, accountCreated) {
   if (accountCreated || error.code === 'REGISTRATION_COMMITTED') return 'Tu taller se creó. Inicia sesión para continuar.'
@@ -27,6 +28,12 @@ export default function RegisterWorkshop() {
   const { status, profile, refreshProfile, logout } = useAuth()
   const { pathname } = useLocation()
   const existingUser = pathname === '/crear-taller'
+  // Paso 2 de la compra: el plan elegido en Precios viaja en ?plan= hasta el pago.
+  const [params] = useSearchParams()
+  const planCode = params.get('plan')
+  const [plan, setPlan] = useState(null)
+  // Sin plan elegido hay que saber si las licencias están activas: apagadas, el registro sigue libre.
+  const [licensing, setLicensing] = useState(planCode || existingUser ? 'on' : null)
   const inFlight = useRef(false)
   const noticeRef = useRef(null)
   const successRef = useRef(null)
@@ -41,6 +48,17 @@ export default function RegisterWorkshop() {
     document.title = 'Crea tu taller · TallerFlow'
     return () => { document.title = previousTitle }
   }, [])
+
+  useEffect(() => {
+    if (!planCode && existingUser) return undefined
+    let active = true
+    api.get('/billing/plans').then((response) => {
+      if (!active) return
+      setLicensing(response.disabled ? 'off' : 'on')
+      if (planCode) setPlan((response.data ?? []).find((item) => item.code === planCode) ?? null)
+    }).catch(() => { if (active && !planCode) setLicensing('off') })
+    return () => { active = false }
+  }, [planCode, existingUser])
 
   useEffect(() => {
     if (error) noticeRef.current?.focus()
@@ -97,6 +115,15 @@ export default function RegisterWorkshop() {
   if (!created && status === 'authenticated' && (!existingUser || profile?.workshop_id || profile?.role === 'SUPER_ADMIN')) {
     return <Navigate to={workspaceDestination(profile)} replace />
   }
+  // Una cuenta nueva solo se crea comprando una licencia: sin plan elegido, primero los planes.
+  if (!existingUser && !planCode && !created) {
+    if (licensing === null) return <AuthLayout variant="register"><p role="status" className="ct-auth-heading"><LoaderCircle size={20} className="animate-spin" aria-label="Cargando" /></p></AuthLayout>
+    if (licensing === 'on') return <Navigate to="/precios" replace />
+  }
+  // Taller creado y sin licencia activa: paso 3, el pago del plan elegido.
+  if (created && planCode && !loading && profile?.license?.allowed === false) {
+    return <Navigate to={`/facturacion?plan=${encodeURIComponent(planCode)}`} replace />
+  }
   const ready = status === 'authenticated' && profile?.workshop?.status === 'ACTIVE'
 
   return (
@@ -113,7 +140,13 @@ export default function RegisterWorkshop() {
           {error && <p ref={noticeRef} tabIndex={-1} role="alert" className="ct-auth-notice ct-auth-notice--info">{error}</p>}
           {!loading && (
             <div className="ct-auth-form">
-              {ready ? (
+              {ready && planCode ? (
+                <>
+                  {/* Con prueba gratis el taller ya entra, pero el plan elegido sigue esperando su pago (paso 3). */}
+                  <Link to={`/facturacion?plan=${encodeURIComponent(planCode)}`} className="ct-auth-primary">Continuar al pago <ArrowRight size={16} aria-hidden="true" /></Link>
+                  <Link to="/dashboard" className="ct-auth-secondary">Ir a mi taller</Link>
+                </>
+              ) : ready ? (
                 <>
                   <Link to="/dashboard" className="ct-auth-primary">Ir a mi taller <ArrowRight size={16} aria-hidden="true" /></Link>
                   <Link to="/clientes" className="ct-auth-secondary">Registrar primer cliente</Link>
@@ -125,13 +158,20 @@ export default function RegisterWorkshop() {
         </div>
       ) : (
         <>
+          {!existingUser && planCode && <BuySteps current={1} />}
           <header className="ct-auth-heading">
-            <p className="ct-auth-eyebrow">Para dueños de taller</p>
             <h1>Crea tu taller en TallerFlow</h1>
             <p>{existingUser
               ? 'Tu cuenta está lista. Completa los datos del taller para entrar a tu espacio de trabajo.'
               : 'Configura tu espacio de trabajo y comienza a gestionar reparaciones, clientes y equipos.'}</p>
           </header>
+
+          {plan && (
+            <div className="ct-buy-plan">
+              <div><span>Plan elegido</span><strong>{TIER_NAMES[plan.tier] ?? plan.name} · {formatPrice(plan.price_cents, plan.currency)} {plan.interval === 'year' ? 'al año' : 'al mes'}</strong></div>
+              <Link to="/precios" className="ct-auth-link">Cambiar</Link>
+            </div>
+          )}
 
           <form onSubmit={submit} className="ct-auth-form" aria-busy={loading}>
             <fieldset disabled={loading || status === 'loading'} className="ct-auth-fieldset">
@@ -168,18 +208,17 @@ export default function RegisterWorkshop() {
               {error && <p ref={noticeRef} tabIndex={-1} role="alert" className="ct-auth-notice ct-auth-notice--error">{error}</p>}
               <button type="submit" className="ct-auth-primary" disabled={loading || status === 'loading'}>
                 {loading ? <LoaderCircle size={17} className="animate-spin" aria-hidden="true" /> : null}
-                {loading ? 'Creando taller…' : 'Crear mi taller'}
+                {loading ? 'Creando taller…' : planCode ? 'Crear mi taller y continuar al pago' : 'Crear mi taller'}
                 {!loading && <ArrowRight size={16} aria-hidden="true" />}
               </button>
             </fieldset>
             <span className="sr-only" role="status">{loading ? 'Creando tu taller. Espera un momento.' : ''}</span>
           </form>
 
-          <p className="ct-auth-staff-note">¿Tu taller ya usa TallerFlow? Pide al administrador que te agregue al equipo.</p>
           <div className="ct-auth-switch">
             {existingUser
               ? <button type="button" onClick={logout} className="ct-auth-link" disabled={loading}>Cerrar sesión</button>
-              : <p>¿Ya tienes cuenta? <Link to="/login" className="ct-auth-link">Inicia sesión</Link></p>}
+              : <Link to="/login" className="ct-auth-link">Volver a iniciar sesión</Link>}
           </div>
         </>
       )}

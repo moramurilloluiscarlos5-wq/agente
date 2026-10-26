@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="UTF-8" /><title>El cliente ve su reparación</title></head>
+  <body>
+    <template>
+      <style>
+        #root { position: absolute; inset: 0; perspective: 1800px; }
+        .cl-phone { position: absolute; left: 300px; top: 50px; width: 330px; height: 680px; padding: 14px; border-radius: 54px; background: linear-gradient(160deg, #24332e, #0a120f); box-shadow: 0 50px 110px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.18); }
+        .cl-screen { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 42px; background: #fff; }
+        .cl-shot { position: absolute; left: 0; top: 0; width: 302px; height: 840px; }
+        .cl-notch { position: absolute; left: 50%; top: 12px; width: 100px; height: 28px; margin-left: -50px; border-radius: 999px; background: #05090a; }
+        .cl-note { position: absolute; left: 540px; top: 200px; width: 600px; display: flex; gap: 20px; align-items: center; padding: 24px 28px; border-radius: 32px; background: rgba(255,255,255,0.97); color: var(--ink); box-shadow: 0 40px 90px rgba(0,0,0,0.4); }
+        .cl-icon { display: grid; width: 74px; height: 74px; flex-shrink: 0; place-items: center; border-radius: 20px; background: #22c55e; color: #fff; }
+        .cl-meta { font-size: 31px; font-weight: 600; color: var(--muted); }
+        .cl-title { margin-top: 2px; font-size: 36px; font-weight: 800; letter-spacing: -0.02em; }
+        .cl-body { margin-top: 2px; font-size: 31px; color: #3f5751; }
+        .cl-chip { position: absolute; left: 620px; top: 450px; padding: 16px 26px; border-radius: 999px; background: #fff; color: var(--ink); font-size: 34px; font-weight: 800; letter-spacing: -0.02em; box-shadow: 0 24px 50px rgba(0,0,0,0.35); white-space: nowrap; }
+      </style>
+      <div id="root" data-composition-id="cliente" data-width="1200" data-height="1200">
+        <div id="cl-phone" class="cl-phone">
+          <div class="cl-screen" data-layout-allow-overflow>
+            <img id="cl-shot" class="cl-shot" src="assets/footage/seguimiento-full.png" alt="" />
+            <div class="cl-notch"></div>
+          </div>
+        </div>
+        <div id="cl-note" class="cl-note">
+          <div class="cl-icon"><svg class="ic" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5Z" /></svg></div>
+          <div>
+            <p class="cl-meta">Taller Centro · ahora</p>
+            <p class="cl-title">¡Tu iPhone 13 está listo!</p>
+            <p class="cl-body">Ya puedes pasar por él.</p>
+          </div>
+        </div>
+        <div id="cl-chip" class="cl-chip">Sin llamar al taller</div>
+      </div>
+      <script>
+        const tl = gsap.timeline({ paused: true });
+        tl.fromTo("#cl-phone", { opacity: 0, y: 80, rotateY: 14, rotate: 4 }, { opacity: 1, y: 0, rotateY: 6, rotate: 0, duration: 1.1, ease: "expo.out" }, 0.45)
+          .fromTo("#cl-shot", { y: 0 }, { y: -170, duration: 2.2, ease: "power2.inOut" }, 1.2)
+          .to("#cl-phone", { rotateY: -4, duration: 2.9, ease: "sine.inOut" }, 1.6)
+          .fromTo("#cl-note", { opacity: 0, x: 60, y: -40, scale: 0.92 }, { opacity: 1, x: 0, y: 0, scale: 1, duration: 0.7, ease: "back.out(1.6)" }, 1.6)
+          .fromTo("#cl-chip", { opacity: 0, scale: 0.6, rotate: 6 }, { opacity: 1, scale: 1, rotate: 3, duration: 0.55, ease: "back.out(2)" }, 2.3)
+          .to(["#cl-phone", "#cl-note", "#cl-chip"], { opacity: 0, y: -40, filter: "blur(8px)", duration: 0.5, ease: "power2.in", stagger: 0.05 }, 3.9);
+        window.__timelines["cliente"] = tl;
+      </script>
+    </template>
+  </body>
+</html>

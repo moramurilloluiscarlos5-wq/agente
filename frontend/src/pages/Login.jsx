@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { CircleAlert, CheckCircle2, LoaderCircle } from 'lucide-react'
+import { ArrowRight, CircleAlert, CheckCircle2, KeyRound, LoaderCircle } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.js'
 import { workspaceDestination } from '../utils/workspace.js'
 import { supabase } from '../services/supabase.js'
@@ -139,7 +139,7 @@ export default function Login() {
     <AuthLayout>
       <header className="ct-auth-heading">
         <h1>Iniciar sesión</h1>
-        <p>Entra con el correo y la contraseña de tu cuenta del taller.</p>
+        <p>Entra con el correo y la contraseña de tu taller.</p>
       </header>
 
       {!isConfigured && <p role="alert" className="ct-auth-notice ct-auth-notice--info">El acceso aún no está disponible. Contacta al administrador para completar la configuración.</p>}
@@ -172,11 +172,15 @@ export default function Login() {
       </form>
 
       <div className="ct-auth-divider" aria-hidden="true">o</div>
-      <div className="ct-auth-register-prompt">
-        <p>¿Aún no tienes una cuenta?</p>
-        <Link to="/registro" className="ct-auth-secondary">Registra tu taller</Link>
-      </div>
-      <p className="ct-auth-staff-note">¿Tu taller ya usa TallerFlow? Pide al administrador que te agregue al equipo.</p>
+      {/* El segundo camino: activar un taller nuevo comprando su licencia. */}
+      <Link to="/precios" className="ct-auth-license">
+        <span className="ct-auth-license-icon" aria-hidden="true"><KeyRound size={20} strokeWidth={2.2} /></span>
+        <span className="ct-auth-license-text">
+          <strong>Comprar licencia de activación</strong>
+          <span>Elige tu plan, crea tu taller y paga con Mercado Pago.</span>
+        </span>
+        <ArrowRight size={18} className="ct-auth-license-arrow" aria-hidden="true" />
+      </Link>
     </AuthLayout>
   )
 }

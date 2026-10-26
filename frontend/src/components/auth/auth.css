@@ -1,7 +1,7 @@
 /* ==========================================================================
-   Acceso (login, registro, restablecer contraseña)
-   Izquierda: el banco de trabajo con una orden de servicio. Derecha: el
-   formulario, sin nada que compita con él.
+   Acceso (login, compra de licencia, restablecer contraseña)
+   Izquierda: el hero en video (HyperFrames) con la promesa y lo que da confianza.
+   Derecha: el formulario, sin nada que compita con él.
    ========================================================================== */
 @layer components {
 .ct-auth-shell {
@@ -15,145 +15,114 @@
 .ct-auth-skip { position: absolute; left: 1rem; top: -3rem; z-index: 20; padding: 0.5rem 1rem; border-radius: var(--tf-radius-control); background: var(--tf-primary); color: #fff; font-size: 0.875rem; font-weight: 600; }
 .ct-auth-skip:focus { top: 1rem; }
 
-/* ---- Lado de marca: el banco de trabajo ----
-   Fondo de tapete antiestático (cuadrícula de 8 mm) y, encima, una orden de servicio impresa:
-   lo que un taller reconoce de inmediato. Es lo único llamativo de la pantalla. */
+/* ---- Lado de marca: el hero ----
+   El video llena el panel; un degradado oscurece la parte baja para que el titular se lea siempre.
+   La placa lleva el texto en blanco en ambos temas. */
 .ct-auth-aside {
+  --tf-ink-rgb: 255 255 255;
+  --tf-text: #ffffff;
+  --tf-text-muted: rgb(255 255 255 / 0.84);
+  --tf-text-subtle: rgb(255 255 255 / 0.66);
+  --tf-border: rgb(255 255 255 / 0.14);
   /* Fijo a la altura de la pantalla: en el registro el formulario es más largo y hace scroll solo. */
   position: sticky;
   top: 0;
   height: 100dvh;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  grid-template-areas: "brand brand" "pitch ticket" "foot foot";
-  column-gap: clamp(1.5rem, 3vw, 3.5rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
   isolation: isolate;
   overflow: hidden;
   padding: 2.5rem clamp(2rem, 4vw, 4rem);
-  border-right: 1px solid var(--tf-border);
-  background: radial-gradient(120% 90% at 85% 55%, var(--tf-mat-glow) 0%, var(--tf-mat) 60%);
+  background: #063a2e;
 }
-/* Cuadrícula del tapete en una capa propia: se mueve con transform (sin repintar) según el mouse. */
+.ct-auth-hero {
+  position: absolute;
+  inset: -2%;
+  z-index: -3;
+  width: 104%;
+  height: 104%;
+  object-fit: cover;
+  object-position: 50% 18%;
+  translate: calc(var(--px, 0) * -18px) calc(var(--py, 0) * -14px);
+  transition: translate 0.6s var(--tf-ease);
+  animation: ct-hero-in 1.2s var(--tf-ease) both;
+}
+/* Degradado de lectura: arriba para la marca y abajo, fuerte, para el titular. */
 .ct-auth-aside::before {
   content: "";
   position: absolute;
-  inset: -32px;
+  inset: 0;
   z-index: -2;
   pointer-events: none;
   background:
-    linear-gradient(var(--tf-mat-line-strong) 1px, transparent 1px) 0 0 / 160px 160px,
-    linear-gradient(90deg, var(--tf-mat-line-strong) 1px, transparent 1px) 0 0 / 160px 160px,
-    linear-gradient(var(--tf-mat-line) 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(90deg, var(--tf-mat-line) 1px, transparent 1px) 0 0 / 32px 32px;
-  transform: translate3d(calc(var(--px, 0) * -14px), calc(var(--py, 0) * -14px), 0);
-  transition: transform var(--tf-dur-4) var(--tf-ease);
+    linear-gradient(180deg, rgb(4 33 26 / 0.94) 0%, rgb(4 33 26 / 0.6) 11%, transparent 22%),
+    linear-gradient(0deg, rgb(4 33 26 / 0.97) 0%, rgb(4 33 26 / 0.9) 34%, rgb(4 33 26 / 0.35) 56%, transparent 70%);
 }
-/* Una luz suave sigue al cursor sobre el tapete (solo con mouse). */
+/* Una luz dorada suave sigue al cursor (solo con mouse). */
 .ct-auth-aside::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(380px circle at var(--mx, 70%) var(--my, 45%), rgb(var(--tf-accent-rgb) / 0.18), transparent 65%);
+  background: radial-gradient(420px circle at var(--mx, 70%) var(--my, 40%), rgb(230 182 46 / 0.16), transparent 65%);
   opacity: 0;
   transition: opacity var(--tf-dur-4) ease-out;
 }
 .ct-auth-aside:hover::after { opacity: 1; }
-/* La placa lleva el texto serigrafiado en blanco en ambos temas. */
-.ct-auth-aside {
-  --tf-ink-rgb: 255 255 255;
-  --tf-text: #ffffff;
-  --tf-text-muted: rgb(255 255 255 / 0.82);
-  --tf-text-subtle: rgb(255 255 255 / 0.64);
-  --tf-border: rgb(255 255 255 / 0.12);
-  border-right-color: transparent;
-}
-.ct-auth-aside-brand { grid-area: brand; }
 .ct-auth-aside-brand .tf-brand-mark { width: 2.25rem; height: 2.25rem; }
 .ct-auth-aside-brand .tf-brand-word { font-size: 1.25rem; }
-.ct-auth-pitch { grid-area: pitch; align-self: center; max-width: 30rem; }
-.ct-auth-headline { color: var(--tf-text); font-family: var(--tf-font-display); font-size: clamp(2rem, min(2.75vw, 5.6vh), 2.875rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.04; text-wrap: balance; }
-.ct-auth-lede { max-width: 26rem; margin-top: 1.25rem; color: var(--tf-text-muted); font-size: 1rem; line-height: 1.6; }
-.ct-auth-aside-footer { grid-area: foot; color: var(--tf-text-subtle); font-size: 0.75rem; }
+.ct-auth-pitch { margin-top: auto; max-width: 34rem; }
+.ct-auth-headline { color: var(--tf-text); font-family: var(--tf-font-display); font-size: clamp(2rem, min(3vw, 5.4vh), 3rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.04; text-wrap: balance; }
+.ct-auth-lede { max-width: 28rem; margin-top: 1rem; color: var(--tf-text-muted); font-size: 1rem; line-height: 1.6; }
+.ct-auth-aside-footer { color: var(--tf-text-subtle); font-size: 0.75rem; }
 
-/* Orden impresa en papel térmico, apenas girada como si estuviera sobre el banco. */
-.ct-ticket { grid-area: ticket; align-self: center; margin: 0; filter: var(--tf-ticket-shadow); transform: rotate(-2.5deg); }
-/* El mouse la inclina: --tilt-x y --tilt-y los pone el componente. */
-.ct-ticket-tilt { transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); transition: transform var(--tf-dur-4) var(--tf-ease); }
-
-/* Impresora: una ranura con su luz de estado (ámbar mientras imprime, verde al terminar). */
-.ct-ticket-printer { position: relative; z-index: 2; width: clamp(18.5rem, 23.5vw, 21.5rem); height: 1.25rem; margin-inline: auto; border-radius: 999px; background: linear-gradient(180deg, #2c394d, #131b28); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 8px 18px rgba(0, 0, 0, 0.45); }
-.ct-ticket-printer > span { position: absolute; right: 0.875rem; bottom: 0.3125rem; left: 0.875rem; height: 3px; border-radius: 2px; background: #04070c; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08); }
-.ct-ticket-printer::after { content: ""; position: absolute; top: 0.3125rem; right: 1.5rem; width: 0.3125rem; height: 0.3125rem; border-radius: 50%; background: #4ade80; box-shadow: 0 0 6px #4ade80; animation: ct-led 2.6s steps(1, end) 0.5s both; }
-/* El papel sale por debajo de la ranura y se imprime de arriba hacia abajo: primero el encabezado, al final el borde rasgado. */
-.ct-ticket-feed { position: relative; z-index: 1; margin-top: -0.375rem; }
-.ct-ticket-paper { animation: ct-ticket-print 2.6s steps(34, end) 0.5s both; }
-.ct-ticket-paper {
-  --ink: #0f172a;
-  --ink-soft: #55627a;
-  --rule: rgba(15, 23, 42, 0.22);
-  position: relative;
-  width: clamp(17rem, 22vw, 20rem);
-  padding: 1.5rem 1.375rem 2rem;
-  background: linear-gradient(180deg, #f4f7f9, #e9eef2);
-  color: var(--ink);
-  font-family: var(--tf-font-mono);
-  font-size: 0.75rem;
-  line-height: 1.45;
-  /* Borde inferior rasgado del rollo de impresión. */
-  -webkit-mask: linear-gradient(#000 0 0) top / 100% calc(100% - 9px) no-repeat, conic-gradient(from -45deg at bottom, transparent 90deg, #000 0) bottom / 14px 9px repeat-x;
-  mask: linear-gradient(#000 0 0) top / 100% calc(100% - 9px) no-repeat, conic-gradient(from -45deg at bottom, transparent 90deg, #000 0) bottom / 14px 9px repeat-x;
+/* Franja de confianza: tres compromisos con su icono dorado, en vidrio sobre el video. */
+.ct-auth-trust { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.625rem; margin: 1.75rem 0 0; padding: 0; list-style: none; }
+.ct-auth-trust li {
+  display: flex; align-items: flex-start; gap: 0.625rem; min-width: 0; padding: 0.75rem 0.875rem;
+  border: 1px solid rgb(255 255 255 / 0.14); border-radius: 14px;
+  background: rgb(255 255 255 / 0.07); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: var(--tf-text-subtle); font-size: 0.75rem; line-height: 1.35;
+  animation: ct-auth-rise 0.5s var(--tf-ease) both; animation-delay: calc(var(--i) * 90ms + 650ms);
 }
-.ct-ticket-head { display: flex; flex-direction: column; gap: 0.125rem; padding-bottom: 0.75rem; border-bottom: 1px dashed var(--rule); }
-.ct-ticket-head strong { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
-.ct-ticket-head span { color: var(--ink-soft); }
-.ct-ticket-lines { display: grid; gap: 0.375rem; margin: 0.875rem 0 0; }
-.ct-ticket-lines div { display: grid; grid-template-columns: 4.25rem minmax(0, 1fr); gap: 0.5rem; }
-.ct-ticket-lines dt { color: var(--ink-soft); }
-.ct-ticket-lines dd { margin: 0; font-weight: 500; }
+.ct-auth-trust strong { display: block; color: #fff; font-size: 0.8125rem; font-weight: 700; }
+.ct-auth-trust-icon { display: grid; width: 2rem; height: 2rem; flex-shrink: 0; place-items: center; border-radius: 10px; background: rgb(230 182 46); color: #2a1d00; }
+@keyframes ct-hero-in { from { opacity: 0; scale: 1.06; } to { opacity: 1; scale: 1; } }
 
-/* Avance de la orden: el mismo color por etapa que en el panel del taller. */
-.ct-ticket-track { display: grid; gap: 0.3125rem; margin: 1rem 0 0; padding: 0.875rem 0 0; border-top: 1px dashed var(--rule); list-style: none; }
-.ct-ticket-track li { display: flex; align-items: center; gap: 0.5rem; color: var(--ink-soft); transition: color 0.3s ease; }
-.ct-ticket-track li span { width: 0.625rem; height: 0.625rem; flex-shrink: 0; border: 1.5px solid currentColor; border-radius: 2px; transition: background-color 0.3s ease, border-color 0.3s ease; }
-.ct-ticket-track li.is-done { color: var(--ink); }
-.ct-ticket-track li.is-done span { border-color: var(--stage-ink); background: var(--stage-ink); }
-.ct-ticket [data-stage="received"] { --stage-ink: #475569; }
-.ct-ticket [data-stage="diagnosis"] { --stage-ink: #b45309; }
-.ct-ticket [data-stage="repair"] { --stage-ink: #1d4ed8; }
-.ct-ticket [data-stage="ready"] { --stage-ink: #15803d; }
-
-.ct-ticket-totals { display: grid; gap: 0.25rem; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed var(--rule); font-variant-numeric: tabular-nums; }
-.ct-ticket-totals div { display: flex; justify-content: space-between; color: var(--ink-soft); }
-.ct-ticket-totals .is-total { color: var(--ink); font-size: 0.875rem; font-weight: 600; }
-.ct-ticket-foot { display: flex; align-items: center; gap: 0.75rem; margin-top: 1rem; padding-top: 0.875rem; border-top: 1px dashed var(--rule); }
-.ct-ticket-qr { width: 3.25rem; height: 3.25rem; flex-shrink: 0; fill: var(--ink); }
-.ct-ticket-foot p { color: var(--ink-soft); font-size: 0.6875rem; line-height: 1.4; }
-
-/* Sello de goma con la etapa actual: se vuelve a estampar cada vez que avanza. */
-.ct-ticket-stamp {
-  position: absolute;
-  /* Sobre el espacio libre a la derecha del avance, sin tapar datos de la orden. */
-  top: 15.25rem;
-  right: 1rem;
-  max-width: 7.5rem;
-  padding: 0.375rem 0.625rem;
-  border: 2.5px solid var(--stage-ink);
-  border-radius: 5px;
-  color: var(--stage-ink);
-  font-family: var(--tf-font-display);
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.1;
-  text-align: center;
-  opacity: 0.86;
-  mix-blend-mode: multiply;
-  transform: rotate(9deg);
-  animation: ct-ticket-stamp 0.42s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+/* ---- Segundo camino: comprar la licencia de activación ---- */
+.ct-auth-license {
+  position: relative; display: flex; align-items: center; gap: 0.875rem; overflow: hidden; padding: 1rem 1.125rem;
+  border: 1px solid rgb(var(--tf-accent-rgb) / 0.55); border-radius: var(--tf-radius-card);
+  background: linear-gradient(135deg, rgb(var(--tf-accent-rgb) / 0.16), rgb(var(--tf-accent-rgb) / 0.05));
+  color: var(--tf-text);
+  transition: border-color 0.15s, box-shadow 0.2s, transform 0.15s;
 }
-@keyframes ct-ticket-stamp { from { opacity: 0; transform: rotate(9deg) scale(1.6); } 60% { opacity: 0.95; } to { opacity: 0.86; transform: rotate(9deg) scale(1); } }
+.ct-auth-license:hover { border-color: rgb(var(--tf-accent-rgb) / 0.9); box-shadow: 0 14px 34px -14px rgb(var(--tf-accent-rgb) / 0.7); transform: translateY(-1px); }
+.ct-auth-license-icon { display: grid; width: 2.5rem; height: 2.5rem; flex-shrink: 0; place-items: center; border-radius: 12px; background: rgb(var(--tf-accent-rgb)); color: #2a1d00; }
+.ct-auth-license-text { display: grid; min-width: 0; gap: 0.125rem; }
+.ct-auth-license-text strong { font-size: 0.9375rem; font-weight: 700; }
+.ct-auth-license-text span { color: var(--tf-text-muted); font-size: 0.8125rem; line-height: 1.4; }
+.ct-auth-license-arrow { margin-left: auto; flex-shrink: 0; color: var(--tf-accent); transition: translate 0.2s var(--tf-ease); }
+.ct-auth-license:hover .ct-auth-license-arrow { translate: 4px 0; }
+/* Un destello recorre la tarjeta una vez al cargar, para que se note el segundo camino. */
+.ct-auth-license::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.28) 50%, transparent 65%); translate: -110% 0; animation: ct-auth-sweep 1.1s var(--tf-ease) 1.1s both; pointer-events: none; }
+@keyframes ct-auth-sweep { to { translate: 110% 0; } }
+
+/* ---- Pasos de la compra (precios, registro y pago) ---- */
+.ct-buy-steps { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 1.5rem; padding: 0; list-style: none; color: var(--tf-text-subtle); font-size: 0.8125rem; font-weight: 600; }
+.ct-buy-steps li { display: flex; align-items: center; gap: 0.5rem; }
+.ct-buy-steps li + li::before { content: ""; width: 1.25rem; height: 2px; border-radius: 2px; background: var(--tf-border-strong); }
+.ct-buy-steps .ct-buy-dot { display: grid; width: 1.5rem; height: 1.5rem; place-items: center; border: 2px solid var(--tf-border-strong); border-radius: 999px; font-size: 0.75rem; }
+.ct-buy-steps .is-done { color: var(--tf-text-muted); }
+.ct-buy-steps .is-done .ct-buy-dot { border-color: var(--tf-primary); background: var(--tf-primary); color: #fff; }
+.ct-buy-steps .is-current { color: var(--tf-text); }
+.ct-buy-steps .is-current .ct-buy-dot { border-color: var(--tf-primary); color: var(--tf-primary-ink); box-shadow: 0 0 0 4px rgb(var(--tf-primary-rgb) / 0.15); }
+.ct-buy-plan { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; padding: 0.875rem 1rem; border: 1px solid var(--tf-border-strong); border-radius: var(--tf-radius-card); background: var(--tf-surface-sunken); font-size: 0.875rem; }
+.ct-buy-plan strong { display: block; color: var(--tf-text); font-size: 1rem; }
+.ct-buy-plan span { color: var(--tf-text-muted); }
 
 
 /* ---- Lado del formulario ---- */
@@ -234,15 +203,11 @@
 .ct-auth-success > svg { color: var(--tf-success); }
 .ct-auth-desktop-break { display: none; }
 
-/* ---- Entrada: la orden cae sobre el banco y el formulario aparece en calma ---- */
+/* ---- Entrada: el formulario aparece en calma ---- */
 @keyframes ct-auth-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-/* Avance entrecortado del rollo: 34 pasos, como una impresora térmica real. */
-@keyframes ct-ticket-print { from { clip-path: inset(0 -3rem 100% -3rem); } to { clip-path: inset(0 -3rem 0 -3rem); } }
-@keyframes ct-led { 0%, 20%, 40%, 60%, 80% { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; } 10%, 30%, 50%, 70%, 90% { background: #4a3410; box-shadow: none; } 100% { background: #4ade80; box-shadow: 0 0 6px #4ade80; } }
 @keyframes ct-auth-shake { 0%, 100% { transform: none; } 20% { transform: translateX(-5px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
 @keyframes ct-auth-sheen { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 
-.ct-ticket-printer { animation: ct-auth-rise 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .ct-auth-content { animation: none; }
 .ct-auth-content > * { animation: ct-auth-rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .ct-auth-content > :nth-child(2) { animation-delay: 0.06s; }
@@ -257,7 +222,7 @@
 .ct-auth-password-toggle svg { transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1); }
 .ct-auth-password-toggle[aria-pressed="true"] svg { transform: rotate(-12deg) scale(1.05); }
 .ct-auth-primary { position: relative; overflow: hidden; }
-.ct-auth-primary:hover:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 8px 24px -10px rgba(59, 130, 246, 0.7); }
+.ct-auth-primary:hover:not(:disabled) { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 8px 24px -10px rgb(var(--tf-primary-rgb) / 0.7); }
 .ct-auth-form[aria-busy="true"] .ct-auth-primary::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent); animation: ct-auth-sheen 1.1s ease-in-out infinite; }
 .ct-auth-notice--success svg { animation: tf-pop 0.3s ease-out both; }
 
@@ -280,19 +245,16 @@
 .ct-auth-input-wrap:focus-within::after { transform: scaleX(1); }
 
 @media (prefers-reduced-motion: reduce) {
-  .ct-ticket-printer, .ct-ticket-printer::after, .ct-ticket-paper, .ct-ticket-stamp, .ct-auth-content > *, .ct-auth-input[aria-invalid="true"], .ct-auth-field-error, .ct-auth-notice--success svg,
+  .ct-auth-hero, .ct-auth-trust li, .ct-auth-license::after, .ct-auth-content > *, .ct-auth-input[aria-invalid="true"], .ct-auth-field-error, .ct-auth-notice--success svg,
   .ct-auth-form[aria-busy="true"] .ct-auth-primary::after, .ct-auth-primary:hover:not(:disabled)::after, .ct-auth-headline .ct-word > span { animation: none; }
-  .ct-ticket-track li, .ct-ticket-track li span, .ct-auth-password-toggle svg, .ct-auth-input-wrap::after, .ct-ticket-tilt, .ct-auth-aside::before, .ct-auth-aside::after { transition: none; }
+  .ct-auth-hero, .ct-auth-license, .ct-auth-license-arrow, .ct-auth-password-toggle svg, .ct-auth-input-wrap::after, .ct-auth-aside::after { transition: none; }
 }
 
 
 /* ---- Responsive ---- */
-/* Pantallas medianas: la orden baja debajo del titular. */
 @media (max-width: 1279px) and (min-width: 1024px) {
-  .ct-auth-aside { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "brand" "pitch" "ticket" "foot"; }
-  .ct-auth-pitch { align-self: end; margin-top: 2rem; }
+  .ct-auth-trust { grid-template-columns: minmax(0, 1fr); }
   .ct-auth-headline { font-size: clamp(1.875rem, 3.2vw, 2.5rem); }
-  .ct-ticket { justify-self: center; }
 }
 @media (max-width: 1023px) {
   .ct-auth-shell { grid-template-columns: 1fr; }
@@ -308,19 +270,13 @@
 /* Laptops (la barra del navegador deja ~650-760 px de alto): todo se compacta para caber sin scroll. */
 @media (max-height: 760px) and (min-width: 1024px) {
   .ct-auth-aside { padding-block: 1.75rem; }
-  .ct-ticket-paper { padding: 1.125rem 1.125rem 1.5rem; font-size: 0.6875rem; }
-  .ct-ticket-foot { display: none; }
+  .ct-auth-lede { display: none; }
+  .ct-auth-trust { margin-top: 1.25rem; }
   .ct-auth-form-side { padding-block: 1rem; }
   .ct-auth-content { padding: 0.5rem 0; }
   .ct-auth-heading { margin-bottom: 1.25rem; }
   .ct-auth-divider { margin: 1rem 0; }
-  .ct-auth-register-prompt { gap: 0.5rem; }
   .ct-auth-staff-note { margin-top: 0.75rem; }
-}
-/* Muy bajas: queda la promesa, sin la orden. */
-@media (max-height: 600px) and (min-width: 1024px) {
-  .ct-ticket { display: none; }
-  .ct-auth-aside { grid-template-columns: minmax(0, 1fr); grid-template-areas: "brand" "pitch" "foot"; grid-template-rows: auto 1fr auto; }
 }
 
 }
