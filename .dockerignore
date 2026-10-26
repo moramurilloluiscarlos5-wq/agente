@@ -25,3 +25,5 @@ releases
 .railway
 **/.tmp
 supabase/.temp
+.claude
+deploy-log.txt

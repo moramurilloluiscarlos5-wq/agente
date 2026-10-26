@@ -24,3 +24,5 @@ releases/
 
 ferpogas51.github.io/
 database/
+.claude/
+deploy-log.txt
