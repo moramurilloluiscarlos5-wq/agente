@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   Wrench,
   Users,
-  Smartphone,
   Bot,
   Receipt,
   Package,
@@ -10,7 +9,6 @@ import {
   ShieldCheck,
   MessageCircle,
   BarChart3,
-  Settings,
   ClipboardList,
   KeyRound,
   Cpu,
@@ -26,20 +24,18 @@ export const NAV_ITEMS = [
   { label: 'Panel', title: 'Panel de control', path: '/', icon: LayoutDashboard, section: 'Taller', permission: 'dashboard.view' },
   { label: 'Reparaciones', path: '/reparaciones', icon: Wrench, section: 'Taller', permission: 'repairs.view' },
   { label: 'Clientes', path: '/clientes', icon: Users, section: 'Taller', permission: 'clients.view' },
-  { label: 'Dispositivos', path: '/dispositivos', icon: Smartphone, section: 'Taller', permission: 'devices.view' },
   { label: 'Diagnóstico IA', path: '/diagnostico-ia', icon: Bot, section: 'Herramientas', permission: 'diagnostics.view' },
   { label: 'Herramientas ADB', title: 'Herramientas ADB / Fastboot', path: '/herramientas-dispositivo', icon: Cpu, section: 'Herramientas', permission: 'devices.view' },
   { label: 'Cotizaciones', path: '/cotizaciones', icon: Receipt, section: 'Negocio', permission: 'quotes.view' },
   { label: 'Pagos', path: '/pagos', icon: CreditCard, section: 'Negocio', permission: 'payments.view' },
   { label: 'Inventario', path: '/inventario', icon: Package, section: 'Negocio', permission: 'inventory.view' },
   { label: 'Garantías', path: '/garantias', icon: ShieldCheck, section: 'Negocio', permission: 'warranties.view' },
-  { label: 'Comunicaciones', path: '/comunicaciones', icon: MessageCircle, section: 'Negocio', permission: 'whatsapp.view' },
+  { label: 'WhatsApp', title: 'Avisos por WhatsApp', path: '/comunicaciones', icon: MessageCircle, section: 'Negocio', permission: 'whatsapp.view' },
   { label: 'Reportes', path: '/reportes', icon: BarChart3, section: 'Negocio', permission: 'reports.view' },
   { label: 'Personal', path: '/personal', icon: UserCog, section: 'Administración', permission: 'users.view' },
   { label: 'Roles y permisos', path: '/roles', icon: KeyRound, section: 'Administración', roles: ['SUPER_ADMIN'], permission: 'roles.view' },
   { label: 'Auditoría', path: '/auditoria', icon: ClipboardList, section: 'Administración', permission: 'audit.view' },
-  { label: 'Facturación', path: '/facturacion', icon: WalletCards, section: 'Administración', roles: ['OWNER', 'ADMINISTRADOR', 'SUPER_ADMIN'] },
-  { label: 'Configuración', path: '/configuracion', icon: Settings, section: 'Administración', permission: 'settings.view' },
+  { label: 'Mi plan', path: '/facturacion', icon: WalletCards, section: 'Administración', roles: ['OWNER', 'ADMINISTRADOR', 'SUPER_ADMIN'] },
 ]
 
 // Título visible de cada sección (barra superior y pestaña del navegador).
@@ -47,6 +43,8 @@ export function sectionTitle(pathname) {
   if (pathname === '/' || pathname === '/dashboard') return 'Panel de control'
   if (pathname.startsWith('/buscar')) return 'Búsqueda'
   if (pathname.startsWith('/guia')) return 'Guía del sistema'
+  // Los equipos se abren desde la ficha del cliente o la búsqueda; ya no están en el menú.
+  if (pathname.startsWith('/dispositivos')) return 'Equipos'
   const item = NAV_ITEMS.find((entry) => entry.path !== '/' && pathname.startsWith(entry.path))
   return item?.title ?? item?.label ?? 'TallerFlow'
 }

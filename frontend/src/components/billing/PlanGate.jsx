@@ -20,7 +20,7 @@ export default function PlanGate({ feature, children }) {
       <PageHeader title={sectionTitle(pathname)} />
       <section className="tf-card">
         <EmptyState icon={Lock} title={`Disponible desde el plan ${tier}`}
-          description={`Tu plan ${profile.entitlements.name} no incluye esta sección (${FEATURE_LABELS[feature]}). ${canManage ? `Cambia a ${tier} en Facturación para usarla.` : `Pide al dueño del taller que cambie al plan ${tier}.`}`}
+          description={`Tu plan ${profile.entitlements.name} no incluye esta sección (${FEATURE_LABELS[feature]}). ${canManage ? `Cambia a ${tier} en Mi plan para usarla.` : `Pide al dueño del taller que cambie al plan ${tier}.`}`}
           action={canManage && <Link to="/facturacion" className="ct-btn ct-btn-primary">Ver planes</Link>} />
       </section>
     </div>

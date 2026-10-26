@@ -40,7 +40,7 @@ export default function Pricing() {
   return (
     <main className="min-h-screen bg-[var(--tf-bg)] px-4 py-8 text-[var(--tf-text)] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-6xl">
-        <header className="flex items-center justify-between"><Link to="/" aria-label="Ir al inicio"><BrandLogo /></Link><Link to={authenticated ? '/' : '/login'} className="text-sm font-semibold text-[var(--tf-link)] hover:text-[var(--tf-link-hover)]">{authenticated ? 'Volver al panel' : 'Iniciar sesión'}</Link></header>
+        <header className="flex items-center justify-between"><Link to="/" aria-label="Ir al inicio"><BrandLogo /></Link><Link to={authenticated ? '/' : '/login'} className="ct-btn ct-btn-secondary">{authenticated ? 'Volver al panel' : 'Iniciar sesión'}</Link></header>
         <div className="mt-12 flex flex-col items-center text-center">
           {!authenticated && <BuySteps current={0} />}
           <h1 className="ct-page-title">Licencia de activación</h1>

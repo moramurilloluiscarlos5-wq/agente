@@ -47,7 +47,7 @@ async function seatLimitMessage(workshopId) {
   const entitlements = await loadWorkshopEntitlements({ db, workshopId, enabled: licensingEnabled() })
   if (entitlements.max_users == null) return null
   if ((await countActiveUsers(db, workshopId)) < entitlements.max_users) return null
-  return `Tu plan ${entitlements.name} permite hasta ${entitlements.max_users} usuarios activos. Desactiva una cuenta o cambia de plan en Facturación para agregar más.`
+  return `Tu plan ${entitlements.name} permite hasta ${entitlements.max_users} usuarios activos. Desactiva una cuenta o cambia de plan en Mi plan para agregar más.`
 }
 
 // Revisar el límite y ocupar el lugar va en fila por taller: dos altas simultáneas no

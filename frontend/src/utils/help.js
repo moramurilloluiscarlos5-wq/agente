@@ -90,17 +90,12 @@ export const MODULE_HELP = {
     when: 'Para contratar, cambiar o cancelar tu plan.',
     tasks: ['Revisa si tu licencia está activa, hasta cuándo y cuántos usuarios usas.', 'Contrata o cambia de plan; pagas con tarjeta en Mercado Pago.', 'Cancela cuando quieras: conservas el acceso hasta el último día pagado.'],
   },
-  '/configuracion': {
-    description: 'Los ajustes del taller: conexión con WhatsApp, licencia y accesos.',
-    when: 'Al empezar a usar TallerFlow o cuando cambia algo del taller.',
-    tasks: ['Revisa si WhatsApp Business está conectado.', 'Entra a licencia, personal y agente de dispositivos desde el índice de esta página.', 'Configura qué avisos automáticos reciben tus clientes.'],
-  },
 }
 
 // El recorrido de un equipo por el taller y la opción del menú que atiende cada paso.
 // Los tonos son los mismos del flujo del panel de control.
 export const JOURNEY = [
-  { title: 'Recibir', text: 'Registra al cliente, su equipo y la falla que reporta. La orden queda lista para darle seguimiento.', paths: ['/reparaciones', '/clientes', '/dispositivos'], tone: 'received' },
+  { title: 'Recibir', text: 'Registra al cliente, su equipo y la falla que reporta. La orden queda lista para darle seguimiento.', paths: ['/reparaciones', '/clientes'], tone: 'received' },
   { title: 'Diagnosticar', text: 'Revisa el equipo para encontrar la falla. La IA y las herramientas ADB ayudan en los casos difíciles.', paths: ['/diagnostico-ia', '/herramientas-dispositivo'], tone: 'diagnosis' },
   { title: 'Cotizar', text: 'Comparte el costo con el cliente y espera su autorización antes de reparar.', paths: ['/cotizaciones'], tone: 'parts' },
   { title: 'Reparar', text: 'Avanza el estado de la orden y registra las refacciones que uses. El cliente recibe avisos por WhatsApp.', paths: ['/reparaciones', '/inventario', '/comunicaciones'], tone: 'repair' },

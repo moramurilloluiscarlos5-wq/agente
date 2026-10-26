@@ -135,7 +135,7 @@ export default function Navbar() {
             </div>
             <div className="my-1 border-t border-[var(--tf-border)]" />
             <Link to="/guia" onClick={() => setUserOpen(false)} className="tf-menu-item"><BookOpen size={15} aria-hidden="true" />Guía del sistema</Link>
-            {CAN_MANAGE_BILLING.includes(profile?.role) && <Link to="/facturacion" onClick={() => setUserOpen(false)} className="tf-menu-item"><WalletCards size={15} aria-hidden="true" />Facturación</Link>}
+            {CAN_MANAGE_BILLING.includes(profile?.role) && <Link to="/facturacion" onClick={() => setUserOpen(false)} className="tf-menu-item"><WalletCards size={15} aria-hidden="true" />Mi plan</Link>}
             <button type="button" onClick={handleLogout} className="tf-menu-item is-danger"><LogOut size={15} aria-hidden="true" />Cerrar sesión</button>
           </div>
         )}

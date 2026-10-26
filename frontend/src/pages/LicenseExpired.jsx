@@ -33,7 +33,7 @@ export default function LicenseExpired() {
         <span className="tf-empty-icon mx-auto"><ShieldAlert size={18} aria-hidden="true" /></span>
         <h1 className="mt-4 text-2xl font-semibold tracking-tight">La licencia de {workshop} no está activa</h1>
         <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-[var(--tf-text-muted)]">
-          {REASONS[profile?.license?.reason] ?? 'El plan del taller terminó.'} Pide al dueño del taller que elija un plan en Facturación. Toda la información del taller se conserva.
+          {REASONS[profile?.license?.reason] ?? 'El plan del taller terminó.'} Pide al dueño del taller que elija un plan en Mi plan. Toda la información del taller se conserva.
         </p>
         {stillBlocked && <p role="status" className="mt-4 text-sm text-[var(--tf-text-subtle)]">La licencia sigue sin renovarse. Vuelve a intentarlo cuando el dueño complete el pago.</p>}
         <div className="mt-6 flex flex-wrap justify-center gap-3">

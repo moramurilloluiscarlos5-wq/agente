@@ -51,7 +51,7 @@ export const requireLicense = createLicenseMiddleware()
 
 export function planUpgradeMessage(feature) {
   const tier = TIERS[minimumTierFor(feature)]
-  return `${FEATURES[feature] ?? 'Esta función'}: disponible desde el plan ${tier?.name ?? 'superior'}. Cambia de plan en Facturación para usarla.`
+  return `${FEATURES[feature] ?? 'Esta función'}: disponible desde el plan ${tier?.name ?? 'superior'}. Cambia de plan en Mi plan para usarla.`
 }
 
 // Corta con 402 PLAN_UPGRADE_REQUIRED si el plan del taller no incluye la función.

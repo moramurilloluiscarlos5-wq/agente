@@ -125,7 +125,7 @@ export default function Billing() {
     <div className="space-y-6" data-mp-subscriptions-page="without-plan-pending">
       {/* Paso 3 de la compra: llega aquí con el plan elegido y sin licencia activa. */}
       {!paid && params.get('plan') && <BuySteps current={2} />}
-      <PageHeader title="Facturación" description="Tu plan de TallerFlow, su estado y los pagos con Mercado Pago." />
+      <PageHeader title="Mi plan" description="Tu plan de TallerFlow, su estado y los pagos con Mercado Pago." />
       {message && <div role="alert" className="tf-alert tf-alert-warning max-w-3xl">{message}</div>}
       {success && subscription && <Alert tone={pending ? 'info' : 'success'} className="max-w-3xl">{!pending ? 'Listo, tu licencia está activa.' : waiting ? 'Estamos confirmando tu pago con Mercado Pago…' : 'Mercado Pago todavía no confirma tu pago. Si ya pagaste, tu licencia se activa en unos minutos: recarga esta página. Si no terminaste el pago, elige tu plan otra vez.'}</Alert>}
       {error && <ErrorAlert error={error.err} action={error.action} className="max-w-3xl" />}

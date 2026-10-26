@@ -5,8 +5,8 @@ export function friendlyError(error, action = 'completar la acción') {
   const status = error?.status
   if (code === 'API_OFFLINE') return `No hay conexión con el servidor. Revisa tu internet y vuelve a intentarlo.`
   if (code === 'API_TIMEOUT') return `El servidor tardó demasiado en responder. Inténtalo de nuevo en unos segundos.`
-  if (code === 'PLAN_UPGRADE_REQUIRED') return error?.message || 'Tu plan no incluye esta función. Cambia de plan en Facturación para usarla.'
-  if (code === 'LICENSE_REQUIRED' || status === 402) return 'La suscripción del taller no está activa. Revisa la sección Facturación.'
+  if (code === 'PLAN_UPGRADE_REQUIRED') return error?.message || 'Tu plan no incluye esta función. Cambia de plan en Mi plan para usarla.'
+  if (code === 'LICENSE_REQUIRED' || status === 402) return 'La suscripción del taller no está activa. Revisa la sección Mi plan.'
   if (code === 'PAYMENT_PROVIDER_ERROR' || (status === 502 && /Mercado Pago/.test(error?.message ?? ''))) return error?.message || 'Mercado Pago no respondió. Inténtalo de nuevo en unos minutos.'
   if (status === 401) return 'Tu sesión expiró. Vuelve a iniciar sesión.'
   if (status === 403) return error?.message && !/forbidden/i.test(error.message) ? error.message : 'No tienes permiso para realizar esta acción.'

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import MainLayout from './layouts/MainLayout.jsx'
 import RequireAuth from './layouts/RequireAuth.jsx'
 import RequirePermission from './layouts/RequirePermission.jsx'
@@ -18,7 +18,6 @@ const Payments = lazy(() => import('./pages/Payments.jsx'))
 const Warranties = lazy(() => import('./pages/Warranties.jsx'))
 const Communications = lazy(() => import('./pages/Communications.jsx'))
 const Reports = lazy(() => import('./pages/Reports.jsx'))
-const Settings = lazy(() => import('./pages/Settings.jsx'))
 const Staff = lazy(() => import('./pages/Staff.jsx'))
 const SearchResults = lazy(() => import('./pages/SearchResults.jsx'))
 const Login = lazy(() => import('./pages/Login.jsx'))
@@ -81,7 +80,8 @@ export default function App() {
           <Route path="/garantias" element={<Warranties />} />
           <Route path="/comunicaciones" element={<PlanGate feature="whatsapp"><Communications /></PlanGate>} />
           <Route path="/reportes" element={<RequirePermission permission="reports.view"><PlanGate feature="reports"><Reports /></PlanGate></RequirePermission>} />
-          <Route path="/configuracion" element={<RequirePermission permission="settings.view"><Settings /></RequirePermission>} />
+          {/* Configuración solo repetía opciones del menú; los enlaces viejos llevan a Mi plan. */}
+          <Route path="/configuracion" element={<Navigate to="/facturacion" replace />} />
           <Route path="/facturacion" element={<Billing />} />
           <Route path="/personal" element={<RequirePermission permission="users.view"><Staff /></RequirePermission>} />
           <Route path="/auditoria" element={<RequirePermission permission="audit.view"><PlanGate feature="audit"><Audit /></PlanGate></RequirePermission>} />

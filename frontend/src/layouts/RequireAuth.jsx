@@ -25,7 +25,9 @@ export default function RequireAuth() {
       </div>
     )
   }
-  if (status !== 'authenticated') return <Navigate to="/login" replace />
+  // Quien abre la dirección principal sin sesión es alguien que aún no compra: ve los planes.
+  // Cualquier otra página protegida lleva a iniciar sesión.
+  if (status !== 'authenticated') return <Navigate to={pathname === '/' ? '/precios' : '/login'} replace />
   const destination = workspaceDestination(profile)
   // El contenido protegido nunca se monta antes de resolver el taller.
   if (destination !== '/' && pathname !== destination) return <Navigate to={destination} replace />

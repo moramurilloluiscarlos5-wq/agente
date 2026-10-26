@@ -156,15 +156,34 @@ test('al volver de Mercado Pago sin pago confirmado deja de esperar y explica qu
   expect(calls.filter((call) => call.startsWith('GET /billing/subscription')).length).toBe(polls)
 })
 
-test('configuración muestra plan, estado, próximo cobro y usuarios del plan', async ({ page }) => {
+test('el enlace viejo de configuración lleva a Mi plan con plan, estado, próximo cobro y usuarios', async ({ page }) => {
   await setup(page, { subscription: activeSubscription })
   await page.goto('/configuracion')
+  await expect(page).toHaveURL(/\/facturacion$/)
+  await expect(page.getByRole('heading', { name: 'Mi plan', level: 1 })).toBeVisible()
   const card = page.getByRole('region', { name: 'Estado de la licencia' })
   await expect(card.getByTestId('license-plan')).toHaveText('Pro mensual')
   await expect(card.getByTestId('license-status')).toHaveText('Activa')
   await expect(card.getByTestId('license-next')).toContainText('2030')
   await expect(card.getByTestId('license-users')).toHaveText('4 de 10')
-  await expect(card.getByRole('link', { name: 'Administrar plan' })).toBeVisible()
+})
+
+test('quien abre la dirección principal sin sesión ve los planes y puede iniciar sesión', async ({ page }) => {
+  await page.route(/\/api\//, (route) => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/billing/plans') ? { data: plans, trial_days: 14 } : { data: [] } }))
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/precios$/)
+  await expect(page.getByRole('heading', { name: 'Licencia de activación' })).toBeVisible()
+  await page.getByRole('link', { name: 'Iniciar sesión' }).click()
+  await expect(page).toHaveURL(/\/login$/)
+})
+
+test('el menú solo muestra las opciones del día a día, con nombres claros', async ({ page }) => {
+  await setup(page, { subscription: activeSubscription })
+  await page.goto('/')
+  const menu = page.getByRole('navigation', { name: 'Navegación principal' })
+  await expect(menu.getByRole('link', { name: 'Mi plan' })).toBeVisible()
+  await expect(menu.getByRole('link', { name: 'WhatsApp' })).toBeVisible()
+  for (const removed of ['Dispositivos', 'Configuración', 'Facturación', 'Comunicaciones']) await expect(menu.getByRole('link', { name: removed })).toHaveCount(0)
 })
 
 test('el dueño baja de plan con el mismo cobro sin salir de TallerFlow', async ({ page }) => {
