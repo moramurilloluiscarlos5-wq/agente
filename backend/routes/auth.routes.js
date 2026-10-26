@@ -50,6 +50,23 @@ async function seatLimitMessage(workshopId) {
   return `Tu plan ${entitlements.name} permite hasta ${entitlements.max_users} usuarios activos. Desactiva una cuenta o cambia de plan en Facturación para agregar más.`
 }
 
+// Revisar el límite y ocupar el lugar va en fila por taller: dos altas simultáneas no
+// pueden pasar las dos el límite del plan. Basta con un proceso (Railway corre una réplica).
+const seatLocks = new Map()
+async function withSeatLock(workshopId, task) {
+  const previous = seatLocks.get(workshopId) ?? Promise.resolve()
+  let release
+  const turn = previous.then(() => new Promise((resolve) => { release = resolve }))
+  seatLocks.set(workshopId, turn)
+  await previous
+  try {
+    return await task()
+  } finally {
+    release()
+    if (seatLocks.get(workshopId) === turn) seatLocks.delete(workshopId)
+  }
+}
+
 function isValidEmail(value) {
   return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 }
@@ -240,17 +257,21 @@ router.post('/users', authenticate, profileLoader, requireRole('ADMINISTRADOR'),
 
   // Crea el usuario en Supabase Auth; el trigger on_auth_user_created crea el perfil.
   if (!req.profile.workshop_id) return res.status(403).json({ message: 'Selecciona una cuenta de administración con taller para agregar personal.' })
-  if (is_active) {
-    const limit = await seatLimitMessage(req.profile.workshop_id)
-    if (limit) return res.status(402).json({ code: 'PLAN_UPGRADE_REQUIRED', feature: 'users', message: limit })
-  }
-  const { data: authData, error: createError } = await db.auth.admin.createUser({
-    email: email.trim().toLowerCase(),
-    password,
-    email_confirm: true,
-    user_metadata: { full_name: full_name.trim() },
-    app_metadata: { workshop_employee: { actor_id: req.profile.id, workshop_id: req.profile.workshop_id, role, phone, is_active } },
+  const created = await withSeatLock(req.profile.workshop_id, async () => {
+    if (is_active) {
+      const limit = await seatLimitMessage(req.profile.workshop_id)
+      if (limit) return { limit }
+    }
+    return db.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: full_name.trim() },
+      app_metadata: { workshop_employee: { actor_id: req.profile.id, workshop_id: req.profile.workshop_id, role, phone, is_active } },
+    })
   })
+  if (created.limit) return res.status(402).json({ code: 'PLAN_UPGRADE_REQUIRED', feature: 'users', message: created.limit })
+  const { data: authData, error: createError } = created
 
   if (createError) return res.status(400).json({ message: createError.message })
 
@@ -316,25 +337,29 @@ router.patch('/users/:id/status', authenticate, profileLoader, requireRole('ADMI
   if (req.params.id === req.authUserId && !is_active) {
     return res.status(400).json({ message: 'No puedes desactivar tu propia cuenta.' })
   }
-  // Anti-IDOR: el objetivo debe pertenecer al mismo taller.
-  if (req.profile.role !== 'SUPER_ADMIN') {
-    const { data: target, error: targetError } = await db.from('profiles').select('role,workshop_id,is_active').eq('id', req.params.id).maybeSingle()
-    if (targetError) throw targetError
-    if (!target || target.workshop_id !== req.profile.workshop_id) return res.status(404).json({ message: 'Usuario no encontrado' })
-    assertCanManageTarget(req.profile, target.role)
-    // Reactivar una cuenta ocupa un lugar del plan.
-    if (is_active && target.is_active === false) {
-      const limit = await seatLimitMessage(req.profile.workshop_id)
-      if (limit) return res.status(402).json({ code: 'PLAN_UPGRADE_REQUIRED', feature: 'users', message: limit })
+  const result = await withSeatLock(req.profile.workshop_id ?? 'platform', async () => {
+    // Anti-IDOR: el objetivo debe pertenecer al mismo taller.
+    if (req.profile.role !== 'SUPER_ADMIN') {
+      const { data: target, error: targetError } = await db.from('profiles').select('role,workshop_id,is_active').eq('id', req.params.id).maybeSingle()
+      if (targetError) throw targetError
+      if (!target || target.workshop_id !== req.profile.workshop_id) return { status: 404, body: { message: 'Usuario no encontrado' } }
+      assertCanManageTarget(req.profile, target.role)
+      // Reactivar una cuenta ocupa un lugar del plan.
+      if (is_active && target.is_active === false) {
+        const limit = await seatLimitMessage(req.profile.workshop_id)
+        if (limit) return { status: 402, body: { code: 'PLAN_UPGRADE_REQUIRED', feature: 'users', message: limit } }
+      }
     }
-  }
-  await ensureAdministratorSurvivesChange(req.params.id, null, is_active)
-  const { data, error } = await db
-    .from('profiles')
-    .update({ is_active })
-    .eq('id', req.params.id)
-    .select('id, role, full_name, phone, avatar_url, is_active, created_at')
-    .maybeSingle()
+    await ensureAdministratorSurvivesChange(req.params.id, null, is_active)
+    return db
+      .from('profiles')
+      .update({ is_active })
+      .eq('id', req.params.id)
+      .select('id, role, full_name, phone, avatar_url, is_active, created_at')
+      .maybeSingle()
+  })
+  if (result.body) return res.status(result.status).json(result.body)
+  const { data, error } = result
 
   if (error) return res.status(400).json({ message: error.message })
   if (!data) return res.status(404).json({ message: 'Usuario no encontrado' })

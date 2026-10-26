@@ -1,9 +1,7 @@
 import { Link } from 'react-router-dom'
 import PageHeader from '../components/ui/PageHeader.jsx'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
-import { Compass } from 'lucide-react'
-import { Button, Card } from '../components/ui/DesignSystem.jsx'
-import { useTour } from '../hooks/useTour.js'
+import { Card } from '../components/ui/DesignSystem.jsx'
 import { NAV_ITEMS, NAV_SECTIONS, REPAIR_STATUSES } from '../utils/constants.js'
 import { JOURNEY, MODULE_HELP, SECTION_INFO } from '../utils/help.js'
 import { useAuth } from '../hooks/useAuth.js'
@@ -29,15 +27,13 @@ function JourneyStep({ step, index, items }) {
 
 export default function Guide() {
   const { profile, hasPermission } = useAuth()
-  const { start: startTour } = useTour()
   const visible = NAV_ITEMS.filter((item) => (!item.roles || item.roles.includes(profile?.role)) && (!item.permission || hasPermission(item.permission)))
   const byPath = new Map(visible.map((item) => [item.path, item]))
   const groups = NAV_SECTIONS.map((section) => [section, visible.filter((item) => item.section === section)]).filter(([, items]) => items.length)
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Guía del sistema" description="Qué hace cada opción del menú y en qué momento usarla. Para encontrar un cliente, una orden o un IMEI desde cualquier página, usa la búsqueda de arriba (en computadora, Ctrl K)."
-        actions={<Button variant="primary" icon={Compass} onClick={startTour}>Iniciar recorrido guiado</Button>} />
+      <PageHeader title="Guía del sistema" description="Qué hace cada opción del menú y en qué momento usarla. Para encontrar un cliente, una orden o un IMEI desde cualquier página, usa la búsqueda de arriba (en computadora, Ctrl K). Para verlo paso a paso en pantalla, usa Recorrido guiado al final del menú." />
 
       <section className="tf-card tf-journey" aria-labelledby="journey-title">
         <header className="tf-journey-header">

@@ -4,8 +4,6 @@ import { CheckCircle2, Circle, X } from 'lucide-react'
 import { Card, IconButton } from '../ui/DesignSystem.jsx'
 import { api } from '../../services/api.js'
 import { useAuth } from '../../hooks/useAuth.js'
-import { useTour } from '../../hooks/useTour.js'
-import { tourDoneKey } from '../../utils/tour.js'
 
 const OWNER_ROLES = ['OWNER', 'ADMINISTRADOR']
 
@@ -18,7 +16,6 @@ function readFlag(key) {
 // del taller y la tarjeta desaparece cuando todo está hecho o el dueño la oculta.
 export default function FirstSteps({ data }) {
   const { profile, hasPermission } = useAuth()
-  const { start: startTour } = useTour()
   const canSeeStaff = hasPermission('users.view')
   const [staffCount, setStaffCount] = useState(null)
   const [hidden, setHidden] = useState(() => readFlag(hiddenKey(profile?.workshop_id)))
@@ -35,12 +32,6 @@ export default function FirstSteps({ data }) {
 
   const stats = data.stats ?? {}
   const steps = [
-    {
-      key: 'tour', done: readFlag(tourDoneKey(profile?.id)),
-      title: 'Conoce el sistema en 2 minutos',
-      hint: 'Un recorrido rápido por cada opción del menú.',
-      action: <button type="button" onClick={startTour} className="tf-link">Iniciar recorrido</button>,
-    },
     {
       key: 'repair', done: Boolean(data.recentRepairs?.length),
       title: 'Registra tu primera reparación',

@@ -23,6 +23,7 @@ export const FEATURE_LABELS = {
 }
 
 export const TIER_NAMES = { plus: 'Plus', pro: 'Pro', max: 'Max' }
+export const TIER_RANK = { plus: 1, pro: 2, max: 3 }
 export const FEATURE_MIN_TIER = { whatsapp: 'pro', reports: 'pro', audit: 'pro', ai: 'max', device_tools: 'max' }
 
 // Sección del menú que necesita cada función del plan.

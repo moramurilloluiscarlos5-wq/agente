@@ -5,7 +5,7 @@ import PageHeader from '../components/ui/PageHeader.jsx'
 import LicenseCard from '../components/billing/LicenseCard.jsx'
 import PlanCards from '../components/billing/PlanCards.jsx'
 import { Alert, Button, ConfirmDialog, Dialog, ErrorAlert, Input } from '../components/ui/DesignSystem.jsx'
-import { FEATURE_LABELS, TIER_NAMES, formatPrice, goToCheckout } from '../utils/billing.js'
+import { FEATURE_LABELS, TIER_NAMES, TIER_RANK, formatPrice, goToCheckout } from '../utils/billing.js'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useToast } from '../hooks/useToast.js'
@@ -69,7 +69,7 @@ export default function Billing() {
     const tier = TIER_NAMES[plan.tier] ?? plan.name
     if (currentPlan?.code === plan.code) return { label: 'Tu plan actual', disabled: true, current: true }
     if (paid) return isOwner && paymentsReady
-      ? { label: `Cambiar a ${tier}`, onClick: () => setDialog({ mode: currentPlan?.interval === plan.interval ? 'change' : 'interval', plan }) }
+      ? { label: `Cambiar a ${tier}`, onClick: () => setDialog({ mode: currentPlan?.interval === plan.interval && TIER_RANK[plan.tier] < TIER_RANK[currentPlan?.tier] ? 'change' : 'interval', plan }) }
       : { label: `Cambiar a ${tier}`, disabled: true }
     return paymentsReady ? { label: `Contratar ${tier}`, onClick: () => setDialog({ mode: 'checkout', plan }) } : { label: `Contratar ${tier}`, disabled: true }
   }
@@ -156,7 +156,7 @@ export default function Billing() {
         {dialogPlan && <div className="space-y-4 text-sm leading-relaxed text-[var(--tf-text-muted)]">
           <p className="text-base font-semibold text-[var(--tf-text)] tf-num">{formatPrice(dialogPlan.price_cents, dialogPlan.currency)} {dialogPlan.interval === 'year' ? 'al año' : 'al mes'}</p>
           {activeDialog.mode === 'change' && <p>Tu plan cambia a {TIER_NAMES[dialogPlan.tier]} ahora mismo. {nextCharge ? `Desde tu próximo cobro, el ${nextCharge}, ` : 'Desde tu próximo cobro '}pagarás {formatPrice(dialogPlan.price_cents, dialogPlan.currency)} {dialogPlan.interval === 'year' ? 'al año' : 'al mes'}.</p>}
-          {activeDialog.mode === 'interval' && <p>Te llevamos a Mercado Pago para pagar el plan {dialogPlan.interval === 'year' ? 'anual' : 'mensual'}. Cuando se confirme el pago cancelamos tu plan actual para que no se cobre doble.</p>}
+          {activeDialog.mode === 'interval' && <p>Te llevamos a Mercado Pago para pagar el plan {TIER_NAMES[dialogPlan.tier]} {dialogPlan.interval === 'year' ? 'anual' : 'mensual'}. En cuanto se confirme el pago se activa y cancelamos tu plan actual para que no se cobre doble.</p>}
           {activeDialog.mode === 'checkout' && <p>Te llevamos a Mercado Pago para pagar con tarjeta. La licencia se activa en cuanto se confirma el pago{subscription?.status === 'trialing' ? '; tu prueba gratuita termina al contratar' : ''}.</p>}
           {(lostFeatures.length > 0 || overSeats) && <Alert tone="warning" title={`Lo que cambia con ${TIER_NAMES[dialogPlan.tier]}`}>
             <ul className="list-disc space-y-1 pl-4">

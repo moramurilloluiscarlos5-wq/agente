@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, BookOpen, Compass, LogOut, Menu, Plus, Search, WalletCards } from 'lucide-react'
+import { Bell, BookOpen, LogOut, Menu, Plus, Search, WalletCards } from 'lucide-react'
 import { sectionTitle } from '../../utils/constants.js'
 import { useSidebar } from '../../hooks/useSidebar.js'
 import { useAuth } from '../../hooks/useAuth.js'
-import { useTour } from '../../hooks/useTour.js'
 import ThemeMenu from '../theme/ThemeMenu.jsx'
 import { api } from '../../services/api.js'
 import { formatRelative, getInitials } from '../../utils/formatters.js'
@@ -27,7 +26,6 @@ function useDismiss(open, setOpen, ref) {
 export default function Navbar() {
   const { openMobile } = useSidebar()
   const { profile, roleLabel, logout } = useAuth()
-  const { start: startTour } = useTour()
   const profileId = profile?.id
   const location = useLocation()
   const navigate = useNavigate()
@@ -136,7 +134,6 @@ export default function Navbar() {
               </div>
             </div>
             <div className="my-1 border-t border-[var(--tf-border)]" />
-            <button type="button" onClick={() => { setUserOpen(false); startTour() }} className="tf-menu-item"><Compass size={15} aria-hidden="true" />Recorrido guiado</button>
             <Link to="/guia" onClick={() => setUserOpen(false)} className="tf-menu-item"><BookOpen size={15} aria-hidden="true" />Guía del sistema</Link>
             {CAN_MANAGE_BILLING.includes(profile?.role) && <Link to="/facturacion" onClick={() => setUserOpen(false)} className="tf-menu-item"><WalletCards size={15} aria-hidden="true" />Facturación</Link>}
             <button type="button" onClick={handleLogout} className="tf-menu-item is-danger"><LogOut size={15} aria-hidden="true" />Cerrar sesión</button>

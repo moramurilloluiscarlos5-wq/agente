@@ -474,17 +474,27 @@ test('rutas: checkout permite contratar de nuevo si la suscripción ya se cancel
   assert.equal((await (await serveBilling(t, db, owner))('/checkout', { plan: 'max_monthly', payer_email: 'a@b.co' })).status, 200)
 })
 
-test('rutas: cambiar de plan con el mismo cobro ajusta el monto en Mercado Pago y cambia el plan ya', async (t) => {
+test('rutas: bajar de plan con el mismo cobro ajusta el monto en Mercado Pago y cambia el plan ya', async (t) => {
   const db = seededDb({ status: 'active', provider_subscription_id: 'pre_1', plan_id: 'plan-pro-m', current_period_end: iso(Date.now() + 10 * DAY), last_event_at: iso(Date.now() - DAY) })
   const mp = mpStub({ preapprovals: { pre_1: preapproval({ last_modified: iso(Date.now() - DAY) }) } })
   const request = await serveBilling(t, db, owner, { mp })
-  const result = await request('/change-plan', { plan: 'max_monthly' })
+  const result = await request('/change-plan', { plan: 'plus_monthly' })
   assert.equal(result.status, 200)
   assert.equal(result.body.data.changed, true)
-  assert.deepEqual(mp.updated[0], { id: 'pre_1', body: { reason: 'TallerFlow Max mensual', auto_recurring: { transaction_amount: 899, currency_id: 'MXN' } } })
-  assert.equal(db.tables.subscriptions[0].plan_id, 'plan-max-m')
-  assert.equal(result.body.data.subscription.entitlements.tier, 'max')
-  assert.equal(db.tables.workshops[0].plan, 'MAX')
+  assert.deepEqual(mp.updated[0], { id: 'pre_1', body: { reason: 'TallerFlow Plus mensual', auto_recurring: { transaction_amount: 299, currency_id: 'MXN' } } })
+  assert.equal(db.tables.subscriptions[0].plan_id, 'plan-plus-m')
+  assert.equal(result.body.data.subscription.entitlements.tier, 'plus')
+  assert.equal(db.tables.workshops[0].plan, 'PLUS')
+})
+
+test('rutas: subir de plan abre un pago nuevo y no cambia el plan hasta que se pague', async (t) => {
+  const db = seededDb({ status: 'active', provider_subscription_id: 'pre_1', plan_id: 'plan-pro-m', current_period_end: iso(Date.now() + 10 * DAY) })
+  const request = await serveBilling(t, db, owner)
+  const result = await request('/change-plan', { plan: 'max_monthly', payer_email: 'a@b.co' })
+  assert.equal(result.body.data.url, 'https://www.mercadopago.com.mx/subscriptions/checkout?preapproval_id=pre_new')
+  assert.equal(request.mp.created[0].auto_recurring.transaction_amount, 899)
+  assert.equal(request.mp.updated.length, 0)
+  assert.equal(db.tables.subscriptions[0].plan_id, 'plan-pro-m')
 })
 
 test('rutas: cambiar entre mensual y anual abre un pago nuevo', async (t) => {
@@ -606,4 +616,29 @@ test('usuarios: el plan Plus no deja crear ni reactivar una cuarta cuenta activa
   const reactivated = await call('PATCH', '/users/u4/status', { is_active: true })
   assert.deepEqual([reactivated.status, reactivated.body.code], [402, 'PLAN_UPGRADE_REQUIRED'])
   assert.equal(db.tables.profiles.find((profile) => profile.id === 'u4').is_active, false)
+})
+
+test('usuarios: dos altas al mismo tiempo no pasan juntas el último lugar del plan', async (t) => {
+  const profiles = [
+    { id: 'user-1', workshop_id: WORKSHOP, role: 'OWNER', is_active: true },
+    { id: 'u2', workshop_id: WORKSHOP, role: 'TECNICO', is_active: true },
+  ]
+  const db = seededDb({ status: 'active', plan_id: 'plan-plus-m', provider_subscription_id: 'pre_1', current_period_end: iso(Date.now() + DAY) }, { profiles })
+  let createdUsers = 0
+  db.auth.admin.createUser = async ({ email }) => {
+    await new Promise((resolve) => setTimeout(resolve, 30)) // Supabase tarda: aquí se colaría la segunda alta
+    const id = `new-${++createdUsers}`
+    db.tables.profiles.push({ id, workshop_id: WORKSHOP, role: 'TECNICO', full_name: email, is_active: true })
+    return { data: { user: { id } }, error: null }
+  }
+  const app = express()
+  app.use(express.json())
+  const stubAuth = (req, _res, next) => { req.authUserId = 'user-1'; req.profile = owner; next() }
+  app.use('/auth', createAuthRouter({ db, authenticate: stubAuth, profileLoader: (_req, _res, next) => next(), configured: (_req, _res, next) => next() }))
+  const server = await new Promise((resolve) => { const listener = app.listen(0, '127.0.0.1', () => resolve(listener)) })
+  t.after(() => new Promise((resolve) => server.close(resolve)))
+  const create = (email) => fetch(`http://127.0.0.1:${server.address().port}/auth/users`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password: 'contrasena-segura', full_name: 'Nuevo', role: 'TECNICO' }) }).then((response) => response.status)
+  const statuses = await Promise.all([create('a@taller.com'), create('b@taller.com')])
+  assert.deepEqual(statuses.sort(), [201, 402])
+  assert.equal(createdUsers, 1)
 })

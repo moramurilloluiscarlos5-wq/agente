@@ -122,9 +122,10 @@ export function createBillingRouter({
     return startCheckout(req, res, ctx, plan, 'Pago iniciado en Mercado Pago')
   }))
 
-  // Mismo cobro (mensual o anual): se ajusta el monto de la suscripción y el plan cambia ya;
-  // el nuevo monto se cobra en el siguiente pago. Otro cobro: se paga el plan nuevo y,
-  // al autorizarse, la suscripción anterior se cancela sola (ver syncPreapproval).
+  // Bajar de plan con el mismo cobro (mensual o anual): se ajusta el monto de la suscripción
+  // y el plan cambia ya; el nuevo monto se cobra en el siguiente pago. Subir de plan u otro
+  // cobro: se paga el plan nuevo y, solo al autorizarse ese pago, el plan cambia y la
+  // suscripción anterior se cancela sola (ver syncPreapproval). Así nadie usa un plan mayor sin pagarlo.
   router.post('/change-plan', ...authenticate, requireRole('OWNER'), checkoutLimiter, asyncRoute(async (req, res) => {
     const ctx = paymentContext(req, res)
     if (!ctx) return
@@ -135,7 +136,8 @@ export function createBillingRouter({
       return res.status(409).json({ code: 'NO_ACTIVE_SUBSCRIPTION', message: 'No tienes una suscripción activa para cambiar. Contrata un plan.' })
     }
     if (existing.plan?.code === plan.code) return res.status(409).json({ code: 'SAME_PLAN', message: 'Tu taller ya tiene este plan.' })
-    if (existing.plan?.interval !== plan.interval) return startCheckout(req, res, ctx, plan, 'Cambio de plan iniciado en Mercado Pago')
+    const upgrade = !existing.plan || tierRank(plan) > tierRank(existing.plan)
+    if (existing.plan?.interval !== plan.interval || upgrade) return startCheckout(req, res, ctx, plan, 'Cambio de plan iniciado en Mercado Pago')
 
     const request = preapprovalRequest({ plan, workshopId: ctx.workshopId, payerEmail: null, appPublicUrl: ctx.config.appPublicUrl })
     await ctx.mp.updatePreapproval(existing.provider_subscription_id, { reason: request.reason, auto_recurring: { transaction_amount: request.auto_recurring.transaction_amount, currency_id: request.auto_recurring.currency_id } })

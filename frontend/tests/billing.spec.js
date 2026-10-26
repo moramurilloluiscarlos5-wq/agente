@@ -144,17 +144,27 @@ test('configuración muestra plan, estado, próximo cobro y usuarios del plan', 
   await expect(card.getByRole('link', { name: 'Administrar plan' })).toBeVisible()
 })
 
-test('el dueño cambia de plan con el mismo cobro sin salir de TallerFlow', async ({ page }) => {
+test('el dueño baja de plan con el mismo cobro sin salir de TallerFlow', async ({ page }) => {
   const calls = await setup(page, { subscription: activeSubscription })
   await page.goto('/facturacion')
   await expect(page.getByRole('article', { name: 'Plan Pro' }).getByRole('button', { name: 'Tu plan actual' })).toBeDisabled()
-  await page.getByRole('article', { name: 'Plan Max' }).getByRole('button', { name: 'Cambiar a Max' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Cambiar a Max mensual' })
+  await page.getByRole('article', { name: 'Plan Plus' }).getByRole('button', { name: 'Cambiar a Plus' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Cambiar a Plus mensual' })
   await expect(dialog).toContainText('ahora mismo')
   await expect(dialog.getByLabel('Correo de tu cuenta de Mercado Pago')).toHaveCount(0)
-  await dialog.getByRole('button', { name: 'Cambiar a Max' }).click()
-  await expect(page.getByText('Listo. Tu plan ahora es Max.')).toBeVisible()
-  expect(calls.find((call) => call.includes('/billing/change-plan'))).toContain('"plan":"max_monthly"')
+  await dialog.getByRole('button', { name: 'Cambiar a Plus' }).click()
+  await expect(page.getByText('Listo. Tu plan ahora es Plus.')).toBeVisible()
+  expect(calls.find((call) => call.includes('/billing/change-plan'))).toContain('"plan":"plus_monthly"')
+})
+
+test('subir de plan lleva a pagar en Mercado Pago antes de activarlo', async ({ page }) => {
+  await setup(page, { subscription: activeSubscription })
+  await page.goto('/facturacion')
+  await page.getByRole('article', { name: 'Plan Max' }).getByRole('button', { name: 'Cambiar a Max' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Cambiar a Max mensual' })
+  await expect(dialog).toContainText('En cuanto se confirme el pago se activa')
+  await expect(dialog.getByLabel('Correo de tu cuenta de Mercado Pago')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Ir a pagar con Mercado Pago' })).toBeVisible()
 })
 
 test('el dueño cancela con confirmación y conserva el acceso hasta fin de periodo', async ({ page }) => {
