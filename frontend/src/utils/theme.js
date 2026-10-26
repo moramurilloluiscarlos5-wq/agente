@@ -1,11 +1,11 @@
-// Temas de TallerFlow. El oscuro es el "banco de trabajo" (tapete antiestático) y el claro
-// es el "papel" (papel térmico de las órdenes). Además hay cinco colores de acento.
+// Temas de TallerFlow. El claro (por defecto) es el mostrador de día y el oscuro la placa de noche.
+// Cinco colores de placa: cambian el menú, los botones y los enlaces; la soldadura dorada no cambia.
 // Las llaves y los valores válidos son los mismos de public/theme-init.js.
 
 export const MODE_KEY = 'tf-theme-mode'
 export const ACCENT_KEY = 'tf-theme-accent'
-export const DEFAULT_MODE = 'dark'
-export const DEFAULT_ACCENT = 'blue'
+export const DEFAULT_MODE = 'light'
+export const DEFAULT_ACCENT = 'emerald'
 
 export const MODES = [
   { id: 'light', label: 'Claro' },
@@ -15,11 +15,11 @@ export const MODES = [
 
 // `swatch` es el color de la muestra en el selector: el mismo --tf-primary de cada acento.
 export const ACCENTS = [
-  { id: 'blue', label: 'Azul señal', swatch: '#2563eb' },
-  { id: 'emerald', label: 'Esmeralda', swatch: '#047857' },
+  { id: 'emerald', label: 'Verde placa', swatch: '#0e6b55' },
+  { id: 'blue', label: 'Azul', swatch: '#1d4ed8' },
   { id: 'violet', label: 'Violeta', swatch: '#6d28d9' },
-  { id: 'copper', label: 'Cobre', swatch: '#c2410c' },
-  { id: 'coral', label: 'Coral', swatch: '#e11d48' },
+  { id: 'copper', label: 'Cobre', swatch: '#a8460e' },
+  { id: 'coral', label: 'Frambuesa', swatch: '#be123c' },
 ]
 
 function read(key) {

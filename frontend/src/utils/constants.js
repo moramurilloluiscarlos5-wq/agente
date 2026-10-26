@@ -58,9 +58,9 @@ export const REPAIR_STATUSES = {
   diagnostico: { label: 'Diagnóstico', badgeClass: 'ct-status ct-status-info', hint: 'Un técnico está revisando qué tiene.' },
   esperando_autorizacion: { label: 'Esperando autorización', badgeClass: 'ct-status ct-status-warning', hint: 'Ya hay cotización; falta que el cliente apruebe el costo.' },
   esperando_refaccion: { label: 'Esperando refacción', badgeClass: 'ct-status ct-status-warning', hint: 'La reparación está detenida hasta que llegue la pieza.' },
-  en_reparacion: { label: 'En reparación', badgeClass: 'ct-status ct-status-info', hint: 'El técnico está trabajando en el equipo.' },
-  en_pruebas: { label: 'En pruebas', badgeClass: 'ct-status ct-status-info', hint: 'Ya se reparó; se comprueba que todo funcione.' },
-  listo_para_entregar: { label: 'Listo para entregar', badgeClass: 'ct-status ct-status-success', hint: 'Terminado. Avisa al cliente para que pase por él.' },
+  en_reparacion: { label: 'En reparación', badgeClass: 'ct-status ct-status-repair', hint: 'El técnico está trabajando en el equipo.' },
+  en_pruebas: { label: 'En pruebas', badgeClass: 'ct-status ct-status-repair', hint: 'Ya se reparó; se comprueba que todo funcione.' },
+  listo_para_entregar: { label: 'Listo para entregar', badgeClass: 'ct-status ct-status-ready', hint: 'Terminado. Avisa al cliente para que pase por él.' },
   entregado: { label: 'Entregado', badgeClass: 'ct-status ct-status-success', hint: 'El cliente recogió su equipo; desde aquí corre la garantía.' },
   cancelado: { label: 'Cancelado', badgeClass: 'ct-status ct-status-danger', hint: 'No se reparó: el cliente no aceptó o el equipo no tuvo arreglo.' },
 }

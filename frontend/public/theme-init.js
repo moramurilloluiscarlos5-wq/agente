@@ -3,8 +3,8 @@
 // Las llaves y los valores válidos son los mismos de src/utils/theme.js.
 (function () {
   var root = document.documentElement
-  var mode = 'dark'
-  var accent = 'blue'
+  var mode = 'light'
+  var accent = 'emerald'
   try {
     var savedMode = localStorage.getItem('tf-theme-mode')
     var savedAccent = localStorage.getItem('tf-theme-accent')

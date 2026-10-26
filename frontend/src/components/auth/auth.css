@@ -61,11 +61,20 @@
   transition: opacity var(--tf-dur-4) ease-out;
 }
 .ct-auth-aside:hover::after { opacity: 1; }
+/* La placa lleva el texto serigrafiado en blanco en ambos temas. */
+.ct-auth-aside {
+  --tf-ink-rgb: 255 255 255;
+  --tf-text: #ffffff;
+  --tf-text-muted: rgb(255 255 255 / 0.82);
+  --tf-text-subtle: rgb(255 255 255 / 0.64);
+  --tf-border: rgb(255 255 255 / 0.12);
+  border-right-color: transparent;
+}
 .ct-auth-aside-brand { grid-area: brand; }
 .ct-auth-aside-brand .tf-brand-mark { width: 2.25rem; height: 2.25rem; }
 .ct-auth-aside-brand .tf-brand-word { font-size: 1.25rem; }
 .ct-auth-pitch { grid-area: pitch; align-self: center; max-width: 30rem; }
-.ct-auth-headline { color: var(--tf-text); font-family: var(--tf-font-display); font-size: clamp(2rem, min(3.1vw, 5.8vh), 3.125rem); font-weight: 700; font-variation-settings: "wdth" 94; letter-spacing: -0.02em; line-height: 1.04; text-wrap: balance; }
+.ct-auth-headline { color: var(--tf-text); font-family: var(--tf-font-display); font-size: clamp(2rem, min(2.75vw, 5.6vh), 2.875rem); font-weight: 800; letter-spacing: -0.035em; line-height: 1.04; text-wrap: balance; }
 .ct-auth-lede { max-width: 26rem; margin-top: 1.25rem; color: var(--tf-text-muted); font-size: 1rem; line-height: 1.6; }
 .ct-auth-aside-footer { grid-area: foot; color: var(--tf-text-subtle); font-size: 0.75rem; }
 
@@ -156,7 +165,7 @@
 
 .ct-auth-heading { margin-bottom: 1.75rem; }
 .ct-auth-heading-icon { display: none; }
-.ct-auth-heading h1 { color: var(--tf-text); font-family: var(--tf-font-display); font-size: 1.875rem; font-weight: 700; font-variation-settings: "wdth" 92; letter-spacing: -0.03em; line-height: 1.1; }
+.ct-auth-heading h1 { color: var(--tf-text); font-family: var(--tf-font-display); font-size: 2rem; font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; }
 .ct-auth-heading p { margin-top: 0.5rem; color: var(--tf-text-muted); font-size: 0.875rem; line-height: 1.55; }
 .ct-auth-heading .ct-auth-eyebrow { margin: 0 0 0.5rem; color: var(--tf-link); font-size: 0.875rem; font-weight: 500; text-transform: none; letter-spacing: 0; }
 
