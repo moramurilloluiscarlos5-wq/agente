@@ -46,21 +46,23 @@ export const NAV_ITEMS = [
 export function sectionTitle(pathname) {
   if (pathname === '/' || pathname === '/dashboard') return 'Panel de control'
   if (pathname.startsWith('/buscar')) return 'Búsqueda'
+  if (pathname.startsWith('/guia')) return 'Guía del sistema'
   const item = NAV_ITEMS.find((entry) => entry.path !== '/' && pathname.startsWith(entry.path))
   return item?.title ?? item?.label ?? 'TallerFlow'
 }
 
 // Estados oficiales del flujo de reparación con estilos ya resueltos para Tailwind (evita clases dinámicas).
+// `hint` explica el estado en palabras del mostrador (Guía del sistema).
 export const REPAIR_STATUSES = {
-  recibido: { label: 'Recibido', badgeClass: 'ct-status ct-status-neutral' },
-  diagnostico: { label: 'Diagnóstico', badgeClass: 'ct-status ct-status-info' },
-  esperando_autorizacion: { label: 'Esperando autorización', badgeClass: 'ct-status ct-status-warning' },
-  esperando_refaccion: { label: 'Esperando refacción', badgeClass: 'ct-status ct-status-warning' },
-  en_reparacion: { label: 'En reparación', badgeClass: 'ct-status ct-status-info' },
-  en_pruebas: { label: 'En pruebas', badgeClass: 'ct-status ct-status-info' },
-  listo_para_entregar: { label: 'Listo para entregar', badgeClass: 'ct-status ct-status-success' },
-  entregado: { label: 'Entregado', badgeClass: 'ct-status ct-status-success' },
-  cancelado: { label: 'Cancelado', badgeClass: 'ct-status ct-status-danger' },
+  recibido: { label: 'Recibido', badgeClass: 'ct-status ct-status-neutral', hint: 'El equipo llegó al mostrador y espera revisión.' },
+  diagnostico: { label: 'Diagnóstico', badgeClass: 'ct-status ct-status-info', hint: 'Un técnico está revisando qué tiene.' },
+  esperando_autorizacion: { label: 'Esperando autorización', badgeClass: 'ct-status ct-status-warning', hint: 'Ya hay cotización; falta que el cliente apruebe el costo.' },
+  esperando_refaccion: { label: 'Esperando refacción', badgeClass: 'ct-status ct-status-warning', hint: 'La reparación está detenida hasta que llegue la pieza.' },
+  en_reparacion: { label: 'En reparación', badgeClass: 'ct-status ct-status-info', hint: 'El técnico está trabajando en el equipo.' },
+  en_pruebas: { label: 'En pruebas', badgeClass: 'ct-status ct-status-info', hint: 'Ya se reparó; se comprueba que todo funcione.' },
+  listo_para_entregar: { label: 'Listo para entregar', badgeClass: 'ct-status ct-status-success', hint: 'Terminado. Avisa al cliente para que pase por él.' },
+  entregado: { label: 'Entregado', badgeClass: 'ct-status ct-status-success', hint: 'El cliente recogió su equipo; desde aquí corre la garantía.' },
+  cancelado: { label: 'Cancelado', badgeClass: 'ct-status ct-status-danger', hint: 'No se reparó: el cliente no aceptó o el equipo no tuvo arreglo.' },
 }
 
 // Etiquetas y tonos de estados del negocio (coinciden con los valores del backend).

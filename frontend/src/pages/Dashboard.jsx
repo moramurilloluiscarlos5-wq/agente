@@ -4,6 +4,7 @@ import { AlertTriangle, CalendarClock, Plus, RefreshCw, UserPlus, Wrench } from 
 import PageHeader from '../components/ui/PageHeader.jsx'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
 import { Button, Card, ErrorAlert, EmptyState, Skeleton } from '../components/ui/DesignSystem.jsx'
+import CountUp from '../components/ui/CountUp.jsx'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { formatCurrency, formatDate, formatRelative } from '../utils/formatters.js'
@@ -37,7 +38,7 @@ function WorkshopFlow({ stats }) {
         {steps.map((step) => (
           <Link key={step.key} to={`/reparaciones?status=${step.status}`} className={`tf-flow-step tf-tone-${step.tone} ${step.count ? '' : 'is-zero'}`} aria-label={`${step.label}: ${step.count}. ${step.hint}`}>
             <span className="tf-flow-step-label"><span className="tf-swatch" aria-hidden="true" />{step.label}</span>
-            <span className="tf-flow-step-count">{step.count}</span>
+            <span className="tf-flow-step-count" aria-hidden="true"><CountUp value={step.count} /></span>
             <span className="tf-flow-step-hint">{step.hint}</span>
           </Link>
         ))}
@@ -55,7 +56,7 @@ function Kpi({ label, value, hint, tone }) {
   return (
     <article className="ct-kpi">
       <p className="ct-kpi-label flex items-center gap-2">{tone === 'warning' && <AlertTriangle size={14} className="text-[var(--tf-warning)]" aria-hidden="true" />}{label}</p>
-      <p className="ct-kpi-value">{value}</p>
+      <p className="ct-kpi-value">{typeof value === 'number' ? <CountUp value={value} /> : value}</p>
       {hint && <p className="ct-kpi-hint">{hint}</p>}
     </article>
   )

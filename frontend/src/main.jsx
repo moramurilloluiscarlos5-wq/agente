@@ -6,20 +6,23 @@ import App from './App.jsx'
 import { SidebarProvider } from './context/SidebarContext.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { ToastProvider } from './context/ToastContext.jsx'
+import { ThemeProvider } from './context/ThemeContext.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary fullPage>
-      <BrowserRouter>
-        <AuthProvider>
-          <ToastProvider>
-            <SidebarProvider>
-              <App />
-            </SidebarProvider>
-          </ToastProvider>
-        </AuthProvider>
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <ToastProvider>
+              <SidebarProvider>
+                <App />
+              </SidebarProvider>
+            </ToastProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
     </ErrorBoundary>
   </StrictMode>,
 )

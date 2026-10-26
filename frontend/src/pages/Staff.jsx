@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, ShieldAlert, Users } from 'lucide-react'
 import PageHeader from '../components/ui/PageHeader.jsx'
-import { Badge, Button, ConfirmDialog, DataCard, EmptyState, ErrorAlert, FilterSelect, FormPage, Input, SearchField, Select, TableSkeleton } from '../components/ui/DesignSystem.jsx'
+import { Alert, Badge, Button, ConfirmDialog, DataCard, EmptyState, ErrorAlert, FilterSelect, FormPage, Input, SearchField, Select, TableSkeleton } from '../components/ui/DesignSystem.jsx'
 import { useToast } from '../hooks/useToast.js'
 import { friendlyError } from '../utils/errors.js'
 import { focusFirstInvalid } from '../utils/forms.js'
@@ -122,9 +122,12 @@ export default function Staff() {
   })
   const filtered = Boolean(term) || statusFilter !== 'all'
   const clearFilters = () => { setQuery(''); setStatusFilter('all') }
+  const activeCount = users.filter((user) => user.is_active).length
+  const maxUsers = profile?.entitlements?.max_users ?? null
+  const atLimit = !loading && maxUsers != null && activeCount >= maxUsers
   const summaries = [
     { label: 'Personas en el equipo', value: users.length },
-    { label: 'Con acceso activo', value: users.filter((user) => user.is_active).length },
+    { label: maxUsers != null ? `Con acceso activo (tu plan permite ${maxUsers})` : 'Con acceso activo', value: activeCount },
     { label: 'Técnicos', value: users.filter((user) => user.role === 'TECNICO').length },
   ]
 
@@ -132,6 +135,10 @@ export default function Staff() {
     <div className="space-y-6">
       <PageHeader title="Personal" description="Cuentas de tu equipo, su rol y si pueden entrar al sistema."
         actions={<Link to="/personal/nuevo" className="ct-btn ct-btn-primary"><Plus size={16} aria-hidden="true" />Crear cuenta</Link>} />
+      {atLimit && <Alert tone="warning" title={`Tu plan ${profile.entitlements.name} ya tiene sus ${maxUsers} usuarios activos`}
+        action={['OWNER', 'ADMINISTRADOR'].includes(profile?.role) && <Link to="/facturacion" className="ct-btn ct-btn-secondary ct-btn-sm">Ver planes</Link>}>
+        Para dar acceso a alguien más, quita el acceso a una cuenta que ya no se use o cambia a un plan con más usuarios.
+      </Alert>}
       <div className="grid gap-4 sm:grid-cols-3">{summaries.map(({ label, value }) => <article className="ct-kpi" key={label}><p className="ct-kpi-label">{label}</p><p className="ct-kpi-value">{loading ? '—' : value}</p></article>)}</div>
       <DataCard toolbar={<>
         <SearchField label="Buscar personal" value={query} onChange={setQuery} placeholder="Ana, correo o rol" />

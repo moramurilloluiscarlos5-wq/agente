@@ -24,33 +24,55 @@ export function Button({ variant = 'secondary', size, className = '', busy = fal
 }
 
 /* ---------- Tooltip (hover con mouse y foco con teclado) ---------- */
-function TooltipBubble({ rect, label, shortcut, id }) {
+function TooltipBubble({ rect, label, shortcut, description, side, id }) {
   const ref = useRef(null)
   const [position, setPosition] = useState({ top: rect.bottom + 8, left: rect.left, ready: false })
   useLayoutEffect(() => {
     const width = ref.current?.offsetWidth ?? 0
     const height = ref.current?.offsetHeight ?? 0
     const gutter = 8
+    if (side === 'right') {
+      // A la derecha del elemento (menú lateral); la flecha sigue al centro del elemento aunque el globo se ajuste a la ventana.
+      const center = rect.top + rect.height / 2
+      const top = Math.min(Math.max(gutter, center - height / 2), window.innerHeight - height - gutter)
+      setPosition({ top, left: Math.min(rect.right + 10, window.innerWidth - width - gutter), arrow: center - top, ready: true })
+      return
+    }
     const centered = rect.left + rect.width / 2 - width / 2
     const left = Math.min(Math.max(gutter, centered), window.innerWidth - width - gutter)
     const below = rect.bottom + 8
     const top = below + height > window.innerHeight - gutter ? rect.top - height - 8 : below
     setPosition({ top, left, ready: true })
-  }, [rect])
+  }, [rect, side])
   return createPortal(
-    <span ref={ref} id={id} role="tooltip" className="tf-tooltip" style={{ top: position.top, left: position.left, visibility: position.ready ? 'visible' : 'hidden' }}>
-      {label}{shortcut && <kbd className="tf-kbd">{shortcut}</kbd>}
+    <span ref={ref} id={id} role="tooltip" className={`tf-tooltip ${description ? 'is-rich' : ''} ${side === 'right' ? 'is-right' : ''}`}
+      style={{ top: position.top, left: position.left, '--tf-arrow-y': position.arrow != null ? `${position.arrow}px` : undefined, visibility: position.ready ? 'visible' : 'hidden' }}>
+      {description ? <><strong>{label}</strong><span>{description}</span></> : label}{shortcut && <kbd className="tf-kbd">{shortcut}</kbd>}
     </span>,
     document.body,
   )
 }
 
-export function Tooltip({ label, shortcut, children, className = 'inline-flex' }) {
+// Un globo que se acaba de cerrar deja abrir el siguiente sin espera: recorrer el menú con el mouse se siente continuo.
+let lastTooltipClosedAt = 0
+
+export function Tooltip({ label, shortcut, description, side = 'bottom', delay = 0, children, className = 'inline-flex' }) {
   const ref = useRef(null)
+  const timer = useRef(0)
   const id = useId()
   const [rect, setRect] = useState(null)
   const show = () => setRect(ref.current?.getBoundingClientRect() ?? null)
-  const hide = () => setRect(null)
+  const showSoon = () => {
+    clearTimeout(timer.current)
+    if (!delay || Date.now() - lastTooltipClosedAt < 300) show()
+    else timer.current = setTimeout(show, delay)
+  }
+  const hide = () => {
+    clearTimeout(timer.current)
+    if (rect) lastTooltipClosedAt = Date.now()
+    setRect(null)
+  }
+  useEffect(() => () => clearTimeout(timer.current), [])
   useEffect(() => {
     if (!rect) return undefined
     const close = () => setRect(null)
@@ -60,11 +82,11 @@ export function Tooltip({ label, shortcut, children, className = 'inline-flex' }
   }, [rect])
   return (
     <span ref={ref} className={className}
-      onPointerEnter={(event) => { if (event.pointerType === 'mouse') show() }} onPointerLeave={hide}
+      onPointerEnter={(event) => { if (event.pointerType === 'mouse') showSoon() }} onPointerLeave={hide}
       onFocus={(event) => { if (event.target.matches?.(':focus-visible')) show() }} onBlur={hide}
       onKeyDown={(event) => { if (event.key === 'Escape') hide() }} onClick={hide}>
       {children}
-      {rect && <TooltipBubble rect={rect} label={label} shortcut={shortcut} id={id} />}
+      {rect && <TooltipBubble rect={rect} label={label} shortcut={shortcut} description={description} side={side} id={id} />}
     </span>
   )
 }

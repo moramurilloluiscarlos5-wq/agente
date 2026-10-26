@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { CloudOff, RefreshCw } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.js'
 import { workspaceDestination } from '../utils/workspace.js'
+import { licenseBlock } from '../utils/billing.js'
 
 export default function RequireAuth() {
   const { status, profile, error, retryConnection } = useAuth()
@@ -12,7 +13,7 @@ export default function RequireAuth() {
   if (status === 'offline') {
     return (
       <div role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--tf-surface-sunken)] px-6 text-center text-[var(--tf-text)]">
-        <CloudOff size={36} className="text-[#fcd34d]" />
+        <CloudOff size={36} className="text-[var(--tf-warning-ink)]" />
         <h1 className="text-xl font-semibold">TallerFlow no pudo conectarse con el servidor.</h1>
         <p className="max-w-md text-sm leading-6 text-[var(--tf-text-muted)]">
           Tu sesión está a salvo. Revisa tu conexión; en cuanto el servidor responda podrás continuar.
@@ -29,5 +30,9 @@ export default function RequireAuth() {
   // El contenido protegido nunca se monta antes de resolver el taller.
   if (destination !== '/' && pathname !== destination) return <Navigate to={destination} replace />
   if (destination === '/' && pathname === '/taller-suspendido') return <Navigate to="/" replace />
+  // Licencia vencida desde el inicio de sesión: nada del taller se monta fuera de su pantalla.
+  const block = destination === '/' ? licenseBlock(profile) : null
+  if (block && pathname !== block.destination) return <Navigate to={block.destination} replace state={{ licenseMessage: block.message }} />
+  if (!block && pathname === '/licencia-vencida') return <Navigate to="/" replace />
   return <Outlet />
 }

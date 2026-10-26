@@ -1,33 +1,67 @@
+import { useState } from 'react'
 import { Check } from 'lucide-react'
 
-import { formatPrice } from '../../utils/billing.js'
+import { BASE_FEATURES, FEATURE_LABELS, TIER_NAMES, formatPrice, usersLabel } from '../../utils/billing.js'
 
-const FEATURES = ['Reparaciones, clientes y dispositivos ilimitados', 'Inventario, cotizaciones y pagos', 'Usuarios y roles por taller', 'Seguimiento público para tus clientes']
+const TAGLINES = {
+  plus: 'Para empezar a ordenar tu taller.',
+  pro: 'Para talleres con equipo de trabajo.',
+  max: 'Todo TallerFlow, sin límites.',
+}
+const PREVIOUS = { pro: 'plus', max: 'pro' }
 
-export default function PlanCards({ plans, onBuy, busyCode = null, buyLabel = 'Comprar', trialDays = 0 }) {
-  const monthly = plans.find((plan) => plan.interval === 'month')
+// Planes Plus, Pro y Max con cobro mensual o anual. `actionFor(plan)` decide el botón de cada
+// tarjeta: { label, onClick, disabled, busy, current }.
+export default function PlanCards({ plans, actionFor, trialDays = 0, initialInterval = 'month' }) {
+  const intervals = [...new Set(plans.map((plan) => plan.interval))]
+  const [cycle, setCycle] = useState(intervals.includes(initialInterval) ? initialInterval : intervals[0])
+  const visible = plans.filter((plan) => plan.interval === cycle)
+  const monthlyByTier = Object.fromEntries(plans.filter((plan) => plan.interval === 'month').map((plan) => [plan.tier, plan]))
+
   return (
-    <div className="grid gap-5 md:grid-cols-2" data-testid="plan-cards">
-      {plans.map((plan) => {
-        const yearly = plan.interval === 'year'
-        const saving = yearly && monthly ? Math.round((1 - plan.price_cents / (monthly.price_cents * 12)) * 100) : 0
-        return (
-          <article key={plan.code} className={`tf-card flex flex-col p-6 ${yearly ? 'border-[var(--tf-border-strong)]' : ''}`} aria-label={plan.name}>
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-lg font-semibold text-[var(--tf-text)]">{plan.name}</h3>
-              {saving > 0 && <span className="text-sm font-medium text-[var(--tf-success)]">Ahorra {saving}%</span>}
-            </div>
-            <p className="tf-num mt-4 text-3xl font-semibold tracking-tight text-[var(--tf-text)]">{formatPrice(plan.price_cents, plan.currency)}<span className="ml-1 text-sm font-normal text-[var(--tf-text-muted)]">/ {yearly ? 'año' : 'mes'}</span></p>
-            <ul className="mt-5 flex-1 space-y-2 text-sm text-[var(--tf-text-muted)]">
-              {FEATURES.map((feature) => <li key={feature} className="flex gap-2"><Check size={16} className="mt-0.5 shrink-0 text-[var(--tf-accent)]" aria-hidden="true" />{feature}</li>)}
-            </ul>
-            {trialDays > 0 && <p className="mt-4 text-xs text-[var(--tf-text-subtle)]">{trialDays} días de prueba al registrar tu taller, sin tarjeta.</p>}
-            <button type="button" className={`ct-btn mt-6 justify-center ${yearly ? 'ct-btn-primary' : 'ct-btn-secondary'}`} disabled={busyCode !== null} aria-busy={busyCode === plan.code || undefined} onClick={() => onBuy(plan)}>
-              {busyCode === plan.code ? 'Abriendo pago seguro…' : `${buyLabel} ${yearly ? 'plan anual' : 'plan mensual'}`}
-            </button>
-          </article>
-        )
-      })}
+    <div className="space-y-5" data-testid="plan-cards">
+      {intervals.length > 1 && (
+        <div className="tf-segmented" role="group" aria-label="Frecuencia de cobro">
+          <button type="button" aria-pressed={cycle === 'month'} onClick={() => setCycle('month')}>Mensual</button>
+          <button type="button" aria-pressed={cycle === 'year'} onClick={() => setCycle('year')}>Anual<span className="tf-segmented-note">2 meses gratis</span></button>
+        </div>
+      )}
+      <div className="tf-plan-grid">
+        {visible.map((plan) => {
+          const action = actionFor(plan)
+          const yearly = plan.interval === 'year'
+          const monthly = monthlyByTier[plan.tier]
+          const saving = yearly && monthly ? monthly.price_cents * 12 - plan.price_cents : 0
+          const tierName = TIER_NAMES[plan.tier] ?? plan.name
+          return (
+            <article key={plan.code} className={`tf-plan ${plan.tier === 'pro' ? 'is-featured' : ''} ${action.current ? 'is-current' : ''}`} aria-label={`Plan ${tierName}`}>
+              <header className="tf-plan-header">
+                <h3>{tierName}</h3>
+                {action.current ? <span className="ct-status ct-status-success">Tu plan</span> : plan.tier === 'pro' ? <span className="ct-status ct-status-accent">Recomendado</span> : null}
+              </header>
+              <p className="tf-plan-tagline">{TAGLINES[plan.tier]}</p>
+              <p className="tf-plan-price tf-num">{formatPrice(plan.price_cents, plan.currency)}<span>/ {yearly ? 'año' : 'mes'}</span></p>
+              <p className="tf-plan-price-note">{yearly ? `Equivale a ${formatPrice(Math.round(plan.price_cents / 1200) * 100, plan.currency)} al mes${saving > 0 ? `; ahorras ${formatPrice(saving, plan.currency)}` : ''}.` : 'Se cobra cada mes. Cancela cuando quieras.'}</p>
+              <p className="tf-plan-users">{usersLabel(plan.max_users)}</p>
+              <ul className="tf-plan-features">
+                {PREVIOUS[plan.tier] && <li className="tf-plan-includes">Todo lo de {TIER_NAMES[PREVIOUS[plan.tier]]}, más:</li>}
+                {(PREVIOUS[plan.tier] ? newFeatures(plans, plan) : BASE_FEATURES).map((feature) => <li key={feature}><Check size={15} strokeWidth={2.4} aria-hidden="true" />{feature}</li>)}
+              </ul>
+              <button type="button" className={`ct-btn ${plan.tier === 'pro' && !action.current ? 'ct-btn-primary' : 'ct-btn-secondary'} w-full justify-center`} disabled={action.disabled} aria-busy={action.busy || undefined} onClick={action.onClick}>
+                {action.label}
+              </button>
+            </article>
+          )
+        })}
+      </div>
+      {trialDays > 0 && <p className="text-sm text-[var(--tf-text-subtle)]">Al registrar tu taller tienes {trialDays} días de prueba con todo incluido, sin tarjeta. Los pagos se hacen con Mercado Pago.</p>}
     </div>
   )
+}
+
+// Lo que un nivel agrega sobre el anterior: más usuarios y funciones nuevas.
+function newFeatures(plans, plan) {
+  const previous = plans.find((other) => other.tier === PREVIOUS[plan.tier] && other.interval === plan.interval)
+  const before = new Set(previous?.features ?? [])
+  return plan.features.filter((feature) => !before.has(feature)).map((feature) => FEATURE_LABELS[feature] ?? feature)
 }

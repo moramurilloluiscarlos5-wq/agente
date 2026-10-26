@@ -63,7 +63,7 @@ export default function RecordPicker({ label, value, onChange, path, renderLabel
           </div>
           {open && (
             <ul id={listId} role="listbox" className="tf-popover left-0 right-0 mt-1 max-h-60 overflow-y-auto p-1">
-              {failed ? <li className="px-3 py-3 text-sm text-[#fca5a5]">No pudimos buscar. Revisa tu conexión.</li>
+              {failed ? <li className="px-3 py-3 text-sm text-[var(--tf-danger-ink)]">No pudimos buscar. Revisa tu conexión.</li>
                 : !loading && !results.length ? <li className="px-3 py-3 text-sm text-[var(--tf-text-muted)]">{emptyText}</li>
                   : results.map((record, index) => (
                     <li key={record.id} id={`${listId}-${index}`} role="option" aria-selected={index === active}

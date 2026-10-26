@@ -4,6 +4,7 @@ import MainLayout from './layouts/MainLayout.jsx'
 import RequireAuth from './layouts/RequireAuth.jsx'
 import RequirePermission from './layouts/RequirePermission.jsx'
 import LicenseRedirect from './components/billing/LicenseRedirect.jsx'
+import PlanGate from './components/billing/PlanGate.jsx'
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const Repairs = lazy(() => import('./pages/Repairs.jsx'))
 const NewRepair = lazy(() => import('./pages/NewRepair.jsx'))
@@ -28,6 +29,7 @@ const Roles = lazy(() => import('./pages/Roles.jsx'))
 const PublicTracking = lazy(() => import('./pages/PublicTracking.jsx'))
 const RegisterWorkshop = lazy(() => import('./pages/RegisterWorkshop.jsx'))
 const WorkshopSuspended = lazy(() => import('./pages/WorkshopSuspended.jsx'))
+const LicenseExpired = lazy(() => import('./pages/LicenseExpired.jsx'))
 const DeviceTools = lazy(() => import('./pages/DeviceTools.jsx'))
 
 const PaymentFormPage = lazy(() => import('./pages/Payments.jsx').then((m) => ({ default: m.PaymentFormPage })))
@@ -43,6 +45,7 @@ const DeviceFormPage = lazy(() => import('./pages/Devices.jsx').then((m) => ({ d
 const StaffFormPage = lazy(() => import('./pages/Staff.jsx').then((m) => ({ default: m.StaffFormPage })))
 const Billing = lazy(() => import('./pages/Billing.jsx'))
 const Pricing = lazy(() => import('./pages/Pricing.jsx'))
+const Guide = lazy(() => import('./pages/Guide.jsx'))
 
 export default function App() {
   return (
@@ -60,6 +63,7 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route path="/crear-taller" element={<RegisterWorkshop />} />
         <Route path="/taller-suspendido" element={<WorkshopSuspended />} />
+        <Route path="/licencia-vencida" element={<LicenseExpired />} />
         <Route element={<MainLayout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -69,18 +73,18 @@ export default function App() {
           <Route path="/reparaciones/:orderNumber/editar" element={<RepairEditPage />} />
           <Route path="/clientes" element={<Customers />} />
           <Route path="/dispositivos" element={<Devices />} />
-          <Route path="/herramientas-dispositivo" element={<RequirePermission permission="devices.view"><DeviceTools /></RequirePermission>} />
-          <Route path="/diagnostico-ia" element={<AIDiagnostic />} />
+          <Route path="/herramientas-dispositivo" element={<RequirePermission permission="devices.view"><PlanGate feature="device_tools"><DeviceTools /></PlanGate></RequirePermission>} />
+          <Route path="/diagnostico-ia" element={<PlanGate feature="ai"><AIDiagnostic /></PlanGate>} />
           <Route path="/cotizaciones" element={<Quotes />} />
           <Route path="/inventario" element={<Inventory />} />
           <Route path="/pagos" element={<Payments />} />
           <Route path="/garantias" element={<Warranties />} />
-          <Route path="/comunicaciones" element={<Communications />} />
-          <Route path="/reportes" element={<RequirePermission permission="reports.view"><Reports /></RequirePermission>} />
+          <Route path="/comunicaciones" element={<PlanGate feature="whatsapp"><Communications /></PlanGate>} />
+          <Route path="/reportes" element={<RequirePermission permission="reports.view"><PlanGate feature="reports"><Reports /></PlanGate></RequirePermission>} />
           <Route path="/configuracion" element={<RequirePermission permission="settings.view"><Settings /></RequirePermission>} />
           <Route path="/facturacion" element={<Billing />} />
           <Route path="/personal" element={<RequirePermission permission="users.view"><Staff /></RequirePermission>} />
-          <Route path="/auditoria" element={<RequirePermission permission="audit.view"><Audit /></RequirePermission>} />
+          <Route path="/auditoria" element={<RequirePermission permission="audit.view"><PlanGate feature="audit"><Audit /></PlanGate></RequirePermission>} />
           <Route path="/roles" element={<RequirePermission permission="roles.view"><Roles /></RequirePermission>} />
           <Route path="/clientes/nuevo" element={<RequirePermission permission="clients.create"><CustomerFormPage /></RequirePermission>} />
           <Route path="/clientes/:id/editar" element={<RequirePermission permission="clients.update"><CustomerFormPage /></RequirePermission>} />
@@ -99,6 +103,7 @@ export default function App() {
           <Route path="/clientes/:id" element={<CustomerDetailPage />} />
           <Route path="/dispositivos/:id" element={<DeviceDetailPage />} />
           <Route path="/buscar" element={<SearchResults />} />
+          <Route path="/guia" element={<Guide />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Route>

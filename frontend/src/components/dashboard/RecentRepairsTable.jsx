@@ -22,7 +22,7 @@ export default function RecentRepairsTable({ repairs }) {
         <tbody>
           {repairs.map((repair) => (
             <tr key={repair.orderNumber}>
-              <td className="font-medium text-cyan-300">
+              <td className="font-medium text-[var(--tf-accent-ink)]">
                 <Link to={`/reparaciones/${repair.orderNumber}`}>{repair.orderNumber}</Link>
               </td>
               <td>{repair.customer}</td>

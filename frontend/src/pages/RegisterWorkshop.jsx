@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth.js'
 import { api } from '../services/api.js'
 import { supabase } from '../services/supabase.js'
 import { workspaceDestination } from '../utils/workspace.js'
+import { daysText } from '../utils/billing.js'
 
 function registrationError(error, existingUser, accountCreated) {
   if (accountCreated || error.code === 'REGISTRATION_COMMITTED') return 'Tu taller se creó. Inicia sesión para continuar.'
@@ -106,7 +107,7 @@ export default function RegisterWorkshop() {
           <header className="ct-auth-heading">
             <p className="ct-auth-eyebrow">Registro completado</p>
             <h1 ref={successRef} tabIndex={-1}>Tu taller está listo</h1>
-            <p>{created.workshop?.name} ya tiene su configuración inicial. Tu cuenta tiene acceso como propietario.</p>
+            <p>{created.workshop?.name} ya tiene su configuración inicial. Tu cuenta tiene acceso como propietario.{profile?.license?.status === 'trialing' ? ` Tu prueba gratuita de ${daysText(profile.license.days_left)} ya empezó, con todo incluido.` : ''}</p>
           </header>
           {loading && <p role="status" className="ct-auth-notice ct-auth-notice--info"><LoaderCircle size={16} className="animate-spin" aria-hidden="true" /> Preparando tu sesión…</p>}
           {error && <p ref={noticeRef} tabIndex={-1} role="alert" className="ct-auth-notice ct-auth-notice--info">{error}</p>}

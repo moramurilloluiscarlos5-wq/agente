@@ -1,13 +1,14 @@
-// Configuración de facturación. Todo sale de variables de entorno; nada se
-// hardcodea y los mensajes de error nombran variables, nunca sus valores.
+// Configuración de facturación con Mercado Pago. Todo sale de variables de
+// entorno; nada se hardcodea y los mensajes de error nombran variables, nunca sus valores.
 
 const REQUIRED = [
-  ['STRIPE_SECRET_KEY', 'secretKey'],
-  ['STRIPE_WEBHOOK_SECRET', 'webhookSecret'],
-  ['STRIPE_PRICE_MONTHLY', 'priceMonthly'],
-  ['STRIPE_PRICE_YEARLY', 'priceYearly'],
+  ['MP_ACCESS_TOKEN', 'accessToken'],
+  ['MP_WEBHOOK_SECRET', 'webhookSecret'],
   ['APP_PUBLIC_URL', 'appPublicUrl'],
 ]
+
+// Mercado Pago reintenta un cobro rechazado durante 10 días: la gracia por defecto coincide.
+const DEFAULT_GRACE_DAYS = 10
 
 function intInRange(value, fallback, min, max) {
   if (value == null || String(value).trim() === '') return { value: fallback }
@@ -16,16 +17,16 @@ function intInRange(value, fallback, min, max) {
   return { value: parsed }
 }
 
-// Interruptor explícito para operar sin licencias (p. ej. antes de configurar Stripe).
+// Interruptor explícito para operar sin licencias (p. ej. antes de configurar Mercado Pago).
 // Por defecto las licencias están activas; solo LICENSING_ENABLED=false las apaga.
 export function licensingEnabled(env = process.env) {
   return String(env.LICENSING_ENABLED ?? '').trim().toLowerCase() !== 'false'
 }
 
-// Días de gracia de past_due. Se usa también cuando billing no está completo.
+// Días de gracia tras un cobro rechazado. Se usa también cuando billing no está completo.
 export function graceDaysFromEnv(env = process.env) {
-  const parsed = intInRange(env.BILLING_GRACE_DAYS, 7, 0, 60)
-  return parsed.error ? 7 : parsed.value
+  const parsed = intInRange(env.BILLING_GRACE_DAYS, DEFAULT_GRACE_DAYS, 0, 60)
+  return parsed.error ? DEFAULT_GRACE_DAYS : parsed.value
 }
 
 export function trialDaysFromEnv(env = process.env) {
@@ -38,11 +39,8 @@ export function loadBillingConfig(env = process.env) {
   const problems = []
   for (const [name, key] of REQUIRED) if (!raw[key]) problems.push(`${name} no está definida`)
 
-  if (raw.secretKey && !/^(sk|rk)_(test|live)_/.test(raw.secretKey)) problems.push('STRIPE_SECRET_KEY no tiene el formato de una clave secreta de Stripe (sk_test_… / sk_live_…)')
-  if (raw.webhookSecret && !raw.webhookSecret.startsWith('whsec_')) problems.push('STRIPE_WEBHOOK_SECRET debe empezar con whsec_')
-  for (const [name, key] of [['STRIPE_PRICE_MONTHLY', 'priceMonthly'], ['STRIPE_PRICE_YEARLY', 'priceYearly']]) {
-    if (raw[key] && !raw[key].startsWith('price_')) problems.push(`${name} debe ser un id de precio de Stripe (price_…)`)
-  }
+  if (raw.accessToken && !/^(APP_USR|TEST)-/.test(raw.accessToken)) problems.push('MP_ACCESS_TOKEN no tiene el formato de un Access Token de Mercado Pago (APP_USR-… / TEST-…)')
+  if (raw.webhookSecret && raw.webhookSecret.length < 16) problems.push('MP_WEBHOOK_SECRET es demasiado corta: copia la clave secreta completa de Webhooks en Tus integraciones')
 
   let appPublicUrl = raw.appPublicUrl
   if (appPublicUrl) {
@@ -58,21 +56,20 @@ export function loadBillingConfig(env = process.env) {
 
   const trial = intInRange(env.TRIAL_DAYS, 14, 0, 365)
   if (trial.error) problems.push('TRIAL_DAYS debe ser un entero entre 0 y 365')
-  const grace = intInRange(env.BILLING_GRACE_DAYS, 7, 0, 60)
+  const grace = intInRange(env.BILLING_GRACE_DAYS, DEFAULT_GRACE_DAYS, 0, 60)
   if (grace.error) problems.push('BILLING_GRACE_DAYS debe ser un entero entre 0 y 60')
 
   if (problems.length) return { ok: false, problems }
   return {
     ok: true,
     config: {
-      secretKey: raw.secretKey,
+      accessToken: raw.accessToken,
       webhookSecret: raw.webhookSecret,
-      priceMonthly: raw.priceMonthly,
-      priceYearly: raw.priceYearly,
       appPublicUrl,
       trialDays: trial.value,
       graceDays: grace.value,
-      testMode: raw.secretKey.startsWith('sk_test_') || raw.secretKey.startsWith('rk_test_'),
+      // Solo describe el tipo de credencial: los usuarios de prueba de Mercado Pago también usan APP_USR-.
+      testCredentials: raw.accessToken.startsWith('TEST-'),
     },
   }
 }

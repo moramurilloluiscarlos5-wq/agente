@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
-import { requireLicense } from '../middleware/license.js'
+import { requireFeature, requireLicense } from '../middleware/license.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { databaseError, fail, pageParams, searchTerm, uuid } from '../utils/operations.js'
 import { auditSafe, writeAudit } from '../services/auditService.js'
@@ -49,7 +49,7 @@ export function createSecurityRouter({ db = supabaseAdmin, authenticate = [requi
     res.json({ data: { role_code: roleCode, permission_codes: permissionCodes } })
   }))
 
-  router.get('/audit', requirePermission('audit.view'), asyncRoute(async (req, res) => {
+  router.get('/audit', requirePermission('audit.view'), requireFeature('audit'), asyncRoute(async (req, res) => {
     const { page, limit, from, to } = pageParams(req.query)
     let query = scopeToWorkshop(db.from('audit_logs').select('*,user:profiles(id,full_name,role)', { count: 'exact' }), req)
     if (req.query.action) query = query.eq('action', searchTerm(req.query.action))
@@ -78,7 +78,7 @@ export function createSecurityRouter({ db = supabaseAdmin, authenticate = [requi
     res.json({ data: data ?? [], count: count ?? 0, page, limit })
   }))
 
-  router.get('/audit/:id', requirePermission('audit.view'), asyncRoute(async (req, res) => {
+  router.get('/audit/:id', requirePermission('audit.view'), requireFeature('audit'), asyncRoute(async (req, res) => {
     let query = scopeToWorkshop(db.from('audit_logs').select('*,user:profiles(id,full_name,role)').eq('id', req.params.id), req)
     let result = await query.maybeSingle()
     if (result.error?.code === '42703' && /workshop_id/i.test(result.error.message ?? '') && req.profile.role !== 'SUPER_ADMIN') {

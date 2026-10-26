@@ -33,9 +33,9 @@ Configurar antes del build:
 | `SUPABASE_SERVICE_ROLE_KEY` | Secreto exclusivo del backend |
 | `WHATSAPP_ENABLED` | `false` mientras no se configure Meta |
 | `WHATSAPP_SIMULATE` | `false` en producción |
-| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, `APP_PUBLIC_URL` | **Obligatorias en producción**: sin ellas el backend no arranca y el mensaje indica cuáles faltan. Ver README → Licencias |
-| `TRIAL_DAYS`, `BILLING_GRACE_DAYS` | Opcionales (14 y 7 por defecto) |
-| `LICENSING_ENABLED` | `false` apaga las licencias (no exige Stripe ni bloquea talleres). Úsalo hasta aplicar la migración 019 y configurar Stripe; luego bórrala o ponla en `true` |
+| `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `APP_PUBLIC_URL` | **Obligatorias en producción** (Mercado Pago): sin ellas el backend no arranca y el mensaje indica cuáles faltan. Ver README → Licencias |
+| `TRIAL_DAYS`, `BILLING_GRACE_DAYS` | Opcionales (14 y 10 por defecto) |
+| `LICENSING_ENABLED` | `false` apaga las licencias (no exige Mercado Pago ni bloquea talleres). Úsalo hasta aplicar las migraciones 019 y 020 y configurar Mercado Pago; luego bórrala o ponla en `true`. Con licencias activas el backend no arranca en producción si faltan las tablas de 019/020 |
 | `TRUST_PROXY` | Opcional. En producción vale `1` por defecto (proxy de Railway) para que los límites de peticiones y la auditoría usen la IP real del usuario |
 | `CSP_ENFORCE` | Opcional. `true` aplica la Content-Security-Policy; por defecto solo la reporta (ver Cabeceras de seguridad) |
 | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | Recomendado: `15`. Segundos entre SIGTERM y SIGKILL cuando Railway reemplaza el deploy; vale 0 por defecto y entonces el proceso muere al instante y el cierre ordenado no llega a ejecutarse (ver Cierre ordenado) |
@@ -64,6 +64,7 @@ ni `seed.sql` sobre la base existente y no hacer reset.
 10. `database/migrations/016_provision_workshop.sql`
 11. `database/migrations/018_device_tools.sql`
 12. `database/migrations/019_licensing.sql` (licencias; ver README → Licencias)
+13. `database/migrations/020_mercadopago_tiers.sql` (planes Plus, Pro y Max con Mercado Pago)
 
 ## Device Tools (ADB / Fastboot)
 

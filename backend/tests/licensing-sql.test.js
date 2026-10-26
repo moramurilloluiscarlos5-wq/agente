@@ -43,10 +43,11 @@ const asUser = async (db, userId, sql, params) => {
   try { return await db.query(sql, params) } finally { await db.exec('reset role') }
 }
 
-test('licencias: migración 019 idempotente, RLS y escritura solo con service role', async (t) => {
+test('licencias: migraciones 019 y 020 idempotentes, RLS y escritura solo con service role', async (t) => {
   const db = await migrate()
   t.after(() => db.close())
-  const sql = await readFile(new URL('../../database/migrations/019_licensing.sql', import.meta.url), 'utf8')
+  const sql019 = await readFile(new URL('../../database/migrations/019_licensing.sql', import.meta.url), 'utf8')
+  const sql020 = await readFile(new URL('../../database/migrations/020_mercadopago_tiers.sql', import.meta.url), 'utf8')
 
   const workshopA = (await db.query("insert into workshops(name,slug) values ('Taller A','taller-a') returning id")).rows[0].id
   const workshopB = (await db.query("insert into workshops(name,slug) values ('Taller B','taller-b') returning id")).rows[0].id
@@ -55,15 +56,38 @@ test('licencias: migración 019 idempotente, RLS y escritura solo con service ro
     role = case when id = $1::uuid then 'OWNER'::user_role when id = $2::uuid then 'TECNICO'::user_role else 'OWNER'::user_role end,
     workshop_id = case when id in ($1::uuid,$2::uuid) then $3::uuid else $4::uuid end`, [ownerA, techA, workshopA, workshopB])
 
-  await db.exec(sql)
-  await db.exec(sql)
+  // Una base que ya tenía la 019 (con un dato de Stripe) recibe la 020 dos veces.
+  await db.exec(sql019)
+  await db.exec(sql019)
+  await db.query("update subscriptions set stripe_subscription_id = 'sub_viejo' where workshop_id = $1", [workshopB])
+  await db.exec(sql020)
+  await db.exec(sql020)
 
-  await t.test('seed y backfill: planes sembrados y talleres existentes en prueba, sin duplicados', async () => {
-    assert.equal((await db.query('select count(*)::int n from plans')).rows[0].n, 2)
+  await t.test('seed y backfill: planes Plus/Pro/Max en MXN y talleres existentes en prueba, sin duplicados', async () => {
+    const plans = (await db.query('select code,tier,price_cents,currency,interval,active from plans order by price_cents')).rows
+    assert.equal(plans.length, 8)
+    assert.deepEqual(plans.filter((plan) => plan.active).map((plan) => [plan.code, plan.tier, plan.price_cents, plan.currency]), [
+      ['plus_monthly', 'plus', 29900, 'mxn'], ['pro_monthly', 'pro', 54900, 'mxn'], ['max_monthly', 'max', 89900, 'mxn'],
+      ['plus_yearly', 'plus', 299000, 'mxn'], ['pro_yearly', 'pro', 549000, 'mxn'], ['max_yearly', 'max', 899000, 'mxn'],
+    ])
+    assert.ok(plans.filter((plan) => plan.code.startsWith('base_')).every((plan) => !plan.active && plan.tier === 'max'))
     const subs = (await db.query('select workshop_id,status from subscriptions')).rows
     const workshops = (await db.query('select count(*)::int n from workshops')).rows[0].n
     assert.equal(subs.length, workshops)
     assert.ok(subs.every((row) => row.status === 'trialing'))
+  })
+
+  await t.test('las columnas de Stripe pasan a nombres de proveedor sin perder datos', async () => {
+    assert.equal((await db.query('select provider_subscription_id from subscriptions where workshop_id = $1', [workshopB])).rows[0].provider_subscription_id, 'sub_viejo')
+    await assert.rejects(db.query('select stripe_subscription_id from subscriptions'))
+    await assert.rejects(db.query('select stripe_price_id from plans'))
+    assert.equal((await db.query("select last_payment_at = 'epoch' ok from subscriptions limit 1")).rows[0].ok, true)
+  })
+
+  await t.test('workshops.plan acepta los niveles nuevos y rechaza valores inventados', async () => {
+    await db.query("update workshops set plan = 'MAX' where id = $1", [workshopA])
+    await assert.rejects(db.query("update workshops set plan = 'ORO' where id = $1", [workshopA]))
+    await assert.rejects(db.query("update plans set tier = 'oro' where code = 'plus_monthly'"))
   })
 
   await t.test('OWNER lee solo la suscripción de su taller', async () => {
@@ -75,14 +99,16 @@ test('licencias: migración 019 idempotente, RLS y escritura solo con service ro
     assert.equal((await asUser(db, techA, 'select status from subscriptions')).rows.length, 0)
   })
 
-  await t.test('los usuarios no ven columnas de Stripe ni billing_events', async () => {
-    await assert.rejects(asUser(db, ownerA, 'select stripe_customer_id from subscriptions'))
-    await assert.rejects(asUser(db, ownerA, 'select stripe_price_id from plans'))
+  await t.test('los usuarios no ven los ids del proveedor ni billing_events', async () => {
+    await assert.rejects(asUser(db, ownerA, 'select provider_customer_id from subscriptions'))
+    await assert.rejects(asUser(db, ownerA, 'select provider_subscription_id from subscriptions'))
     await assert.rejects(asUser(db, ownerA, 'select * from billing_events'))
   })
 
-  await t.test('los planes activos son públicos', async () => {
-    assert.equal((await asUser(db, ownerA, 'select code from plans')).rows.length, 2)
+  await t.test('los planes activos son públicos con su nivel', async () => {
+    const rows = (await asUser(db, ownerA, 'select code,tier from plans')).rows
+    assert.equal(rows.length, 6)
+    assert.ok(rows.every((row) => ['plus', 'pro', 'max'].includes(row.tier)))
   })
 
   await t.test('ningún usuario puede modificar su propia licencia', async () => {
@@ -96,11 +122,11 @@ test('licencias: migración 019 idempotente, RLS y escritura solo con service ro
   await t.test('service role escribe y la idempotencia de eventos la garantiza la unicidad', async () => {
     await db.exec('set role service_role')
     try {
-      await db.query("update subscriptions set status = 'active', stripe_subscription_id = 'sub_x' where workshop_id = $1", [workshopA])
-      await db.query("insert into billing_events(provider_event_id,type,payload) values ('evt_1','x','{}')")
-      await assert.rejects(db.query("insert into billing_events(provider_event_id,type,payload) values ('evt_1','x','{}')"))
+      await db.query("update subscriptions set status = 'active', provider_subscription_id = 'pre_x' where workshop_id = $1", [workshopA])
+      await db.query("insert into billing_events(provider_event_id,type,payload) values ('mp:1','x','{}')")
+      await assert.rejects(db.query("insert into billing_events(provider_event_id,type,payload) values ('mp:1','x','{}')"))
       await assert.rejects(db.query("update subscriptions set status = 'invalido' where workshop_id = $1", [workshopA]))
-      await assert.rejects(db.query("update subscriptions set stripe_subscription_id = 'sub_x' where workshop_id = $1", [workshopB]))
+      await assert.rejects(db.query("update subscriptions set provider_subscription_id = 'pre_x' where workshop_id = $1", [workshopB]))
     } finally { await db.exec('reset role') }
   })
 })

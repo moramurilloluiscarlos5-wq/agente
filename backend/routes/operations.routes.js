@@ -5,6 +5,7 @@ import { requireLicense } from '../middleware/license.js'
 import { requireRole } from '../middleware/roles.js'
 import { assertRepairAccess, databaseError, DEVICE_SELECT, fail, orderNumber, pageParams, REPAIR_SELECT, REPAIR_STATUSES, scopeRepairs, searchTerm, STAFF_ROLES, uuid, validateHistory, validatePayload } from '../utils/operations.js'
 import { enqueueRepairStatusNotification } from '../services/whatsappService.js'
+import { hasFeature } from '../config/plans.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { assertSameWorkshop, requireActiveWorkshop, scopeToWorkshop, stampWorkshop, workshopScope } from '../utils/workshop.js'
 import { auditSafe, writeAudit } from '../services/auditService.js'
@@ -206,7 +207,8 @@ export function createOperationsRouter({ db = supabaseAdmin, authenticate = [req
     databaseError(error)
     const data = await repairRecord(existing.order_number, req.profile)
     void auditSafe(writeAudit({ db, req, action: 'REPAIR_STATUS_CHANGED', entity: 'repair_orders', entityId: data.id, description: `Estado de ${data.order_number} cambiado`, oldValues: { status: existing.status }, newValues: { status: data.status, note: values.note } }))
-    void enqueueRepairStatusNotification({ db, repair: data, actorId: req.profile.id }).catch(() => {})
+    // Los avisos automáticos por WhatsApp son parte del plan Pro en adelante.
+    if (hasFeature(req.entitlements, 'whatsapp')) void enqueueRepairStatusNotification({ db, repair: data, actorId: req.profile.id }).catch(() => {})
     res.status(201).json({ data })
   }))
 

@@ -9,8 +9,9 @@ import { auditSafe, writeAudit } from '../services/auditService.js'
 import { shouldRecordLogin } from '../utils/loginAudit.js'
 import { randomSlugSuffix, slugifyWorkshop } from '../utils/workshop.js'
 import { databaseError } from '../utils/operations.js'
-import { ensureTrialSubscription } from '../services/billingService.js'
-import { trialDaysFromEnv } from '../config/billing.js'
+import { countActiveUsers, ensureTrialSubscription, loadWorkshopAccess, loadWorkshopEntitlements } from '../services/billingService.js'
+import { graceDaysFromEnv, licensingEnabled, trialDaysFromEnv } from '../config/billing.js'
+import { entitlementsFor } from '../config/plans.js'
 
 export function createAuthRouter({ db = supabaseAdmin, authenticate = requireAuth, profileLoader = loadProfile, sessionLoader = loadProfileForSession, configured = requireSupabase } = {}) {
 const router = Router()
@@ -39,6 +40,14 @@ async function withOptionalLastLogin(rows) {
   const byId = new Map(data.map((row) => [row.id, row.last_login_at]))
   const merged = list.map((row) => ({ ...row, last_login_at: byId.get(row.id) ?? null }))
   return Array.isArray(rows) ? merged : merged[0]
+}
+
+// Usuarios activos que permite el plan del taller. Devuelve el mensaje de bloqueo o null.
+async function seatLimitMessage(workshopId) {
+  const entitlements = await loadWorkshopEntitlements({ db, workshopId, enabled: licensingEnabled() })
+  if (entitlements.max_users == null) return null
+  if ((await countActiveUsers(db, workshopId)) < entitlements.max_users) return null
+  return `Tu plan ${entitlements.name} permite hasta ${entitlements.max_users} usuarios activos. Desactiva una cuenta o cambia de plan en Facturación para agregar más.`
 }
 
 function isValidEmail(value) {
@@ -86,7 +95,14 @@ router.get('/me', authenticate, sessionLoader, asyncHandler(async (req, res) => 
     await db.from('profiles').update({ last_login_at: new Date().toISOString() }).eq('id', req.profile.id)
     if (req.profile.workshop_id) void auditSafe(writeAudit({ db: db, req, action: 'LOGIN_SUCCESS', entity: 'profiles', entityId: req.profile.id, description: 'Inicio de sesión validado' }))
   }
-  res.json({ id: req.profile.id, role: req.profile.role, profile: req.profile, workshop: req.profile.workshop ?? null, workspace_access: req.profile.workspace_access })
+  // Lo que incluye el plan y el estado de la licencia, para que desde el inicio de sesión la
+  // interfaz lleve a cada quien a su pantalla (prueba, cobro pendiente o licencia vencida).
+  // El servidor vuelve a validarlo en cada ruta; si no se puede leer, la interfaz no bloquea nada.
+  let access = { entitlements: entitlementsFor({ unlimited: true }), license: { enabled: licensingEnabled(), allowed: true, reason: 'unlimited' } }
+  if (req.profile.role !== 'SUPER_ADMIN' && req.profile.workshop_id) {
+    try { access = await loadWorkshopAccess({ db, workshopId: req.profile.workshop_id, enabled: licensingEnabled(), graceDays: graceDaysFromEnv() }) } catch { access = { entitlements: null, license: null } }
+  }
+  res.json({ id: req.profile.id, role: req.profile.role, profile: { ...req.profile, ...access }, workshop: req.profile.workshop ?? null, workspace_access: req.profile.workspace_access })
 }))
 
 async function provisionWorkshop({ userId, ownerName, businessName, workshopPhone = null, workshopCity = null }) {
@@ -224,6 +240,10 @@ router.post('/users', authenticate, profileLoader, requireRole('ADMINISTRADOR'),
 
   // Crea el usuario en Supabase Auth; el trigger on_auth_user_created crea el perfil.
   if (!req.profile.workshop_id) return res.status(403).json({ message: 'Selecciona una cuenta de administración con taller para agregar personal.' })
+  if (is_active) {
+    const limit = await seatLimitMessage(req.profile.workshop_id)
+    if (limit) return res.status(402).json({ code: 'PLAN_UPGRADE_REQUIRED', feature: 'users', message: limit })
+  }
   const { data: authData, error: createError } = await db.auth.admin.createUser({
     email: email.trim().toLowerCase(),
     password,
@@ -298,10 +318,15 @@ router.patch('/users/:id/status', authenticate, profileLoader, requireRole('ADMI
   }
   // Anti-IDOR: el objetivo debe pertenecer al mismo taller.
   if (req.profile.role !== 'SUPER_ADMIN') {
-    const { data: target, error: targetError } = await db.from('profiles').select('role,workshop_id').eq('id', req.params.id).maybeSingle()
+    const { data: target, error: targetError } = await db.from('profiles').select('role,workshop_id,is_active').eq('id', req.params.id).maybeSingle()
     if (targetError) throw targetError
     if (!target || target.workshop_id !== req.profile.workshop_id) return res.status(404).json({ message: 'Usuario no encontrado' })
     assertCanManageTarget(req.profile, target.role)
+    // Reactivar una cuenta ocupa un lugar del plan.
+    if (is_active && target.is_active === false) {
+      const limit = await seatLimitMessage(req.profile.workshop_id)
+      if (limit) return res.status(402).json({ code: 'PLAN_UPGRADE_REQUIRED', feature: 'users', message: limit })
+    }
   }
   await ensureAdministratorSurvivesChange(req.params.id, null, is_active)
   const { data, error } = await db

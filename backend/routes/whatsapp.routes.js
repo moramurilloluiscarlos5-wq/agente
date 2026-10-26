@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
-import { requireLicense } from '../middleware/license.js'
+import { requireFeature, requireLicense } from '../middleware/license.js'
 import { requireRole } from '../middleware/roles.js'
 import { databaseError, fail, REPAIR_SELECT, scopeRepairs, searchTerm, uuid } from '../utils/operations.js'
 import { normalizeWhatsAppPhone } from '../services/whatsappPhone.js'
@@ -20,6 +20,8 @@ export function createWhatsAppRouter({ db = supabaseAdmin, authenticate = [requi
   router.use(...authenticate, staff)
 
   router.get('/status', requirePermission('whatsapp.view'), (_req, res) => res.json({ data: whatsappProvider.getStatus() }))
+  // El estado de la conexión se ve en Configuración con cualquier plan; lo demás es del plan Pro en adelante.
+  router.use(requireFeature('whatsapp'))
 
   router.get('/automations', requirePermission('whatsapp.view'), asyncRoute(async (req, res) => {
     const { data, error } = await scopeToWorkshop(db.from('whatsapp_automations').select('*').order('event_type'), req)

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
-import { requireLicense } from '../middleware/license.js'
+import { requireFeature, requireLicense } from '../middleware/license.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { databaseError } from '../utils/operations.js'
 import { scopeToWorkshop } from '../utils/workshop.js'
@@ -26,7 +26,7 @@ export async function fetchAllRows(buildQuery) {
 
 export function createReportsRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense] } = {}) {
   const router = Router()
-  router.use(...authenticate)
+  router.use(...authenticate, requireFeature('reports'))
   router.get('/', requirePermission('reports.view'), asyncRoute(async (req, res) => {
     const [repairsResult, paymentsResult, inventoryResult] = await Promise.all([
       fetchAllRows(() => scopeToWorkshop(db.from('repair_orders').select('id,status,brand,model,estimated_cost,received_at').is('deleted_at', null), req)),

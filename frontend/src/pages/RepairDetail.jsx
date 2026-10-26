@@ -5,6 +5,7 @@ import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useToast } from '../hooks/useToast.js'
 import { REPAIR_STATUSES } from '../utils/constants.js'
+import { planIncludes } from '../utils/billing.js'
 import { focusFirstInvalid } from '../utils/forms.js'
 import { formatCurrency, formatDate, formatDateTime } from '../utils/formatters.js'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
@@ -124,15 +125,17 @@ function RepairDetailContent({ orderNumber }) {
   const [messages, setMessages] = useState({ key: null, list: [] })
   const canManage = MANAGE_ROLES.includes(profile?.role)
   const canEdit = canManage || (profile?.role === 'TECNICO' && repair?.technician_id === (profile?.id ?? user?.id))
+  // WhatsApp es del plan Pro en adelante: con Plus no se consulta ni se ofrece enviar.
+  const whatsapp = planIncludes(profile, 'whatsapp')
 
   useEffect(() => {
-    if (!repair?.id) return undefined
+    if (!repair?.id || !whatsapp) return undefined
     let active = true
     api.get(`/whatsapp/messages?repair_order_id=${encodeURIComponent(repair.id)}`)
       .then((response) => { if (active) setMessages({ key: repair.id, list: response.data ?? [] }) })
       .catch(() => { if (active) setMessages({ key: repair.id, list: [] }) })
     return () => { active = false }
-  }, [repair?.id, history.length])
+  }, [repair?.id, history.length, whatsapp])
 
   const back = <Link className="tf-form-page-back" to="/reparaciones"><ArrowLeft size={16} aria-hidden="true" />Reparaciones</Link>
   if (loading && !repair) return (
@@ -156,7 +159,7 @@ function RepairDetailContent({ orderNumber }) {
             <p className="ct-page-description">{deviceName(repair.device ?? repair)} de {customerName(repair.customer)}. Recibido el {formatDate(repair.received_at)}.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <WhatsAppComposer repair={repair} customer={repair.customer} onSent={(message) => setMessages((current) => ({ key: repair.id, list: [message, ...(current.key === repair.id ? current.list : [])] }))} />
+            {whatsapp && <WhatsAppComposer repair={repair} customer={repair.customer} onSent={(message) => setMessages((current) => ({ key: repair.id, list: [message, ...(current.key === repair.id ? current.list : [])] }))} />}
             {canEdit && <Link to={`/reparaciones/${encodeURIComponent(repair.order_number)}/editar`} className="ct-btn ct-btn-secondary"><Pencil size={16} aria-hidden="true" />{canManage ? 'Editar orden' : 'Editar diagnóstico'}</Link>}
           </div>
         </div>
@@ -224,7 +227,8 @@ function RepairDetailContent({ orderNumber }) {
           <RepairTrackingPanel orderNumber={repair.order_number} />
 
           <Card title="Mensajes de WhatsApp" bodyClassName={null}>
-            {!messageList.length ? <p className="p-6 text-sm text-[var(--tf-text-subtle)]">Aún no hay mensajes de esta orden.</p>
+            {!whatsapp ? <p className="p-6 text-sm text-[var(--tf-text-subtle)]">Los avisos y mensajes por WhatsApp están disponibles desde el plan Pro.</p>
+              : !messageList.length ? <p className="p-6 text-sm text-[var(--tf-text-subtle)]">Aún no hay mensajes de esta orden.</p>
               : <ul className="tf-list">{messageList.map((message) => {
                 const [label, tone] = WHATSAPP_STATUS[message.status] ?? ['Pendiente', 'neutral']
                 return (

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, LogOut, Menu, Plus, Search, WalletCards } from 'lucide-react'
+import { Bell, BookOpen, Compass, LogOut, Menu, Plus, Search, WalletCards } from 'lucide-react'
 import { sectionTitle } from '../../utils/constants.js'
 import { useSidebar } from '../../hooks/useSidebar.js'
 import { useAuth } from '../../hooks/useAuth.js'
+import { useTour } from '../../hooks/useTour.js'
+import ThemeMenu from '../theme/ThemeMenu.jsx'
 import { api } from '../../services/api.js'
 import { formatRelative, getInitials } from '../../utils/formatters.js'
 import { IconButton, Tooltip } from '../ui/DesignSystem.jsx'
@@ -25,6 +27,7 @@ function useDismiss(open, setOpen, ref) {
 export default function Navbar() {
   const { openMobile } = useSidebar()
   const { profile, roleLabel, logout } = useAuth()
+  const { start: startTour } = useTour()
   const profileId = profile?.id
   const location = useLocation()
   const navigate = useNavigate()
@@ -76,7 +79,7 @@ export default function Navbar() {
 
       <p className="tf-navbar-title hidden truncate lg:block">{sectionTitle(location.pathname)}</p>
 
-      <form onSubmit={handleSearch} role="search" className="ml-auto w-full max-w-[22rem]">
+      <form onSubmit={handleSearch} role="search" data-tour="search" className="ml-auto w-full max-w-[22rem]">
         <label className="tf-search">
           <Search size={16} className="shrink-0" aria-hidden="true" />
           <span className="tf-search-label hidden sm:inline">Buscar</span>
@@ -86,12 +89,14 @@ export default function Navbar() {
       </form>
 
       {CAN_CREATE_REPAIRS.includes(profile?.role) && location.pathname !== '/reparaciones/nueva' && (
-        <Link to="/reparaciones/nueva" className="ct-btn ct-btn-primary hidden shrink-0 md:inline-flex"><Plus size={16} aria-hidden="true" />Registrar reparación</Link>
+        <Link to="/reparaciones/nueva" data-tour="new-repair" className="ct-btn ct-btn-primary hidden shrink-0 md:inline-flex"><Plus size={16} aria-hidden="true" />Registrar reparación</Link>
       )}
+
+      <ThemeMenu />
 
       <div ref={notificationsRef} className="relative shrink-0">
         <Tooltip label={unread ? `Notificaciones (${unread} sin leer)` : 'Notificaciones'}>
-          <button type="button" onClick={() => { setUserOpen(false); setNotificationsOpen((prev) => !prev) }} className="tf-icon-btn" aria-label="Notificaciones" aria-describedby={unread ? 'notifications-unread' : undefined} aria-expanded={notificationsOpen} aria-controls="notifications-panel">
+          <button type="button" onClick={() => { setUserOpen(false); setNotificationsOpen((prev) => !prev) }} className="tf-icon-btn" data-tour="notifications" aria-label="Notificaciones" aria-describedby={unread ? 'notifications-unread' : undefined} aria-expanded={notificationsOpen} aria-controls="notifications-panel">
             <Bell size={18} aria-hidden="true" />
             {unread > 0 && <span className="tf-dot-badge" aria-hidden="true" />}
           </button>
@@ -117,7 +122,7 @@ export default function Navbar() {
 
       <div ref={userRef} className="relative shrink-0">
         <Tooltip label="Tu cuenta">
-          <button type="button" onClick={() => { setNotificationsOpen(false); setUserOpen((prev) => !prev) }} className="tf-icon-btn rounded-full" aria-label={`Cuenta de ${displayName}`} aria-expanded={userOpen} aria-controls="account-panel">
+          <button type="button" onClick={() => { setNotificationsOpen(false); setUserOpen((prev) => !prev) }} className="tf-icon-btn rounded-full" data-tour="account" aria-label={`Cuenta de ${displayName}`} aria-expanded={userOpen} aria-controls="account-panel">
             <span className="tf-avatar">{getInitials(displayName)}</span>
           </button>
         </Tooltip>
@@ -131,6 +136,8 @@ export default function Navbar() {
               </div>
             </div>
             <div className="my-1 border-t border-[var(--tf-border)]" />
+            <button type="button" onClick={() => { setUserOpen(false); startTour() }} className="tf-menu-item"><Compass size={15} aria-hidden="true" />Recorrido guiado</button>
+            <Link to="/guia" onClick={() => setUserOpen(false)} className="tf-menu-item"><BookOpen size={15} aria-hidden="true" />Guía del sistema</Link>
             {CAN_MANAGE_BILLING.includes(profile?.role) && <Link to="/facturacion" onClick={() => setUserOpen(false)} className="tf-menu-item"><WalletCards size={15} aria-hidden="true" />Facturación</Link>}
             <button type="button" onClick={handleLogout} className="tf-menu-item is-danger"><LogOut size={15} aria-hidden="true" />Cerrar sesión</button>
           </div>

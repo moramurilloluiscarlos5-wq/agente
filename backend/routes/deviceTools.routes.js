@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { supabaseAdmin, requireSupabase } from '../config/supabase.js'
 import { requireAuth, loadProfile } from '../middleware/auth.js'
-import { requireLicense } from '../middleware/license.js'
+import { requireFeature, requireLicense } from '../middleware/license.js'
 import { requirePermission } from '../middleware/rbac.js'
 import { requireRole } from '../middleware/roles.js'
 import { rateLimit } from '../middleware/security.js'
@@ -31,7 +31,7 @@ function commandName(value) {
 
 export function createDeviceToolsRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense], getRelease = getDeviceAgentRelease } = {}) {
   const router = Router()
-  router.use(...authenticate, DEVICE_ROLES, requirePermission('devices.view'))
+  router.use(...authenticate, DEVICE_ROLES, requirePermission('devices.view'), requireFeature('device_tools'))
   router.use((req, _res, next) => {
     if (!req.profile?.workshop_id || req.profile.workspace_access !== 'ACTIVE') return next(Object.assign(new Error('El taller debe estar activo para usar Device Tools.'), { status: 403, publicMessage: 'El taller debe estar activo para usar Device Tools.' }))
     next()

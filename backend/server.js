@@ -30,6 +30,7 @@ import { createCspReportRouter } from './routes/cspReport.routes.js'
 import { mountSpa } from './middleware/spa.js'
 import { installLifecycleHandlers } from './utils/lifecycle.js'
 import { assertBillingConfig, loadBillingConfig, licensingEnabled } from './config/billing.js'
+import { checkLicensingSchema } from './services/billingService.js'
 
 
 const app = express()
@@ -50,12 +51,25 @@ if (!licensingEnabled()) {
   console.warn('Licencias DESACTIVADAS (LICENSING_ENABLED=false): ningún taller se bloquea por licencia.')
 } else if (process.env.NODE_ENV === 'production') {
   const billing = assertBillingConfig()
-  console.log(`Facturación Stripe en modo ${billing.testMode ? 'PRUEBA (test)' : 'REAL (live)'}`)
+  console.log(`Facturación con Mercado Pago (${billing.testCredentials ? 'credenciales de prueba TEST-' : 'credenciales APP_USR-'})`)
 } else if (!loadBillingConfig().ok) {
-  console.warn('Facturación Stripe sin configurar: las rutas /api/billing responderán 503 (ver README, Licencias).')
+  console.warn('Facturación con Mercado Pago sin configurar: las rutas /api/billing responderán 503 (ver README, Licencias).')
+}
+// Con licencias activas la base debe tener las migraciones 019 y 020; sin ellas cada ruta del taller
+// respondería 503. En producción no se arranca y Railway conserva el despliegue anterior.
+if (licensingEnabled() && supabaseAdmin) {
+  const schema = await checkLicensingSchema(supabaseAdmin)
+  if (schema.missing) {
+    const message = 'Licencias activadas, pero la base de datos no tiene sus tablas: aplica database/migrations/019_licensing.sql y 020_mercadopago_tiers.sql en Supabase (SQL Editor) o pon LICENSING_ENABLED=false.'
+    if (process.env.NODE_ENV === 'production') throw new Error(message)
+    console.error(message)
+  } else if (!schema.ok) {
+    console.warn('No se pudieron comprobar las tablas de licencias al arrancar; se validan en cada petición.')
+  }
 }
 app.use(cors({ origin: (origin, callback) => callback(null, !origin || allowedOrigins.includes(origin)) }))
-app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), createBillingWebhookHandler())
+// La firma de Mercado Pago cubre el id de la URL y los encabezados, no el cuerpo: basta JSON normal.
+app.post('/api/billing/webhook', express.json({ limit: '100kb' }), createBillingWebhookHandler())
 app.use('/api/webhooks/whatsapp', express.raw({ type: 'application/json' }), whatsappWebhookRoutes)
 app.use(express.json())
 

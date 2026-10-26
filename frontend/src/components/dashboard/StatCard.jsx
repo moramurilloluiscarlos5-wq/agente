@@ -4,7 +4,7 @@ export default function StatCard({ icon: Icon, label, value, hint, accent = 'blu
       <div className="flex items-center justify-between">
         <span className="ct-kpi-label">{label}</span>
         {Icon && (
-          <Icon size={17} strokeWidth={1.8} className={accent === 'red' ? 'text-red-300' : 'text-slate-500'} />
+          <Icon size={17} strokeWidth={1.8} className={accent === 'red' ? 'text-[var(--tf-danger-ink)]' : 'text-[var(--tf-text-subtle)]'} />
         )}
       </div>
       <p className="ct-kpi-value">{value}</p>

@@ -136,25 +136,50 @@ Esta migración agrega consentimiento, teléfonos normalizados, automatizaciones
 historial de mensajes y eventos del webhook. Es segura para volver a ejecutar si
 una aplicación anterior quedó incompleta.
 
-## Licencias por suscripción (Stripe)
+## Licencias por suscripción (Mercado Pago)
 
-Cada taller necesita una licencia vigente para usar el sistema. Stripe es la
-fuente de verdad; la base de datos solo refleja su estado, y **únicamente el
-webhook firmado** lo modifica (nunca el cliente).
+Cada taller necesita una licencia vigente para usar el sistema. Mercado Pago es la
+fuente de verdad del cobro; la base de datos solo refleja su estado, y **únicamente
+la notificación firmada de Mercado Pago** (o una acción del dueño confirmada por su
+API) lo modifica, nunca el navegador.
+
+### Planes
+
+| Plan | Mensual | Anual | Usuarios activos | Incluye |
+| --- | --- | --- | --- | --- |
+| **Plus** | $299 MXN | $2,990 MXN | 3 | Reparaciones, clientes, equipos, cotizaciones, pagos, inventario, garantías y seguimiento con QR |
+| **Pro** | $549 MXN | $5,490 MXN | 10 | Todo Plus + WhatsApp, reportes y auditoría |
+| **Max** | $899 MXN | $8,990 MXN | Sin límite | Todo Pro + Diagnóstico IA y Herramientas ADB/Fastboot |
+
+- Los precios viven en la tabla `plans` (migración 020); lo que incluye cada nivel, en `backend/config/plans.js`.
+- La **prueba gratuita** (`TRIAL_DAYS`) incluye todo lo de Max.
+- El servidor aplica los límites: `requireFeature()` responde 402 `PLAN_UPGRADE_REQUIRED` (IA, ADB, reportes,
+  auditoría, WhatsApp) y Personal no deja crear ni reactivar cuentas por encima del límite de usuarios.
+  La interfaz muestra un candado en el menú y explica en qué plan está cada sección.
 
 ### Flujo de compra
 
-1. El dueño se registra (`/registro`): se crea el taller y una **prueba de `TRIAL_DAYS` días sin tarjeta**.
-2. En `/precios` (o `/facturacion` dentro del panel) elige plan y pulsa **Comprar**. El backend crea una Checkout Session usando el taller de la **sesión** (nunca del body).
-3. Paga en Stripe Checkout y vuelve a `/facturacion?checkout=success`.
-4. Stripe llama a `POST /api/billing/webhook`; el backend actualiza `subscriptions` y la licencia queda activa.
-5. **Gestionar pago** (solo OWNER) abre el Customer Portal para cambiar tarjeta o cancelar.
+1. El dueño se registra (`/registro`): se crea el taller y una **prueba sin tarjeta**.
+2. En `/facturacion` elige plan. El backend crea una suscripción de Mercado Pago (`POST /preapproval`,
+   `status: pending`) con el monto del plan guardado y `external_reference` = taller de la **sesión** (nunca del body).
+3. El dueño paga con tarjeta en Mercado Pago y vuelve a `/facturacion?checkout=success`.
+4. Mercado Pago llama a `POST /api/billing/webhook`; el backend verifica la firma, vuelve a leer la suscripción
+   en la API de Mercado Pago y activa la licencia con su plan.
+5. **Cambiar de plan** (solo OWNER): con el mismo cobro se ajusta el monto de la suscripción y el plan cambia ya
+   (el nuevo monto se cobra desde el siguiente pago). Entre mensual y anual se paga el plan nuevo y, al
+   autorizarse, la suscripción anterior se cancela sola para no cobrar doble.
+6. **Cancelar** (solo OWNER): se cancela en Mercado Pago y el taller conserva el acceso hasta el último día pagado.
+
+**Al iniciar sesión** `/api/auth/me` incluye la licencia (`profile.license`: estado, días de prueba, motivo del
+bloqueo). Con la licencia vencida, el dueño o administrador entra directo a Facturación y técnicos, recepción
+y caja ven a quién pedir la renovación (`/licencia-vencida`), sin cargar datos del taller. Durante la prueba,
+con un cobro rechazado o con el plan cancelado, un aviso arriba muestra los días que quedan.
 
 | Estado | Acceso |
 | --- | --- |
 | `trialing` | Mientras `trial_end` esté en el futuro |
-| `active` | Sí |
-| `past_due` | Sí, durante `BILLING_GRACE_DAYS` desde que falló el cobro |
+| `active` | Sí (si se canceló, hasta `current_period_end`) |
+| `past_due` | Sí, durante `BILLING_GRACE_DAYS` desde el cobro rechazado (Mercado Pago reintenta 10 días) |
 | `canceled`, `unpaid`, `incomplete`, sin suscripción | No: 402 `LICENSE_REQUIRED` |
 
 ### Endpoints
@@ -162,10 +187,11 @@ webhook firmado** lo modifica (nunca el cliente).
 | Ruta | Acceso |
 | --- | --- |
 | `GET /api/billing/plans` | Público |
-| `GET /api/billing/subscription` | OWNER / ADMINISTRADOR |
-| `POST /api/billing/checkout` `{ plan }` o `{ interval: "month"\|"year" }` | OWNER / ADMINISTRADOR (limitado a 10/min) |
-| `POST /api/billing/portal` | OWNER |
-| `POST /api/billing/webhook` | Stripe (firma `Stripe-Signature`, cuerpo crudo, idempotente) |
+| `GET /api/billing/subscription` | OWNER / ADMINISTRADOR (estado, plan, lo que incluye y usuarios activos) |
+| `POST /api/billing/checkout` `{ plan, payer_email? }` | OWNER / ADMINISTRADOR (limitado a 10/min) |
+| `POST /api/billing/change-plan` `{ plan, payer_email? }` | OWNER |
+| `POST /api/billing/cancel` | OWNER |
+| `POST /api/billing/webhook` | Mercado Pago (firma `x-signature`, idempotente por id de notificación) |
 
 El middleware `backend/middleware/license.js` responde 402 en las rutas de negocio.
 **Rutas con licencia obligatoria:** dashboard, inventario, cotizaciones, pagos, garantías,
@@ -174,56 +200,59 @@ operaciones (reparaciones, clientes, dispositivos) y las rutas autenticadas de s
 **Excluidas** para no bloquear el pago ni el acceso: `/api/auth/*`, `/api/billing/*`, `/health`,
 seguimiento público por token, webhook de WhatsApp y `/api/device-agent`. SUPER_ADMIN no se bloquea.
 
-### Variables nuevas (solo Railway / `backend/.env`)
+### Variables (solo Railway / `backend/.env`)
 
-`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`,
-`APP_PUBLIC_URL` (https, sin barra final), `TRIAL_DAYS` (14), `BILLING_GRACE_DAYS` (7).
-En producción faltar o tener mal formato cualquiera de las cinco primeras detiene el arranque
-con un mensaje que lista los nombres (nunca los valores). Fuera de producción `/api/billing`
-responde 503 `BILLING_NOT_CONFIGURED`. El frontend no necesita ninguna clave de Stripe.
+`MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `APP_PUBLIC_URL` (https, sin barra final), `TRIAL_DAYS` (14),
+`BILLING_GRACE_DAYS` (10). En producción faltar o tener mal formato cualquiera de las tres primeras
+detiene el arranque con un mensaje que lista los nombres (nunca los valores). Fuera de producción
+`/api/billing` responde 503 `BILLING_NOT_CONFIGURED` en las acciones de pago (los planes se ven, pero no se
+contratan). El frontend no necesita ninguna clave. Con licencias activas el arranque también comprueba que
+existan las tablas de las migraciones 019 y 020: en producción no arranca sin ellas (Railway conserva el
+despliegue anterior) y en local lo avisa en la consola.
 
-### Configurar Stripe
+### Configurar Mercado Pago
 
-1. **Products**: crea un producto con dos precios recurrentes (mensual y anual) y copia sus `price_…`.
-2. **Customer Portal** (Settings → Billing → Customer portal): activa cambio de método de pago y cancelación.
-3. **Webhook** (Developers → Webhooks → Add endpoint): URL `https://TU-DOMINIO/api/billing/webhook` y los eventos
-   `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`,
-   `customer.subscription.deleted`, `invoice.payment_failed`, `invoice.paid`. Copia el `whsec_…`.
+1. En [Tus integraciones](https://www.mercadopago.com.mx/developers/panel/app) crea una aplicación (producto: Suscripciones).
+2. **Webhooks → Configurar notificaciones**: URL `https://TU-DOMINIO/api/billing/webhook` y el evento
+   **Planes y suscripciones** (`subscription_preapproval`, `subscription_authorized_payment`). Guarda y copia la
+   **clave secreta** → `MP_WEBHOOK_SECRET`.
+3. **Credenciales de producción → Access Token** (`APP_USR-…`) → `MP_ACCESS_TOKEN`.
 
-### Probar en modo test
+### Probar antes de cobrar de verdad
 
-```bash
-# backend/.env con claves de PRUEBA (sk_test_…, price_… de test) y APP_PUBLIC_URL=http://localhost:5173
-stripe login
-stripe listen --forward-to localhost:4000/api/billing/webhook   # imprime el whsec_… local → STRIPE_WEBHOOK_SECRET
-stripe trigger invoice.payment_failed                            # simula eventos
-```
+Las suscripciones se prueban con **usuarios de prueba** de Mercado Pago (Tus integraciones → Cuentas de prueba):
+uno vendedor y uno comprador.
 
-Compra completa: regístrate, entra a `/precios`, **Comprar**, usa la tarjeta `4242 4242 4242 4242`
-(cualquier fecha futura y CVC). Para un pago fallido usa `4000 0000 0000 0341`.
+1. Pon en Railway (o `backend/.env`) el Access Token **del vendedor de prueba** y la clave secreta del webhook.
+   `APP_PUBLIC_URL` debe ser una URL https pública (Mercado Pago no regresa a `localhost`).
+2. Entra a TallerFlow, elige un plan y, en Mercado Pago, inicia sesión con el **comprador de prueba** usando
+   su correo en el campo "Correo de tu cuenta de Mercado Pago". Paga con una de las tarjetas de prueba
+   que Mercado Pago lista en su documentación de pruebas.
+3. Revisa que la licencia quede activa, prueba un cambio de plan y una cancelación.
+4. Para cobrar de verdad cambia solo `MP_ACCESS_TOKEN` por el de producción de tu cuenta.
+
 Pruebas automáticas: `npm --prefix backend test` (`billing.test.js` cubre firma, idempotencia, transiciones,
-middleware y rutas con eventos simulados; `licensing-sql.test.js` valida RLS de la migración 019).
-Pasar a producción solo cambia las variables a claves live, el `whsec_` del endpoint live y los `price_` live.
+niveles, límites de usuarios, middleware y rutas con Mercado Pago simulado; `licensing-sql.test.js` valida
+las migraciones 019 y 020 y el RLS).
 
 ### Decisiones por defecto y riesgos
 
-- La migración es la **019** (017 y 018 ya existían). Una suscripción por taller; el historial vive en `billing_events` y `audit_logs`.
-- `workshops.status` **no** lo modifica el webhook (es la suspensión manual y provoca 403 en vez de llevar a facturación); el acceso se corta con el 402. El webhook solo refleja `workshops.plan` (PRO/FREE).
-- Columnas extra: `past_due_since` (inicio de la gracia) y `last_event_at` (descarta eventos viejos); estado extra `incomplete`.
-- La migración da 14 días de prueba a los talleres existentes para no bloquearlos al desplegar.
-- Moneda USD y planes semilla `base_monthly` (29 USD) y `base_yearly` (290 USD): **ajusta los precios** en la tabla `plans` y en Stripe.
-- Riesgo: cada registro recibe prueba gratis (abuso por múltiples registros). Mitiga con TRIAL_DAYS bajo o verificación adicional.
+- Una suscripción por taller; el historial vive en `billing_events` y `audit_logs`.
+- `workshops.status` **no** lo modifica el webhook (es la suspensión manual); el acceso se corta con el 402.
+  El webhook refleja el nivel en `workshops.plan` (`PLUS`/`PRO`/`MAX`, o `FREE`).
+- Contratar durante la prueba termina la prueba: el primer cobro es inmediato.
+- Bajar de plan no desactiva cuentas: quien ya tiene acceso sigue entrando, pero no se pueden agregar más.
+- Riesgo: cada registro recibe prueba gratis (abuso por múltiples registros). Mitiga con TRIAL_DAYS bajo.
 - Riesgo: la caché de licencia (15 s por instancia) puede retrasar el bloqueo/desbloqueo ese tiempo.
-- Si faltan webhooks, una suscripción `active` se bloquea pasados `BILLING_GRACE_DAYS` desde `current_period_end`.
+- Si faltan notificaciones, una suscripción `active` se bloquea pasados `BILLING_GRACE_DAYS` desde `current_period_end`.
 
 ### Despliegue
 
-1. Aplicar `019_licensing.sql` en Supabase (SQL Editor).
-2. Configurar las variables en Railway (con claves test primero).
-3. Crear productos y precios en Stripe.
-4. Registrar el endpoint del webhook con los 6 eventos.
-5. Probar una compra completa en test mode (y cancelación desde el portal).
-6. Cambiar a claves live (secret, webhook secret y price ids live).
+1. Aplicar `019_licensing.sql` (si no estaba) y `020_mercadopago_tiers.sql` en Supabase (SQL Editor).
+2. Configurar las variables en Railway con las credenciales del vendedor de prueba.
+3. Registrar el webhook con el evento de suscripciones.
+4. Probar una compra completa, un cambio de plan y una cancelación.
+5. Cambiar `MP_ACCESS_TOKEN` al de producción y quitar `LICENSING_ENABLED=false`.
 
 ## Módulos del panel
 

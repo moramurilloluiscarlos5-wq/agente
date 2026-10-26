@@ -13,23 +13,23 @@ export default function UpcomingDeliveries({ deliveries }) {
   }
 
   return (
-    <ul className="divide-y divide-slate-800/70">
+    <ul className="divide-y divide-[var(--tf-border)]">
       {deliveries.map((delivery) => (
         <li key={delivery.orderNumber} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
           <div className="min-w-0">
             <Link
               to={`/reparaciones/${delivery.orderNumber}`}
-              className="text-sm font-semibold text-cyan-300 hover:underline"
+              className="text-sm font-semibold text-[var(--tf-accent-ink)] hover:underline"
             >
               {delivery.orderNumber}
             </Link>
-            <p className="truncate text-xs text-slate-400">
+            <p className="truncate text-xs text-[var(--tf-text-muted)]">
               {delivery.device} · {delivery.customer}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={delivery.status} />
-            <span className="flex items-center gap-1 text-xs text-slate-500">
+            <span className="flex items-center gap-1 text-xs text-[var(--tf-text-subtle)]">
               <CalendarClock size={13} />
               {formatDate(delivery.estDelivery)}
             </span>
