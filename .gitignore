@@ -37,3 +37,4 @@ CarlosTech_Recovery_Final/
 media/hyperframes/*/renders/
 media/hyperframes/*/.hyperframes/
 .playwright-mcp/
+*.code-workspace
