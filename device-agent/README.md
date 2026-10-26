@@ -9,7 +9,7 @@ El instalador crea `%LOCALAPPDATA%\CarlosTech\DeviceAgent\.env` si no existe.
 Las actualizaciones conservan la configuración. El ejecutable carga ese archivo
 antes de iniciar, independientemente del directorio desde el que se ejecute.
 Las variables del proceso tienen prioridad. El dominio de producción permitido
-es `https://carlostech-ai-production.up.railway.app`; agrega cualquier dominio
+es `https://tallerflow.up.railway.app`; agrega cualquier dominio
 adicional exacto a `DEVICE_AGENT_ALLOWED_ORIGINS` y reinicia el agente.
 
 `ADB_PATH` y `FASTBOOT_PATH` vacíos seleccionan las herramientas incluidas.

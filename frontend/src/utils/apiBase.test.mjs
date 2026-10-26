@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { apiOriginFromBase, resolveApiBaseUrl } from './apiBase.js'
 
 test('producción con build envenenado hacia localhost cae a /api', () => {
-  assert.equal(resolveApiBaseUrl('http://127.0.0.1:4000/api', 'carlostech-ai-production.up.railway.app'), '/api')
+  assert.equal(resolveApiBaseUrl('http://127.0.0.1:4000/api', 'tallerflow.up.railway.app'), '/api')
   assert.equal(resolveApiBaseUrl('http://localhost:4000/api', 'carlostechnet.com'), '/api')
 })
 
@@ -25,6 +25,6 @@ test('URL absoluta de producción válida se respeta', () => {
 
 test('apiOriginFromBase deriva el origen para URLs absolutas y relativas', () => {
   assert.equal(apiOriginFromBase('https://api.carlostechnet.com/api', 'https://app.com'), 'https://api.carlostechnet.com')
-  assert.equal(apiOriginFromBase('/api', 'https://carlostech-ai-production.up.railway.app'), 'https://carlostech-ai-production.up.railway.app')
+  assert.equal(apiOriginFromBase('/api', 'https://tallerflow.up.railway.app'), 'https://tallerflow.up.railway.app')
   assert.equal(apiOriginFromBase('/api', ''), '')
 })

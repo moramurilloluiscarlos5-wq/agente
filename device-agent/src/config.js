@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { parseEnv } from 'node:util'
 import packageJson from '../package.json' with { type: 'json' }
 
-export const PRODUCTION_ORIGIN = 'https://carlostech-ai-production.up.railway.app'
+export const PRODUCTION_ORIGIN = 'https://tallerflow.up.railway.app'
 const DEFAULT_ORIGINS = `${PRODUCTION_ORIGIN},http://localhost:5173,http://127.0.0.1:5173`
 
 export function runtimeRoot({ packaged = Boolean(process.pkg), execPath = process.execPath, sourceDirectory } = {}) {

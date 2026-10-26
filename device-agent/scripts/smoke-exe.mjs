@@ -26,7 +26,7 @@ try {
     'DEVICE_AGENT_HOST=127.0.0.1', `DEVICE_AGENT_PORT=${port}`,
     'DEVICE_AGENT_STATE_FILE=isolated-state.json', 'DEVICE_AGENT_POLL_MS=60000',
     'ADB_PATH=./no-tools/adb.exe', 'FASTBOOT_PATH=./no-tools/fastboot.exe',
-    'DEVICE_AGENT_ALLOWED_ORIGINS=https://carlostech-ai-production.up.railway.app',
+    'DEVICE_AGENT_ALLOWED_ORIGINS=https://tallerflow.up.railway.app',
   ].join('\n'))
   const env = { ...process.env }
   for (const key of Object.keys(env)) {
@@ -37,7 +37,7 @@ try {
   child.on('error', (error) => { spawnError = error })
   closed = new Promise((resolve) => child.once('close', resolve))
   const base = `http://127.0.0.1:${port}`
-  const headers = { Origin: 'https://carlostech-ai-production.up.railway.app' }
+  const headers = { Origin: 'https://tallerflow.up.railway.app' }
   let response
   for (let attempt = 0; attempt < 100; attempt++) {
     if (spawnError) throw spawnError
