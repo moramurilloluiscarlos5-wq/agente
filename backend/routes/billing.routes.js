@@ -9,6 +9,8 @@ import { FEATURES, TIERS } from '../config/plans.js'
 import { countActiveUsers, createBillingProcessor, getWorkshopSubscription, preapprovalRequest, serializeSubscription } from '../services/billingService.js'
 import { checkoutProblem, createMercadoPagoClient, verifyNotificationSignature } from '../services/mercadoPago.js'
 import { auditSafe, writeAudit } from '../services/auditService.js'
+import { OpenAIProvider } from '../services/aiProvider.js'
+import { WhatsAppProvider } from '../services/whatsappProvider.js'
 
 const PAID_STATUSES = ['active', 'past_due']
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -25,6 +27,16 @@ const publicPlan = (plan) => ({
   code: plan.code, name: plan.name, tier: plan.tier, price_cents: plan.price_cents, currency: plan.currency, interval: plan.interval,
   max_users: TIERS[plan.tier]?.maxUsers ?? null, features: TIERS[plan.tier]?.features ?? [],
 })
+
+// Funciones del plan que el servidor aún no puede dar por falta de credenciales: se anuncian como
+// "Próximamente" para no vender algo que no funciona. Se activan solas al configurar sus variables.
+export function comingSoonFeatures(env) {
+  const soon = []
+  const ai = new OpenAIProvider({ env })
+  if (String(env.AI_PROVIDER || '').trim().toLowerCase() !== 'openai' || !ai.configured) soon.push('ai')
+  if (!new WhatsAppProvider({ env }).configured) soon.push('whatsapp')
+  return soon
+}
 
 // Resuelve configuración y cliente de Mercado Pago por petición para que las claves
 // solo vivan en el entorno. Sin configuración completa responde 503.
@@ -108,7 +120,7 @@ export function createBillingRouter({
     if (error) throw error
     const plans = (data ?? []).filter((plan) => TIERS[plan.tier]).sort((a, b) => tierRank(a) - tierRank(b) || a.price_cents - b.price_cents)
     // payments_ready solo dice si se puede contratar ya (Mercado Pago configurado), nunca con qué claves.
-    res.json({ data: plans.map(publicPlan), trial_days: trialDaysFromEnv(env()), features: FEATURES, payments_ready: loadBillingConfig(env()).ok })
+    res.json({ data: plans.map(publicPlan), trial_days: trialDaysFromEnv(env()), features: FEATURES, payments_ready: loadBillingConfig(env()).ok, coming_soon: comingSoonFeatures(env()) })
   }))
 
   router.get('/subscription', ...authenticate, requireRole('ADMINISTRADOR'), asyncRoute(async (req, res) => {

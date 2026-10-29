@@ -31,11 +31,12 @@ export default function Billing() {
   const [busy, setBusy] = useState(false)
   // false mientras Mercado Pago no esté configurado en el servidor: se ven los planes, pero aún no se contratan.
   const [paymentsReady, setPaymentsReady] = useState(true)
+  const [comingSoon, setComingSoon] = useState([])
   const message = location.state?.licenseMessage
   const isOwner = profile?.role === 'OWNER'
 
   useEffect(() => {
-    api.get('/billing/plans').then((response) => { setPlans(response.data); setPaymentsReady(response.payments_ready !== false) }).catch((err) => setError({ err, action: 'cargar los planes' }))
+    api.get('/billing/plans').then((response) => { setPlans(response.data); setPaymentsReady(response.payments_ready !== false); setComingSoon(response.coming_soon ?? []) }).catch((err) => setError({ err, action: 'cargar los planes' }))
   }, [])
 
   // Tras volver de Mercado Pago la notificación puede tardar unos segundos en activar la licencia.
@@ -142,7 +143,7 @@ export default function Billing() {
             </div>
             <p className="flex items-center gap-2 text-xs text-[var(--tf-text-subtle)]"><ShieldCheck size={14} aria-hidden="true" />TallerFlow no guarda los datos de tu tarjeta.</p>
           </div>
-          <PlanCards plans={plans} actionFor={actionFor} initialInterval={currentPlan?.interval ?? 'month'} />
+          <PlanCards plans={plans} actionFor={actionFor} initialInterval={currentPlan?.interval ?? 'month'} comingSoon={comingSoon} />
           {paid && isOwner && (
             <div className="tf-card flex flex-wrap items-center justify-between gap-3 p-4">
               <p className="text-sm text-[var(--tf-text-muted)]">¿Ya no necesitas TallerFlow? Al cancelar conservas el acceso hasta {nextCharge ? `el ${nextCharge}` : 'el final del periodo pagado'}.</p>

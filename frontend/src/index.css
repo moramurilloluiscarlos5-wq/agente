@@ -785,3 +785,16 @@ button:not(:disabled), a, summary, label[for], select { cursor: pointer; }
 ::view-transition-new(root) { z-index: 2; animation: tf-theme-reveal 520ms var(--tf-ease) both; }
 @keyframes tf-theme-reveal { from { clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 50%)); } to { clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 50%) var(--vt-y, 50%)); } }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
+
+/* Enlaces legales y páginas de aviso de privacidad / términos. */
+.tf-legal-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem 1rem; font-size: 0.75rem; }
+.tf-legal-links a { color: var(--tf-text-subtle); text-decoration: underline; text-underline-offset: 2px; }
+.tf-legal-links a:hover { color: var(--tf-link); }
+.tf-legal { max-width: 46rem; margin: 0 auto; color: var(--tf-text-muted); font-size: 0.9375rem; line-height: 1.7; }
+.tf-legal h1 { color: var(--tf-text); font-family: var(--tf-font-display); font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15; }
+.tf-legal h2 { margin-top: 2rem; color: var(--tf-text); font-size: 1.125rem; font-weight: 700; }
+.tf-legal p, .tf-legal ul { margin-top: 0.75rem; }
+.tf-legal ul { padding-left: 1.25rem; list-style: disc; }
+.tf-legal li + li { margin-top: 0.25rem; }
+.tf-legal a { color: var(--tf-link); text-decoration: underline; }
+.tf-plan-soon { display: inline-block; margin-left: 0.375rem; padding: 0 0.375rem; border-radius: 999px; background: var(--tf-surface-sunken); color: var(--tf-text-subtle); font-size: 0.6875rem; font-weight: 600; vertical-align: 0.0625rem; }

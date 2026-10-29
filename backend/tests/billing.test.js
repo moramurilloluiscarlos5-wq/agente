@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import express from 'express'
 import { createFakeDb } from './helpers/fakeBillingDb.js'
-import { createBillingRouter, createBillingWebhookHandler } from '../routes/billing.routes.js'
+import { comingSoonFeatures, createBillingRouter, createBillingWebhookHandler } from '../routes/billing.routes.js'
 import { createAuthRouter } from '../routes/auth.routes.js'
 import { createLicenseMiddleware, invalidateLicenseCache, requireFeature } from '../middleware/license.js'
 import { assertBillingConfig, loadBillingConfig, licensingEnabled } from '../config/billing.js'
@@ -426,6 +426,12 @@ test('rutas: /plans avisa si ya se puede contratar sin revelar la configuración
   const result = await (await serveBilling(t, seededDb(null), owner, { env: { TRIAL_DAYS: '14' } }))('/plans')
   assert.deepEqual([result.status, result.body.payments_ready, result.body.data.length], [200, false, 4])
   assert.ok(!JSON.stringify(result.body).includes('MP_'))
+})
+
+test('rutas: /plans marca como próximamente la IA y WhatsApp sin credenciales', () => {
+  assert.deepEqual(comingSoonFeatures({}), ['ai', 'whatsapp'])
+  assert.deepEqual(comingSoonFeatures({ WHATSAPP_ENABLED: 'true', WHATSAPP_ACCESS_TOKEN: 't', WHATSAPP_PHONE_NUMBER_ID: '1' }), ['ai'])
+  assert.deepEqual(comingSoonFeatures({ AI_PROVIDER: 'openai', AI_API_KEY: 'k', AI_MODEL: 'm' }), ['whatsapp'])
 })
 
 test('rutas: checkout cobra el monto del plan guardado al taller de la sesión, nunca al del body', async (t) => {

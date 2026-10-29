@@ -78,7 +78,7 @@ export default function Communications() {
   const counts = Object.fromEntries(Object.keys(SUMMARY).map((key) => [key, messages.filter((message) => message.status === key).length]))
   const connection = status?.simulate ? ['info', 'Modo de prueba: los mensajes se registran pero no salen a WhatsApp.']
     : status?.configured ? ['success', 'WhatsApp Business está conectado y enviando mensajes.']
-      : ['warning', 'WhatsApp Business aún no está conectado. Los avisos no se enviarán hasta configurarlo en el servidor.']
+      : ['info', 'Próximamente: los avisos automáticos por WhatsApp estarán disponibles muy pronto. Mientras tanto, los mensajes no se envían.']
 
   return (
     <div className="space-y-6">

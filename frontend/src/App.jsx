@@ -45,6 +45,8 @@ const StaffFormPage = lazy(() => import('./pages/Staff.jsx').then((m) => ({ defa
 const Billing = lazy(() => import('./pages/Billing.jsx'))
 const Pricing = lazy(() => import('./pages/Pricing.jsx'))
 const Guide = lazy(() => import('./pages/Guide.jsx'))
+const PrivacyNotice = lazy(() => import('./pages/Legal.jsx').then((m) => ({ default: m.PrivacyNotice })))
+const Terms = lazy(() => import('./pages/Legal.jsx').then((m) => ({ default: m.Terms })))
 
 export default function App() {
   return (
@@ -53,6 +55,8 @@ export default function App() {
     <Routes>
       {/* Público */}
       <Route path="/precios" element={<Pricing />} />
+      <Route path="/privacidad" element={<PrivacyNotice />} />
+      <Route path="/terminos" element={<Terms />} />
       <Route path="/login" element={<Login />} />
       <Route path="/restablecer-contrasena" element={<ResetPassword />} />
       <Route path="/registro" element={<RegisterWorkshop />} />

@@ -49,7 +49,7 @@ export function requireActiveWorkshop(req, _res, next) {
   if (req.profile?.workshop?.status && req.profile.workshop.status !== 'ACTIVE') {
     return next(Object.assign(new Error('suspended'), {
       status: 403,
-      publicMessage: 'Este taller se encuentra temporalmente suspendido. Contacta con soporte de TallerFlow.',
+      publicMessage: 'Este taller se encuentra temporalmente suspendido. Escribe a soporte: luiscarlosmoramurill063@gmail.com.',
     }))
   }
   next()

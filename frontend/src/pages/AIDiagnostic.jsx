@@ -79,7 +79,7 @@ export default function AIDiagnostic() {
   return (
     <div className="space-y-6">
       <PageHeader title="Diagnóstico IA" description="Sugiere causas probables y pruebas para un equipo. Un técnico siempre valida el resultado." />
-      {aiStatus && !aiStatus.configured && <Alert tone="warning" title="El análisis con IA no está activo">Pide a soporte que configure el servicio de IA en el servidor. Mientras tanto, el formulario no podrá generar resultados.</Alert>}
+      {aiStatus && !aiStatus.configured && <Alert tone="info" title="Próximamente">El diagnóstico con IA estará disponible muy pronto. Te avisaremos cuando se active; mientras tanto, el formulario no podrá generar resultados.</Alert>}
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <Card title="Datos del equipo" description="Elige una orden para llenar los datos y guardar el diagnóstico en su historial.">

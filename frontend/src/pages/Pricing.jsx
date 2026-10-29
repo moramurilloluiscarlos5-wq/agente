@@ -4,6 +4,7 @@ import { LockKeyhole, RefreshCcw, ShieldCheck } from 'lucide-react'
 import BrandLogo from '../components/branding/BrandLogo.jsx'
 import BuySteps from '../components/auth/BuySteps.jsx'
 import PlanCards from '../components/billing/PlanCards.jsx'
+import LegalLinks from '../components/legal/LegalLinks.jsx'
 import { TIER_NAMES } from '../utils/billing.js'
 import { Alert, ErrorAlert, Skeleton } from '../components/ui/DesignSystem.jsx'
 import { api } from '../services/api.js'
@@ -21,6 +22,7 @@ export default function Pricing() {
   const [params] = useSearchParams()
   const [plans, setPlans] = useState([])
   const [trialDays, setTrialDays] = useState(0)
+  const [comingSoon, setComingSoon] = useState([])
   const [error, setError] = useState(null)
   const [loaded, setLoaded] = useState(false)
   // Licencias apagadas en el servidor: no hay nada que comprar y el registro es libre.
@@ -28,7 +30,7 @@ export default function Pricing() {
   const authenticated = status === 'authenticated'
 
   useEffect(() => {
-    api.get('/billing/plans').then((response) => { setPlans(response.data); setTrialDays(response.trial_days ?? 0); setDisabled(Boolean(response.disabled)) }).catch((err) => setError({ err, action: 'cargar los planes' })).finally(() => setLoaded(true))
+    api.get('/billing/plans').then((response) => { setPlans(response.data); setTrialDays(response.trial_days ?? 0); setComingSoon(response.coming_soon ?? []); setDisabled(Boolean(response.disabled)) }).catch((err) => setError({ err, action: 'cargar los planes' })).finally(() => setLoaded(true))
   }, [])
 
   // Sin sesión: se crea el taller con el plan elegido y después se paga. Con sesión: el pago se confirma en Facturación.
@@ -48,12 +50,13 @@ export default function Pricing() {
         </div>
         {params.get('checkout') === 'cancelled' && <Alert tone="info" className="mx-auto mt-6 max-w-3xl">Cancelaste el pago. No se hizo ningún cobro.</Alert>}
         {error && <ErrorAlert error={error.err} action={error.action} className="mx-auto mt-6 max-w-3xl" />}
-        <div className="mt-10">{plans.length > 0 ? <PlanCards plans={plans} actionFor={actionFor} trialDays={trialDays} /> : !error && loaded ? <div role="status" className="tf-card mx-auto max-w-3xl p-6 text-center text-sm text-[var(--tf-text-muted)]"><p>{disabled && !authenticated ? 'Por ahora el registro es gratis: crea tu taller y empieza a usarlo hoy.' : 'Los planes de pago aún no están disponibles. Vuelve a revisar pronto.'}</p>{disabled && !authenticated && <Link to="/registro" className="ct-auth-primary mx-auto mt-4 inline-flex">Crear mi taller</Link>}</div> : !error && <div role="status" aria-label="Cargando planes" className="tf-plan-grid">{[0, 1, 2].map((key) => <div key={key} className="tf-card space-y-4 p-6"><Skeleton className="h-5 w-24" /><Skeleton className="h-8 w-32" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /></div>)}</div>}</div>
+        <div className="mt-10">{plans.length > 0 ? <PlanCards plans={plans} actionFor={actionFor} trialDays={trialDays} comingSoon={comingSoon} /> : !error && loaded ? <div role="status" className="tf-card mx-auto max-w-3xl p-6 text-center text-sm text-[var(--tf-text-muted)]"><p>{disabled && !authenticated ? 'Por ahora el registro es gratis: crea tu taller y empieza a usarlo hoy.' : 'Los planes de pago aún no están disponibles. Vuelve a revisar pronto.'}</p>{disabled && !authenticated && <Link to="/registro" className="ct-auth-primary mx-auto mt-4 inline-flex">Crear mi taller</Link>}</div> : !error && <div role="status" aria-label="Cargando planes" className="tf-plan-grid">{[0, 1, 2].map((key) => <div key={key} className="tf-card space-y-4 p-6"><Skeleton className="h-5 w-24" /><Skeleton className="h-8 w-32" /><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-3/4" /></div>)}</div>}</div>
         <ul className="mx-auto mt-10 flex max-w-4xl flex-wrap justify-center gap-x-8 gap-y-3" aria-label="Por qué es seguro">
           {TRUST.map(({ icon: Icon, text }) => (
             <li key={text} className="flex items-center gap-2 text-sm font-medium text-[var(--tf-text-muted)]"><Icon size={16} className="text-[var(--tf-primary)]" aria-hidden="true" />{text}</li>
           ))}
         </ul>
+        <footer className="mt-12 border-t border-[var(--tf-border)] pt-6"><LegalLinks /></footer>
       </div>
     </main>
   )

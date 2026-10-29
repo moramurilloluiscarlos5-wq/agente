@@ -241,3 +241,16 @@ test('licencias apagadas: /precios no se queda cargando y /facturacion explica e
   await expect(page.getByRole('region', { name: 'Licencias desactivadas' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Planes disponibles' })).toHaveCount(0)
 })
+
+test('/precios marca como próximamente lo que el servidor aún no tiene y enlaza los avisos legales', async ({ page }) => {
+  await page.route(/\/api\//, (route) => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/billing/plans') ? { data: plans, trial_days: 14, coming_soon: ['ai', 'whatsapp'] } : { data: [] } }))
+  await page.goto('/precios')
+  await expect(page.getByRole('article', { name: 'Plan Pro' }).getByText('Avisos y mensajes por WhatsAppPróximamente')).toBeVisible()
+  await expect(page.getByRole('article', { name: 'Plan Max' }).getByText('Diagnóstico IAPróximamente')).toBeVisible()
+  await expect(page.getByRole('article', { name: 'Plan Pro' }).getByText('Reportes del negocio')).toBeVisible()
+  await expect(page.getByRole('article', { name: 'Plan Pro' }).getByText('Reportes del negocioPróximamente')).toHaveCount(0)
+  await page.getByRole('link', { name: 'Aviso de privacidad' }).click()
+  await expect(page.getByRole('heading', { name: 'Aviso de privacidad' })).toBeVisible()
+  await page.getByRole('link', { name: 'Términos' }).click()
+  await expect(page.getByRole('heading', { name: 'Términos y condiciones' })).toBeVisible()
+})

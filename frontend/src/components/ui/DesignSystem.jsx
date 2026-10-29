@@ -238,7 +238,7 @@ export function ErrorAlert({ error, action = 'cargar la información', onRetry, 
       `Página: ${window.location.pathname}`,
       `Fecha: ${new Date().toISOString()}`,
     ].filter(Boolean).join('\n')
-    try { await navigator.clipboard.writeText(details); toast.success('Detalles copiados. Pégalos en tu mensaje a soporte.') }
+    try { await navigator.clipboard.writeText(details); toast.success('Detalles copiados. Pégalos en tu correo a soporte (lo encuentras en el pie de la página de inicio de sesión).') }
     catch { toast.error('No se pudieron copiar los detalles. Toma una captura de pantalla de este aviso.') }
   }
   return (

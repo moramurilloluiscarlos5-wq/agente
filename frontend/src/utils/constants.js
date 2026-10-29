@@ -95,3 +95,7 @@ export const WRITE_ROLES = {
   inventory: ['OWNER', 'ADMINISTRADOR', 'RECEPCION', 'TECNICO', 'SUPER_ADMIN'],
   admin: ['OWNER', 'ADMINISTRADOR', 'SUPER_ADMIN'],
 }
+
+// Contacto público de soporte: aparece en las páginas legales, el pie de inicio de sesión y los avisos de error.
+export const SUPPORT_EMAIL = 'luiscarlosmoramurill063@gmail.com'
+export const supportMailto = (subject = 'Soporte TallerFlow') => `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}`

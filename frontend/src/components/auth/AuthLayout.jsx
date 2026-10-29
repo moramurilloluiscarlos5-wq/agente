@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef } from 'react'
 import { LockKeyhole, RefreshCcw, ShieldCheck } from 'lucide-react'
 import BrandLogo from '../branding/BrandLogo.jsx'
 import ThemeMenu from '../theme/ThemeMenu.jsx'
+import LegalLinks from '../legal/LegalLinks.jsx'
 import './auth.css'
 
 const prefersReducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -86,6 +87,7 @@ export default function AuthLayout({ children, variant = 'login' }) {
         <div className="ct-auth-mobile-brand"><BrandLogo /></div>
         <main id="auth-content" className="ct-auth-content" tabIndex={-1}>{children}</main>
         <footer className="ct-auth-footer"><ShieldCheck size={14} aria-hidden="true" /><span>Conexión cifrada. Pagos procesados por Mercado Pago.</span></footer>
+        <LegalLinks className="mt-2" />
       </div>
     </div>
   )

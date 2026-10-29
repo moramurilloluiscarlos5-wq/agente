@@ -11,8 +11,9 @@ const TAGLINES = {
 const PREVIOUS = { pro: 'plus', max: 'pro' }
 
 // Planes Plus, Pro y Max con cobro mensual o anual. `actionFor(plan)` decide el botón de cada
-// tarjeta: { label, onClick, disabled, busy, current }.
-export default function PlanCards({ plans, actionFor, trialDays = 0, initialInterval = 'month' }) {
+// tarjeta: { label, onClick, disabled, busy, current }. `comingSoon` lista las funciones que el
+// servidor aún no tiene configuradas; se muestran con la etiqueta "Próximamente".
+export default function PlanCards({ plans, actionFor, trialDays = 0, initialInterval = 'month', comingSoon = [] }) {
   const intervals = [...new Set(plans.map((plan) => plan.interval))]
   const [cycle, setCycle] = useState(intervals.includes(initialInterval) ? initialInterval : intervals[0])
   const visible = plans.filter((plan) => plan.interval === cycle)
@@ -45,7 +46,9 @@ export default function PlanCards({ plans, actionFor, trialDays = 0, initialInte
               <p className="tf-plan-users">{usersLabel(plan.max_users)}</p>
               <ul className="tf-plan-features">
                 {PREVIOUS[plan.tier] && <li className="tf-plan-includes">Todo lo de {TIER_NAMES[PREVIOUS[plan.tier]]}, más:</li>}
-                {(PREVIOUS[plan.tier] ? newFeatures(plans, plan) : BASE_FEATURES).map((feature) => <li key={feature}><Check size={15} strokeWidth={2.4} aria-hidden="true" />{feature}</li>)}
+                {(PREVIOUS[plan.tier] ? newFeatures(plans, plan) : BASE_FEATURES).map((feature) => (
+                  <li key={feature}><Check size={15} strokeWidth={2.4} aria-hidden="true" /><span>{FEATURE_LABELS[feature] ?? feature}{comingSoon.includes(feature) && <span className="tf-plan-soon">Próximamente</span>}</span></li>
+                ))}
               </ul>
               <button type="button" className={`ct-btn ${plan.tier === 'pro' && !action.current ? 'ct-btn-primary' : 'ct-btn-secondary'} w-full justify-center`} disabled={action.disabled} aria-busy={action.busy || undefined} onClick={action.onClick}>
                 {action.label}
@@ -63,5 +66,5 @@ export default function PlanCards({ plans, actionFor, trialDays = 0, initialInte
 function newFeatures(plans, plan) {
   const previous = plans.find((other) => other.tier === PREVIOUS[plan.tier] && other.interval === plan.interval)
   const before = new Set(previous?.features ?? [])
-  return plan.features.filter((feature) => !before.has(feature)).map((feature) => FEATURE_LABELS[feature] ?? feature)
+  return plan.features.filter((feature) => !before.has(feature))
 }

@@ -211,6 +211,7 @@ export default function RegisterWorkshop() {
                 {loading ? 'Creando taller…' : planCode ? 'Crear mi taller y continuar al pago' : 'Crear mi taller'}
                 {!loading && <ArrowRight size={16} aria-hidden="true" />}
               </button>
+              <p className="ct-auth-hint text-center">Al crear tu taller aceptas los <Link to="/terminos" className="ct-auth-link">Términos</Link> y el <Link to="/privacidad" className="ct-auth-link">Aviso de privacidad</Link>.</p>
             </fieldset>
             <span className="sr-only" role="status">{loading ? 'Creando tu taller. Espera un momento.' : ''}</span>
           </form>
