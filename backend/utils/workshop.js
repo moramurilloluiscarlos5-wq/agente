@@ -6,7 +6,6 @@ import { fail } from './operations.js'
 export const WORKSHOP_ROLES = ['OWNER', 'ADMINISTRADOR', 'TECNICO', 'RECEPCION', 'CAJERO']
 export const ADMIN_ROLES = ['OWNER', 'ADMINISTRADOR']
 export const PLATFORM_ROLES = ['SUPER_ADMIN']
-export const ALL_STAFF_ROLES = [...WORKSHOP_ROLES, ...PLATFORM_ROLES]
 
 // Taller del usuario autenticado. El frontend NUNCA lo envía: siempre sale de
 // la sesión (profiles.workshop_id cargado en loadProfile).

@@ -77,13 +77,6 @@ export async function trackedActiveWarranty(db, repairId) {
   return data
 }
 
-export async function trackedRepairIdByToken(db, token) {
-  const { data, error } = await db.from('repair_orders').select('id').eq('tracking_token', token).is('deleted_at', null).maybeSingle()
-  databaseError(error)
-  if (!data) fail('Seguimiento no encontrado.', 404)
-  return data
-}
-
 export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requireSupabase, requireAuth, loadProfile, requireLicense] } = {}) {
   const router = Router()
 
