@@ -8,7 +8,7 @@ import CountUp from '../components/ui/CountUp.jsx'
 import WelcomeSteps from '../components/dashboard/WelcomeSteps.jsx'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
-import { formatCurrency, formatDate, formatRelative } from '../utils/formatters.js'
+import { formatCurrency, formatDate, formatRelative, formatPhone } from '../utils/formatters.js'
 
 const CAN_CREATE = ['OWNER', 'ADMINISTRADOR', 'RECEPCION', 'SUPER_ADMIN']
 
@@ -197,7 +197,7 @@ export default function Dashboard() {
                       <li key={customer.id} className="tf-list-row">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-[var(--tf-text)]">{customer.name}</p>
-                          <p className="truncate text-xs text-[var(--tf-text-subtle)]">{customer.phone || 'Sin teléfono'}</p>
+                          <p className="truncate text-xs text-[var(--tf-text-subtle)]">{formatPhone(customer.phone) || 'Sin teléfono'}</p>
                         </div>
                         <span className="shrink-0 text-xs text-[var(--tf-text-subtle)]">{formatRelative(customer.createdAt)}</span>
                       </li>

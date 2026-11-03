@@ -63,7 +63,7 @@ export default function DeviceAgentRelease({ installedVersion }) {
       <button className="ct-btn ct-btn-secondary" disabled={loading} onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Reintentar descarga</button>
     </div>}
     {release && <>
-      {release.source === 'external' && <p className="mt-4 rounded-lg border border-[rgb(var(--tf-warning-rgb)/.3)] bg-[var(--tf-warning-soft)] p-3 text-xs text-[var(--tf-warning-ink)]">Descarga de prueba externa. MediaFire no es una release oficial verificada por GitHub.</p>}
+
       {updateAvailable && <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tf-accent)] bg-[var(--tf-accent-soft)] p-4">
         <p className="text-sm text-[var(--tf-link)]">Nueva versión disponible: {release.version}</p>
         <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Actualizar</a>

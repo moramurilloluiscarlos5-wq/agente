@@ -88,7 +88,7 @@ export default function AIDiagnostic() {
               <RecordPicker label="Orden de reparación (opcional)" value={repair} onChange={selectRepair} disabled={running}
                 path={(q) => `/repairs?limit=6${q ? `&q=${encodeURIComponent(q)}` : ''}`}
                 renderLabel={(record) => `${record.order_number}, ${deviceName(record.device ?? record)}`} renderMeta={(record) => customerName(record.customer)}
-                placeholder="CAR-0042 o iPhone 13" />
+                placeholder="ST-2026-0042 o iPhone 13" />
             </div>
             <Input label="Marca" required value={form.device_brand} onChange={set('device_brand')} error={errors.device_brand} placeholder="Samsung" />
             <Input label="Modelo" required value={form.device_model} onChange={set('device_model')} error={errors.device_model} placeholder="Galaxy A54" />

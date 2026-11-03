@@ -7,7 +7,7 @@ import { Badge, Card, EmptyState, ErrorAlert, Skeleton } from '../components/ui/
 import { useAuth } from '../hooks/useAuth.js'
 import { api } from '../services/api.js'
 import { QUOTE_STATUSES } from '../utils/constants.js'
-import { formatCurrency } from '../utils/formatters.js'
+import { formatCurrency, formatPhone } from '../utils/formatters.js'
 
 const emptyData = { repairs: [], customers: [], devices: [], quotes: [] }
 const fullName = (person) => [person?.first_name, person?.last_name].filter(Boolean).join(' ')
@@ -63,9 +63,9 @@ function SearchResultsContent({ query }) {
                     secondary={[[item.brand || item.device?.brand, item.model || item.device?.model].filter(Boolean).join(' '), item.reported_problem].filter(Boolean).join(': ')} aside={<StatusBadge status={item.status} />} />)}
                 </ResultCard>
                 <ResultCard icon={UserRound} title="Clientes" items={data.customers}>
-                  {data.customers.map((item) => <Row key={item.id} to={`/clientes/${encodeURIComponent(item.id)}`} primary={fullName(item) || 'Cliente'} secondary={item.phone || item.email || 'Sin contacto'} />)}
+                  {data.customers.map((item) => <Row key={item.id} to={`/clientes/${encodeURIComponent(item.id)}`} primary={fullName(item) || 'Cliente'} secondary={formatPhone(item.phone) || item.email || 'Sin contacto'} />)}
                 </ResultCard>
-                <ResultCard icon={Smartphone} title="Dispositivos" items={data.devices}>
+                <ResultCard icon={Smartphone} title="Equipos" items={data.devices}>
                   {data.devices.map((item) => <Row key={item.id} to={`/dispositivos/${encodeURIComponent(item.id)}`} primary={[item.brand, item.model].filter(Boolean).join(' ') || 'Equipo'}
                     secondary={[item.imei ? `IMEI ${item.imei}` : null, item.customer ? fullName(item.customer) : null].filter(Boolean).join(', ') || 'Sin IMEI'} />)}
                 </ResultCard>

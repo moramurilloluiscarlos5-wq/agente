@@ -4,10 +4,10 @@ import { ArrowLeft, Check, Pencil, Send } from 'lucide-react'
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useToast } from '../hooks/useToast.js'
-import { REPAIR_STATUSES } from '../utils/constants.js'
+import { PAYMENT_METHODS, REPAIR_STATUSES, WRITE_ROLES } from '../utils/constants.js'
 import { featureAvailable, planIncludes } from '../utils/billing.js'
 import { focusFirstInvalid } from '../utils/forms.js'
-import { formatCurrency, formatDate, formatDateTime } from '../utils/formatters.js'
+import { formatCurrency, formatDate, formatDateTime, formatPhone } from '../utils/formatters.js'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
 import WhatsAppComposer from '../components/whatsapp/WhatsAppComposer.jsx'
 import RepairFields from '../components/repairs/RepairFields.jsx'
@@ -15,6 +15,7 @@ import RepairTrackingPanel from '../components/tracking/RepairTrackingPanel.jsx'
 import { Alert, Badge, Button, Card, EmptyState, ErrorAlert, Select, Skeleton, Textarea } from '../components/ui/DesignSystem.jsx'
 import { customerName, deviceName, repairFormPayload, repairFormValues } from '../components/repairs/repairForm.js'
 
+const PAYMENT_ROLES = WRITE_ROLES.payments ?? []
 const MANAGE_ROLES = ['OWNER', 'ADMINISTRADOR', 'RECEPCION', 'SUPER_ADMIN']
 // Camino normal de una orden. "Esperando autorización/refacción" y "En pruebas" se agrupan en su etapa.
 const STAGES = [
@@ -119,10 +120,14 @@ function StatusUpdate({ repair, endpoint, onSaved }) {
 }
 
 function RepairDetailContent({ orderNumber }) {
-  const { profile, user } = useAuth()
+  const { profile, user, hasPermission } = useAuth()
+  const navigate = useNavigate()
   const repairState = useRepair(orderNumber)
   const { data: repair, history, loading, error, endpoint, reload } = repairState
   const [messages, setMessages] = useState({ key: null, list: [] })
+  const [payments, setPayments] = useState({ key: null, list: [] })
+  const canSeePayments = hasPermission('payments.view')
+  const canAddPayment = hasPermission('payments.create') && PAYMENT_ROLES.includes(profile?.role)
   const canManage = MANAGE_ROLES.includes(profile?.role)
   const canEdit = canManage || (profile?.role === 'TECNICO' && repair?.technician_id === (profile?.id ?? user?.id))
   // WhatsApp es del plan Pro en adelante: con Plus no se consulta ni se ofrece enviar.
@@ -139,6 +144,16 @@ function RepairDetailContent({ orderNumber }) {
     return () => { active = false }
   }, [repair?.id, history.length, whatsapp])
 
+  // Pagos ligados a la orden: lo cobrado se descuenta del saldo junto con el anticipo.
+  useEffect(() => {
+    if (!repair?.id || !canSeePayments) return undefined
+    let active = true
+    api.get(`/payments?limit=50&repair_order_id=${encodeURIComponent(repair.id)}`)
+      .then((response) => { if (active) setPayments({ key: repair.id, list: response.data ?? [] }) })
+      .catch(() => { if (active) setPayments({ key: repair.id, list: [] }) })
+    return () => { active = false }
+  }, [repair?.id, canSeePayments])
+
   const back = <Link className="tf-form-page-back" to="/reparaciones"><ArrowLeft size={16} aria-hidden="true" />Reparaciones</Link>
   if (loading && !repair) return (
     <div className="space-y-6" role="status" aria-label="Cargando orden">
@@ -149,7 +164,10 @@ function RepairDetailContent({ orderNumber }) {
   if (error || !repair) return <div className="space-y-4">{back}<ErrorAlert error={error ?? { status: 404 }} action="cargar la orden" onRetry={reload} /></div>
 
   const messageList = messages.key === repair.id ? messages.list : []
-  const balance = Math.max(0, Number(repair.estimated_cost || 0) - Number(repair.deposit || 0))
+  const paymentList = payments.key === repair.id ? payments.list : []
+  const paid = paymentList.filter((payment) => payment.status !== 'pendiente').reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+  const balance = Math.max(0, Number(repair.estimated_cost || 0) - Number(repair.deposit || 0) - paid)
+  const registerPayment = () => navigate('/pagos/nuevo', { state: { back: `/reparaciones/${encodeURIComponent(repair.order_number)}`, prefill: { customer: repair.customer ? { id: repair.customer_id, ...repair.customer } : null, repair: { id: repair.id, order_number: repair.order_number, brand: repair.brand, model: repair.model }, amount: balance || '' } } })
 
   return (
     <div className="space-y-6">
@@ -204,13 +222,19 @@ function RepairDetailContent({ orderNumber }) {
         </div>
 
         <aside className="min-w-0 space-y-6">
-          <Card title="Cobro">
+          <Card title="Cobro" actions={canAddPayment && <Button size="sm" onClick={registerPayment}>Registrar pago</Button>}>
             <dl className="space-y-4">
               <div><dt className="text-xs text-[var(--tf-text-subtle)]">Costo estimado</dt><dd className="tf-num mt-1 text-2xl font-semibold tracking-tight text-[var(--tf-text)]">{formatCurrency(repair.estimated_cost)}</dd></div>
               <div className="grid grid-cols-2 gap-4">
                 <div><dt className="text-xs text-[var(--tf-text-subtle)]">Anticipo</dt><dd className="tf-num mt-1 text-sm text-[var(--tf-text)]">{formatCurrency(repair.deposit)}</dd></div>
                 <div><dt className="text-xs text-[var(--tf-text-subtle)]">Saldo</dt><dd className={`tf-num mt-1 text-sm ${balance > 0 ? 'text-[var(--tf-warning)]' : 'text-[var(--tf-text)]'}`}>{formatCurrency(balance)}</dd></div>
               </div>
+              {paymentList.length > 0 && <div>
+                <dt className="text-xs text-[var(--tf-text-subtle)]">Pagos registrados</dt>
+                <dd className="mt-1 space-y-1 text-sm">{paymentList.map((payment) => (
+                  <p key={payment.id} className="flex items-center justify-between gap-2"><span className="text-[var(--tf-text-muted)]">{formatDate(payment.payment_date)} · {PAYMENT_METHODS[payment.method] ?? payment.method}{payment.status === 'pendiente' ? ' (pendiente)' : ''}</span><span className="tf-num text-[var(--tf-text)]">{formatCurrency(payment.amount)}</span></p>
+                ))}</dd>
+              </div>}
               <div className="grid grid-cols-2 gap-4">
                 <div><dt className="text-xs text-[var(--tf-text-subtle)]">Entrega estimada</dt><dd className="mt-1 text-sm text-[var(--tf-text)]">{repair.estimated_delivery_at ? formatDateTime(repair.estimated_delivery_at) : <span className="text-[var(--tf-text-subtle)]">Sin fecha</span>}</dd></div>
                 <div><dt className="text-xs text-[var(--tf-text-subtle)]">Responsable</dt><dd className="mt-1 text-sm text-[var(--tf-text)]">{repair.technician?.full_name || <span className="text-[var(--tf-text-subtle)]">Sin asignar</span>}</dd></div>
@@ -220,7 +244,7 @@ function RepairDetailContent({ orderNumber }) {
 
           <Card title="Cliente y equipo">
             <dl className="space-y-4">
-              <div><dt className="text-xs text-[var(--tf-text-subtle)]">Cliente</dt><dd className="mt-1"><Link to={`/clientes/${encodeURIComponent(repair.customer_id)}`} className="tf-link text-sm font-medium">{customerName(repair.customer)}</Link><span className="tf-num block text-sm text-[var(--tf-text-muted)]">{repair.customer?.phone || 'Sin teléfono'}</span></dd></div>
+              <div><dt className="text-xs text-[var(--tf-text-subtle)]">Cliente</dt><dd className="mt-1"><Link to={`/clientes/${encodeURIComponent(repair.customer_id)}`} className="tf-link text-sm font-medium">{customerName(repair.customer)}</Link><span className="tf-num block text-sm text-[var(--tf-text-muted)]">{formatPhone(repair.customer?.phone) || 'Sin teléfono'}</span></dd></div>
               <div><dt className="text-xs text-[var(--tf-text-subtle)]">Equipo</dt><dd className="mt-1">{repair.device_id ? <Link to={`/dispositivos/${encodeURIComponent(repair.device_id)}`} className="tf-link text-sm font-medium">{deviceName(repair.device ?? repair)}</Link> : <span className="text-sm text-[var(--tf-text)]">{deviceName(repair)}</span>}
                 <span className="tf-num block break-all text-sm text-[var(--tf-text-muted)]">{repair.device?.imei ? `IMEI ${repair.device.imei}` : repair.device?.serial_number ? `Serie ${repair.device.serial_number}` : 'Sin IMEI ni serie'}</span></dd></div>
             </dl>

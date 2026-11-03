@@ -14,7 +14,7 @@ import { api } from '../services/api.js'
 import { QUOTE_STATUSES, WRITE_ROLES } from '../utils/constants.js'
 import { friendlyError } from '../utils/errors.js'
 import { focusFirstInvalid } from '../utils/forms.js'
-import { formatCurrency, formatDate } from '../utils/formatters.js'
+import { formatCurrency, formatDate, formatPhone } from '../utils/formatters.js'
 import { customerName } from '../components/repairs/repairForm.js'
 
 const toMoney = (value) => Math.round(Number(value || 0) * 100) / 100
@@ -74,13 +74,13 @@ function QuoteForm({ initial, onDone }) {
           <RecordPicker label="Cliente" required value={form.customer} error={errors.customer} disabled={editing}
             onChange={(customer) => { setForm((current) => ({ ...current, customer, repair: null })); setErrors((current) => ({ ...current, customer: null })) }}
             path={(q) => `/customers?limit=6${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-            renderLabel={customerName} renderMeta={(customer) => customer.phone || ''} placeholder="María López o 612 123 4567" />
+            renderLabel={customerName} renderMeta={(customer) => formatPhone(customer.phone) || ''} placeholder="María López o 612 123 4567" />
         </div>
         {!editing && form.customer && <div className="tf-span-2">
           <RecordPicker label="Orden de reparación (opcional)" value={form.repair} onChange={(repair) => setForm((current) => ({ ...current, repair }))}
             path={(q) => `/repairs?limit=6&customer_id=${form.customer.id}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
             renderLabel={(repair) => `${repair.order_number}, ${[repair.brand, repair.model].filter(Boolean).join(' ')}`} renderMeta={(repair) => repair.reported_problem}
-            placeholder="ORD-0012 o iPhone 13" emptyText="Este cliente no tiene órdenes que coincidan." />
+            placeholder="Número de orden o modelo del equipo" emptyText="Este cliente no tiene órdenes que coincidan." />
         </div>}
         <Input label="Costo del servicio (MXN)" required type="number" inputMode="decimal" min="0" step="0.01" value={form.labor_cost} onChange={set('labor_cost')} error={errors.labor_cost} placeholder="850.00" />
         <Input label="Descuento (MXN, opcional)" type="number" inputMode="decimal" min="0" step="0.01" value={form.discount} onChange={set('discount')} error={errors.discount} />

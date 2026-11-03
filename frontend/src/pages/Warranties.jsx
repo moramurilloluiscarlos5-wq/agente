@@ -18,9 +18,13 @@ import { customerName } from '../components/repairs/repairForm.js'
 
 const DURATIONS = [30, 60, 90, 180, 365]
 
+// Días de calendario hasta el vencimiento: contar milisegundos con Math.ceil daba "quedan 91"
+// en una garantía de 90 días registrada hoy.
 function daysLeft(expiresAt) {
   if (!expiresAt) return null
-  return Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000)
+  const end = new Date(expiresAt)
+  const today = new Date()
+  return Math.round((Date.UTC(end.getFullYear(), end.getMonth(), end.getDate()) - Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000)
 }
 
 function WarrantyForm({ initial, onDone }) {
@@ -70,7 +74,7 @@ function WarrantyForm({ initial, onDone }) {
       <form id="warranty-form" onSubmit={submit} noValidate className="tf-form-grid">
         {!editing && <div className="tf-span-2">
           <RecordPicker label="Orden de reparación" required value={form.repair} error={errors.repair}
-            onChange={(repair) => { setForm((current) => ({ ...current, repair, service_description: current.service_description || repair?.reported_problem || '' })); setErrors((current) => ({ ...current, repair: null })) }}
+            onChange={(repair) => { setForm((current) => ({ ...current, repair })); setErrors((current) => ({ ...current, repair: null })) }}
             path={(q) => `/repairs?limit=6${q ? `&q=${encodeURIComponent(q)}` : ''}`}
             renderLabel={(repair) => `${repair.order_number}, ${[repair.brand, repair.model].filter(Boolean).join(' ')}`}
             renderMeta={(repair) => customerName(repair.customer)} placeholder="ORD-0012 o iPhone 13" />
