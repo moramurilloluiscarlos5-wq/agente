@@ -5,7 +5,7 @@ import { Card } from '../components/ui/DesignSystem.jsx'
 import { NAV_ITEMS, NAV_SECTIONS, REPAIR_STATUSES } from '../utils/constants.js'
 import { JOURNEY, MODULE_HELP, SECTION_INFO } from '../utils/help.js'
 import { useAuth } from '../hooks/useAuth.js'
-import { FEATURE_BY_PATH, FEATURE_MIN_TIER, TIER_NAMES } from '../utils/billing.js'
+import { FEATURE_BY_PATH, FEATURE_MIN_TIER, TIER_NAMES, featureAvailable } from '../utils/billing.js'
 
 // Paso del recorrido con las opciones del menú que lo atienden (solo las que el rol puede abrir).
 function JourneyStep({ step, index, items }) {
@@ -27,7 +27,7 @@ function JourneyStep({ step, index, items }) {
 
 export default function Guide() {
   const { profile, hasPermission } = useAuth()
-  const visible = NAV_ITEMS.filter((item) => (!item.roles || item.roles.includes(profile?.role)) && (!item.permission || hasPermission(item.permission)))
+  const visible = NAV_ITEMS.filter((item) => (!item.roles || item.roles.includes(profile?.role)) && (!item.permission || hasPermission(item.permission)) && featureAvailable(profile, FEATURE_BY_PATH[item.path]))
   const byPath = new Map(visible.map((item) => [item.path, item]))
   const groups = NAV_SECTIONS.map((section) => [section, visible.filter((item) => item.section === section)]).filter(([, items]) => items.length)
 
@@ -70,7 +70,7 @@ export default function Guide() {
         </div>
 
         <div className="min-w-0 space-y-6">
-          <Card title="Recorrido en video" description="Lo principal de TallerFlow en unos segundos.">
+          <Card title="Recorrido en video" description="Lo principal de ServiTrack en unos segundos.">
             <video className="tf-guide-video" src="/branding/auth-hero.mp4" poster="/branding/auth-hero-panel.jpg" controls muted playsInline preload="none" aria-describedby="guide-video-text" />
             <p id="guide-video-text" className="mt-3 text-sm leading-relaxed text-[var(--tf-text-muted)]">El panel del taller, el enlace de seguimiento que recibe tu cliente y cómo se conectan cobros, inventario y garantías.</p>
           </Card>

@@ -60,7 +60,7 @@ test('si el fallo persiste no hay bucle de recargas: se avisa y "Recargar" recup
 
   await openPricing(page)
 
-  const notice = page.getByRole('alert').filter({ hasText: 'Hay una versión nueva de TallerFlow' })
+  const notice = page.getByRole('alert').filter({ hasText: 'Hay una versión nueva de ServiTrack' })
   await expect(notice).toBeVisible()
   const settled = loads.value
   await page.waitForTimeout(1500)
@@ -98,6 +98,6 @@ test('dentro de la aplicación el aviso ocupa solo el contenido y el menú sigue
   await page.getByRole('link', { name: 'Inventario' }).first().click()
 
   const content = page.locator('#main-content')
-  await expect(content.getByRole('alert').filter({ hasText: 'Hay una versión nueva de TallerFlow' })).toBeVisible()
+  await expect(content.getByRole('alert').filter({ hasText: 'Hay una versión nueva de ServiTrack' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Inventario' }).first()).toBeVisible()
 })

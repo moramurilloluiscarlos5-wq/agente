@@ -42,7 +42,7 @@ export default function Login() {
 
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Iniciar sesión | TallerFlow'
+    document.title = 'Iniciar sesión | ServiTrack'
     return () => { document.title = previousTitle }
   }, [])
 

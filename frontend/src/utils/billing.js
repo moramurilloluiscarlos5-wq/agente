@@ -38,13 +38,17 @@ export const FEATURE_BY_PATH = {
 // Sin datos del plan (licencias apagadas o error al leerlos) la interfaz no oculta nada: el servidor valida.
 export const planIncludes = (profile, feature) => !feature || !profile?.entitlements || profile.entitlements.features.includes(feature)
 
+// Funciones que el servidor aún no puede dar (faltan sus credenciales): no se muestran en ningún lado.
+export const featureAvailable = (profile, feature) => !feature || !profile?.unavailable_features?.includes(feature)
+
 export const usersLabel = (maxUsers) => (maxUsers == null ? 'Usuarios ilimitados' : `Hasta ${maxUsers} usuarios`)
 
 // Solo el dueño y el administrador contratan o cambian el plan del taller.
 export const canManageBilling = (profile) => ['OWNER', 'ADMINISTRADOR'].includes(profile?.role)
 
 export const daysText = (days) => (days === 1 ? '1 día' : `${days ?? 0} días`)
-const dayMonth = (value) => (value ? new Date(value).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' }) : 'el final del periodo')
+// Incluye el artículo: "el 9 de noviembre" o "el final del periodo".
+const dayMonth = (value) => `el ${value ? new Date(value).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' }) : 'final del periodo'}`
 
 // Licencia vencida según /auth/me: el dueño o administrador va a Facturación a pagar y el resto ve
 // el aviso. Sin datos de licencia (apagadas o error al leerlas) no se bloquea nada: el servidor valida.
@@ -63,7 +67,7 @@ export function licenseStatus(profile) {
   if (license.status === 'trialing') return { label: `Prueba gratuita · ${daysText(license.days_left)}`, tone: license.days_left <= 3 ? 'warning' : 'success' }
   if (license.reason === 'past_due_grace') return { label: 'Pago pendiente', tone: 'warning' }
   const plan = profile.entitlements?.name ? `Plan ${profile.entitlements.name}` : 'Plan activo'
-  return license.cancel_at_period_end ? { label: `${plan} · hasta el ${dayMonth(license.current_period_end)}`, tone: 'warning' } : { label: plan, tone: 'success' }
+  return license.cancel_at_period_end ? { label: `${plan} · hasta ${dayMonth(license.current_period_end)}`, tone: 'warning' } : { label: plan, tone: 'success' }
 }
 
 // Aviso para quien puede pagar: días de prueba, cobro rechazado o plan cancelado.
@@ -71,11 +75,11 @@ export function licenseNotice(profile) {
   const license = profile?.license
   if (!license?.enabled || !license.allowed || !canManageBilling(profile)) return null
   if (license.status === 'trialing') {
-    return { tone: license.days_left <= 3 ? 'warning' : 'info', action: 'Elegir plan', text: `Prueba gratuita: te ${license.days_left === 1 ? 'queda' : 'quedan'} ${daysText(license.days_left)} con todo incluido.`, detail: `Termina el ${dayMonth(license.trial_end)}.` }
+    return { tone: license.days_left <= 3 ? 'warning' : 'info', action: 'Elegir plan', text: `Prueba gratuita: te ${license.days_left === 1 ? 'queda' : 'quedan'} ${daysText(license.days_left)} con todo incluido.`, detail: `Termina ${dayMonth(license.trial_end)}.` }
   }
   if (license.reason === 'past_due_grace') {
-    return { tone: 'warning', action: 'Ver facturación', text: `Mercado Pago no pudo cobrar tu plan y lo seguirá intentando. Revisa tu tarjeta en Mercado Pago antes del ${dayMonth(license.grace_until)} para no perder el acceso.` }
+    return { tone: 'warning', action: 'Ver facturación', text: `Mercado Pago no pudo cobrar tu plan y lo seguirá intentando. Revisa tu tarjeta en Mercado Pago a más tardar ${dayMonth(license.grace_until)} para no perder el acceso.` }
   }
-  if (license.cancel_at_period_end) return { tone: 'warning', action: 'Contratar de nuevo', text: `Cancelaste tu plan: conservas el acceso hasta el ${dayMonth(license.current_period_end)}.` }
+  if (license.cancel_at_period_end) return { tone: 'warning', action: 'Contratar de nuevo', text: `Cancelaste tu plan: conservas el acceso hasta ${dayMonth(license.current_period_end)}.` }
   return null
 }

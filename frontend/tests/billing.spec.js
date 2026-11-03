@@ -33,7 +33,7 @@ async function setup(page, { dashboard = 'ok', subscription, entitlements, role 
     if (path === '/billing/checkout') return route.fulfill({ json: { data: { url: '/precios?checkout=cancelled' } } })
     if (path === '/billing/change-plan') return route.fulfill({ json: { data: { changed: true, subscription } } })
     if (path === '/billing/cancel') return route.fulfill({ json: { data: { ...subscription, cancel_at_period_end: true } } })
-    if (path === '/dashboard' && dashboard === 'licenseRequired') return route.fulfill({ status: 402, json: { code: 'LICENSE_REQUIRED', reason: 'trial_expired', message: 'Tu periodo de prueba terminó. Elige un plan para seguir usando TallerFlow.' } })
+    if (path === '/dashboard' && dashboard === 'licenseRequired') return route.fulfill({ status: 402, json: { code: 'LICENSE_REQUIRED', reason: 'trial_expired', message: 'Tu periodo de prueba terminó. Elige un plan para seguir usando ServiTrack.' } })
     return route.fulfill({ json: { data: [] } })
   })
   return calls
@@ -65,7 +65,7 @@ test('con las licencias apagadas el registro sigue libre desde /precios', async 
   await page.goto('/precios')
   await page.getByRole('link', { name: 'Crear mi taller' }).click()
   await expect(page).toHaveURL(/\/registro$/)
-  await expect(page.getByRole('heading', { name: 'Crea tu taller en TallerFlow', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Crea tu taller en ServiTrack', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Crear mi taller', exact: true })).toBeVisible()
   await expect(page.getByRole('list', { name: 'Pasos para activar tu taller' })).toHaveCount(0)
 })
@@ -78,7 +78,7 @@ test('un 402 LICENSE_REQUIRED redirige a /facturacion con un mensaje claro', asy
   await expect(page.getByRole('region', { name: 'Planes disponibles' })).toBeVisible()
 })
 
-const expiredTrial = { enabled: true, allowed: false, reason: 'trial_expired', message: 'Tu periodo de prueba terminó. Elige un plan para seguir usando TallerFlow.', status: 'trialing', trial_end: null, days_left: null, current_period_end: null, cancel_at_period_end: false, grace_until: null }
+const expiredTrial = { enabled: true, allowed: false, reason: 'trial_expired', message: 'Tu periodo de prueba terminó. Elige un plan para seguir usando ServiTrack.', status: 'trialing', trial_end: null, days_left: null, current_period_end: null, cancel_at_period_end: false, grace_until: null }
 const expiredSubscription = { status: 'trialing', plan: null, trial_end: '2020-01-01T00:00:00Z', has_billing_account: false, license: license({ allowed: false, reason: 'trial_expired' }) }
 
 test('al iniciar sesión con la prueba vencida, el dueño llega a Facturación sin abrir el panel', async ({ page }) => {
@@ -186,7 +186,7 @@ test('el menú solo muestra las opciones del día a día, con nombres claros', a
   for (const removed of ['Dispositivos', 'Configuración', 'Facturación', 'Comunicaciones']) await expect(menu.getByRole('link', { name: removed })).toHaveCount(0)
 })
 
-test('el dueño baja de plan con el mismo cobro sin salir de TallerFlow', async ({ page }) => {
+test('el dueño baja de plan con el mismo cobro sin salir de ServiTrack', async ({ page }) => {
   const calls = await setup(page, { subscription: activeSubscription })
   await page.goto('/facturacion')
   await expect(page.getByRole('article', { name: 'Plan Pro' }).getByRole('button', { name: 'Tu plan actual' })).toBeDisabled()
@@ -242,13 +242,13 @@ test('licencias apagadas: /precios no se queda cargando y /facturacion explica e
   await expect(page.getByRole('region', { name: 'Planes disponibles' })).toHaveCount(0)
 })
 
-test('/precios marca como próximamente lo que el servidor aún no tiene y enlaza los avisos legales', async ({ page }) => {
+test('/precios no anuncia lo que el servidor aún no tiene y enlaza los avisos legales', async ({ page }) => {
   await page.route(/\/api\//, (route) => route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/billing/plans') ? { data: plans, trial_days: 14, coming_soon: ['ai', 'whatsapp'] } : { data: [] } }))
   await page.goto('/precios')
-  await expect(page.getByRole('article', { name: 'Plan Pro' }).getByText('Avisos y mensajes por WhatsAppPróximamente')).toBeVisible()
-  await expect(page.getByRole('article', { name: 'Plan Max' }).getByText('Diagnóstico IAPróximamente')).toBeVisible()
+  await expect(page.getByRole('article', { name: 'Plan Pro' }).getByText('Avisos y mensajes por WhatsApp')).toHaveCount(0)
+  await expect(page.getByRole('article', { name: 'Plan Max' }).getByText('Diagnóstico IA')).toHaveCount(0)
   await expect(page.getByRole('article', { name: 'Plan Pro' }).getByText('Reportes del negocio')).toBeVisible()
-  await expect(page.getByRole('article', { name: 'Plan Pro' }).getByText('Reportes del negocioPróximamente')).toHaveCount(0)
+  await expect(page.getByRole('article', { name: 'Plan Pro' }).getByText('Herramientas ADB y Fastboot')).toHaveCount(0)
   await page.getByRole('link', { name: 'Aviso de privacidad' }).click()
   await expect(page.getByRole('heading', { name: 'Aviso de privacidad' })).toBeVisible()
   await page.getByRole('link', { name: 'Términos' }).click()

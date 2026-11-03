@@ -46,7 +46,7 @@ test('el dueño que entra por primera vez ve la bienvenida con pasos y no se rep
   await setup(page, { ...owner, last_login_at: null })
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/')
-  const dialog = page.getByRole('dialog', { name: 'Te damos la bienvenida a TallerFlow' })
+  const dialog = page.getByRole('dialog', { name: 'Te damos la bienvenida a ServiTrack' })
   await expect(dialog).toBeVisible()
   const steps = page.getByRole('list', { name: 'Pasos para empezar' })
   await expect(steps.getByRole('listitem')).toHaveCount(4)
@@ -117,11 +117,11 @@ test('móvil conserva las etiquetas tras colapsar el menú y respeta movimiento 
   await page.screenshot({ path: testInfo.outputPath('staff-mobile.png'), fullPage: true, animations: 'disabled' })
 })
 
-test('la identidad de TallerFlow se muestra en el acceso', async ({ page }, testInfo) => {
+test('la identidad de ServiTrack se muestra en el acceso', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/login')
   await expect(page.getByRole('heading', { name: 'Iniciar sesión', exact: true })).toBeVisible()
-  await expect(page).toHaveTitle('Iniciar sesión | TallerFlow')
+  await expect(page).toHaveTitle('Iniciar sesión | ServiTrack')
   await page.screenshot({ path: testInfo.outputPath('login-desktop.png'), fullPage: true, animations: 'disabled' })
 })
 

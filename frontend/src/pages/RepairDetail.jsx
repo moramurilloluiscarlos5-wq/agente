@@ -5,7 +5,7 @@ import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { useToast } from '../hooks/useToast.js'
 import { REPAIR_STATUSES } from '../utils/constants.js'
-import { planIncludes } from '../utils/billing.js'
+import { featureAvailable, planIncludes } from '../utils/billing.js'
 import { focusFirstInvalid } from '../utils/forms.js'
 import { formatCurrency, formatDate, formatDateTime } from '../utils/formatters.js'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
@@ -126,7 +126,9 @@ function RepairDetailContent({ orderNumber }) {
   const canManage = MANAGE_ROLES.includes(profile?.role)
   const canEdit = canManage || (profile?.role === 'TECNICO' && repair?.technician_id === (profile?.id ?? user?.id))
   // WhatsApp es del plan Pro en adelante: con Plus no se consulta ni se ofrece enviar.
-  const whatsapp = planIncludes(profile, 'whatsapp')
+  // Sin credenciales en el servidor la sección no se muestra a nadie.
+  const whatsappReady = featureAvailable(profile, 'whatsapp')
+  const whatsapp = whatsappReady && planIncludes(profile, 'whatsapp')
 
   useEffect(() => {
     if (!repair?.id || !whatsapp) return undefined
@@ -226,7 +228,7 @@ function RepairDetailContent({ orderNumber }) {
 
           <RepairTrackingPanel orderNumber={repair.order_number} />
 
-          <Card title="Mensajes de WhatsApp" bodyClassName={null}>
+          {whatsappReady && <Card title="Mensajes de WhatsApp" bodyClassName={null}>
             {!whatsapp ? <p className="p-6 text-sm text-[var(--tf-text-subtle)]">Los avisos y mensajes por WhatsApp están disponibles desde el plan Pro.</p>
               : !messageList.length ? <p className="p-6 text-sm text-[var(--tf-text-subtle)]">Aún no hay mensajes de esta orden.</p>
               : <ul className="tf-list">{messageList.map((message) => {
@@ -239,7 +241,7 @@ function RepairDetailContent({ orderNumber }) {
                   </li>
                 )
               })}</ul>}
-          </Card>
+          </Card>}
         </aside>
       </div>
     </div>

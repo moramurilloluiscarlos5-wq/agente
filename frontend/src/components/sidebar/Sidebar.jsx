@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { Compass, Lock, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { NAV_ITEMS, NAV_SECTIONS } from '../../utils/constants.js'
 import { MODULE_HELP } from '../../utils/help.js'
-import { FEATURE_BY_PATH, FEATURE_MIN_TIER, TIER_NAMES, licenseStatus, planIncludes } from '../../utils/billing.js'
+import { FEATURE_BY_PATH, FEATURE_MIN_TIER, TIER_NAMES, featureAvailable, licenseStatus, planIncludes } from '../../utils/billing.js'
 import { useSidebar } from '../../hooks/useSidebar.js'
 import { useAuth } from '../../hooks/useAuth.js'
 import { useTour } from '../../hooks/useTour.js'
@@ -27,7 +27,7 @@ export default function Sidebar() {
 
   const workshopName = profile?.workshop?.name || profile?.workshop_name || (profile?.role === 'SUPER_ADMIN' ? 'Plataforma' : 'Mi taller')
   const status = licenseStatus(profile)
-  const visibleItems = NAV_ITEMS.filter((item) => (!item.roles || item.roles.includes(profile?.role)) && (!item.permission || hasPermission(item.permission)))
+  const visibleItems = NAV_ITEMS.filter((item) => (!item.roles || item.roles.includes(profile?.role)) && (!item.permission || hasPermission(item.permission)) && featureAvailable(profile, FEATURE_BY_PATH[item.path]))
   const groups = NAV_SECTIONS.map((section) => [section, visibleItems.filter((item) => item.section === section)]).filter(([, items]) => items.length)
   const compact = collapsed && !mobileOpen
 

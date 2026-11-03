@@ -2,7 +2,7 @@
 
 Sistema interno de gestión para servicio técnico de celulares: clientes, dispositivos, reparaciones, diagnósticos, cotizaciones, inventario, pagos, garantías, reportes y asistente de IA.
 
-> **Estado (octubre 2026):** en producción en Railway. Multi-taller (OWNER, ADMINISTRADOR, TÉCNICO, RECEPCIÓN, CAJERO y SUPER_ADMIN), reparaciones, seguimiento público con QR/PDF, cotizaciones, inventario, pagos, garantías, reportes, IA, WhatsApp y Device Tools (ADB/Fastboot). La interfaz se presenta como **TallerFlow**. Ver `AUDITORIA_FASES.md` y `DEPLOYMENT.md`.
+> **Estado (octubre 2026):** en producción en Railway. Multi-taller (OWNER, ADMINISTRADOR, TÉCNICO, RECEPCIÓN, CAJERO y SUPER_ADMIN), reparaciones, seguimiento público con QR/PDF, cotizaciones, inventario, pagos, garantías, reportes, IA, WhatsApp y Device Tools (ADB/Fastboot). La interfaz se presenta como **ServiTrack**. Ver `AUDITORIA_FASES.md` y `DEPLOYMENT.md`.
 
 ---
 
@@ -225,7 +225,7 @@ uno vendedor y uno comprador.
 
 1. Pon en Railway (o `backend/.env`) el Access Token **del vendedor de prueba** y la clave secreta del webhook.
    `APP_PUBLIC_URL` debe ser una URL https pública (Mercado Pago no regresa a `localhost`).
-2. Entra a TallerFlow, elige un plan y, en Mercado Pago, inicia sesión con el **comprador de prueba** usando
+2. Entra a ServiTrack, elige un plan y, en Mercado Pago, inicia sesión con el **comprador de prueba** usando
    su correo en el campo "Correo de tu cuenta de Mercado Pago". Paga con una de las tarjetas de prueba
    que Mercado Pago lista en su documentación de pruebas.
 3. Revisa que la licencia quede activa, prueba un cambio de plan y una cancelación.

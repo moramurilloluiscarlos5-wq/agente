@@ -41,7 +41,7 @@ export default function WelcomeSteps({ data }) {
   const steps = [
     {
       key: 'welcome', short: 'Bienvenida', done: true,
-      title: 'Te damos la bienvenida a TallerFlow',
+      title: 'Te damos la bienvenida a ServiTrack',
       body: 'Así trabaja tu taller aquí: recibes el equipo, lo reparas, avisas al cliente y se lo entregas. En unos pasos lo dejas listo.',
     },
     {

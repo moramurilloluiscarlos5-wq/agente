@@ -22,7 +22,7 @@ export class MercadoPagoError extends Error {
 // Rechazos de Mercado Pago al crear una suscripción que dependen de quien paga, no de un fallo
 // del servicio: se explican al taller con algo que pueda corregir. El resto sigue como 502.
 const CHECKOUT_PROBLEMS = [
-  [/same user|payer.*collector|collector.*payer/i, 'No puedes pagar con la misma cuenta de Mercado Pago que recibe los cobros de TallerFlow. Usa el correo de otra cuenta de Mercado Pago.'],
+  [/same user|payer.*collector|collector.*payer/i, 'No puedes pagar con la misma cuenta de Mercado Pago que recibe los cobros de ServiTrack. Usa el correo de otra cuenta de Mercado Pago.'],
   [/different countries|country/i, 'Ese correo es de una cuenta de Mercado Pago de otro país. Usa una cuenta de Mercado Pago de México.'],
   [/real or test users|test user/i, 'Ese correo no se puede usar para pagar en este entorno. Usa el correo de una cuenta real de Mercado Pago.'],
   [/payer_email|email/i, 'Mercado Pago no aceptó ese correo. Escribe el correo con el que entras a tu cuenta de Mercado Pago.'],

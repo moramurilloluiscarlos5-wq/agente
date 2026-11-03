@@ -55,7 +55,7 @@ export default function DeviceAgentRelease({ installedVersion }) {
   const updateAvailable = release && isNewerAgentVersion(release.version, installedVersion)
 
   return <section className="ct-surface-raised p-5" aria-label="Descarga y actualizaciones del agente">
-    <h2 className="text-lg font-semibold">TallerFlow Device Agent</h2>
+    <h2 className="text-lg font-semibold">ServiTrack Device Agent</h2>
     <p className="mt-1 text-sm text-[var(--tf-text-muted)]">Windows 10 / Windows 11 · x64{installedVersion ? ` · Versión instalada: ${installedVersion}` : ''}</p>
     {loading && !release && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-[var(--tf-text-muted)]"><LoaderCircle size={16} className="animate-spin" /> Consultando versión oficial…</p>}
     {error && <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -69,7 +69,7 @@ export default function DeviceAgentRelease({ installedVersion }) {
         <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Actualizar</a>
       </div>}
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Descargar TallerFlow Device Agent</a>
+        <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Descargar ServiTrack Device Agent</a>
         <a className="text-sm text-[var(--tf-link)] underline underline-offset-4" href={release.releaseUrl} target="_blank" rel="noreferrer">{release.source === 'external' ? 'Abrir página de descarga' : `Ver release v${release.version}`}</a>
       </div>
     </>}

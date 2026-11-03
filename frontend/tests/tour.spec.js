@@ -25,7 +25,7 @@ test('el recorrido guiado explica cada opción del menú paso a paso', async ({ 
   await page.goto('/')
   const launcher = page.getByRole('button', { name: /Recorrido guiado/ })
   await launcher.click()
-  await expect(page.getByRole('dialog', { name: 'Te damos la bienvenida a TallerFlow' })).toContainText('1 de 22')
+  await expect(page.getByRole('dialog', { name: 'Te damos la bienvenida a ServiTrack' })).toContainText('1 de 22')
   await expect(page.getByRole('button', { name: 'Anterior' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Siguiente' })).toBeFocused()
 
@@ -61,7 +61,7 @@ test('el último paso termina el recorrido y señala dónde repetirlo', async ({
 test('en el primer inicio de sesión del personal el recorrido arranca solo y no se repite', async ({ page }) => {
   await setup(page, { ...owner, role: 'TECNICO', last_login_at: null })
   await page.goto('/')
-  await expect(page.getByRole('dialog', { name: 'Te damos la bienvenida a TallerFlow' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Te damos la bienvenida a ServiTrack' })).toBeVisible()
   await page.getByRole('button', { name: 'Omitir' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
 

@@ -8,6 +8,7 @@ import { usePagedResource } from '../hooks/usePagedResource.js'
 import { useDraft } from '../hooks/useDraft.js'
 import { useRecord } from '../hooks/useRecord.js'
 import { useAuth } from '../hooks/useAuth.js'
+import { featureAvailable, planIncludes } from '../utils/billing.js'
 import { useToast } from '../hooks/useToast.js'
 import { api } from '../services/api.js'
 import { QUOTE_STATUSES, WRITE_ROLES } from '../utils/constants.js'
@@ -125,7 +126,7 @@ export default function Quotes() {
   const canCreate = writer && hasPermission('quotes.create')
   const canEdit = writer && hasPermission('quotes.update')
   const canDelete = WRITE_ROLES.admin.includes(profile?.role) && hasPermission('quotes.delete')
-  const canSend = hasPermission('whatsapp.send')
+  const canSend = hasPermission('whatsapp.send') && featureAvailable(profile, 'whatsapp') && planIncludes(profile, 'whatsapp')
   const filtered = Boolean(list.query || status)
   const clearFilters = () => { list.setQuery(''); setStatus('') }
 

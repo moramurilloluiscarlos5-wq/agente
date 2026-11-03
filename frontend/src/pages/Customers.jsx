@@ -8,6 +8,7 @@ import { usePagedResource } from '../hooks/usePagedResource.js'
 import { useDirectoryRecords } from '../hooks/useDirectoryRecords.js'
 import { useDraft } from '../hooks/useDraft.js'
 import { useAuth } from '../hooks/useAuth.js'
+import { featureAvailable } from '../utils/billing.js'
 import { useToast } from '../hooks/useToast.js'
 import { api } from '../services/api.js'
 import { friendlyError } from '../utils/errors.js'
@@ -185,7 +186,7 @@ export function CustomerDetailPage() {
           </table></div>}
       </Card>
 
-      <Card title="Mensajes de WhatsApp" bodyClassName={null}>
+      {featureAvailable(profile, 'whatsapp') && <Card title="Mensajes de WhatsApp" bodyClassName={null}>
         {messages.loading ? <TableSkeleton rows={2} columns={3} />
           : messages.error ? <div className="p-4"><Alert tone="error" action={<Button size="sm" onClick={messages.reload}>Reintentar</Button>}>{messages.error}</Alert></div>
             : !messages.payload?.data?.length ? <EmptyState icon={MessageCircle} title="Sin mensajes enviados" description="Los avisos de reparación y cotizaciones enviados a este cliente aparecerán aquí." className="!py-8" />
@@ -194,7 +195,7 @@ export function CustomerDetailPage() {
                   <p className="min-w-0 text-sm text-[var(--tf-text-muted)]">{message.message}</p>
                   <span className="flex shrink-0 flex-col items-end gap-1"><Badge tone={message.status === 'failed' ? 'danger' : message.status === 'read' || message.status === 'delivered' ? 'success' : 'neutral'}>{WHATSAPP_STATUS[message.status] ?? message.status}</Badge><span className="text-xs text-[var(--tf-text-subtle)]">{formatDate(message.created_at)}</span></span>
                 </li>))}</ul>}
-      </Card>
+      </Card>}
 
       <ConfirmDialog open={confirmArchive} busy={archiving} confirmLabel="Archivar cliente"
         title={`¿Archivar a ${fullName(customer)}?`}

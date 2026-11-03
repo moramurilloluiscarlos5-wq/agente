@@ -1,8 +1,8 @@
-// Resolución segura de la base del API de TallerFlow.
+// Resolución segura de la base del API de ServiTrack.
 //
 // Regla de oro:
 // - El Device Agent local ES la única cosa que vive en 127.0.0.1/localhost.
-// - El backend de TallerFlow vive en Railway y, en producción, el propio
+// - El backend de ServiTrack vive en Railway y, en producción, el propio
 //   backend sirve el frontend compilado, por lo que la base correcta es
 //   la ruta relativa `/api` (mismo origen).
 //

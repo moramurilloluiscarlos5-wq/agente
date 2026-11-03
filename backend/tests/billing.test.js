@@ -503,7 +503,7 @@ test('rutas: bajar de plan con el mismo cobro ajusta el monto en Mercado Pago y 
   const result = await request('/change-plan', { plan: 'plus_monthly' })
   assert.equal(result.status, 200)
   assert.equal(result.body.data.changed, true)
-  assert.deepEqual(mp.updated[0], { id: 'pre_1', body: { reason: 'TallerFlow Plus mensual', auto_recurring: { transaction_amount: 299, currency_id: 'MXN' } } })
+  assert.deepEqual(mp.updated[0], { id: 'pre_1', body: { reason: 'ServiTrack Plus mensual', auto_recurring: { transaction_amount: 299, currency_id: 'MXN' } } })
   assert.equal(db.tables.subscriptions[0].plan_id, 'plan-plus-m')
   assert.equal(result.body.data.subscription.entitlements.tier, 'plus')
   assert.equal(db.tables.workshops[0].plan, 'PLUS')

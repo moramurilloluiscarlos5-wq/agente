@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   TallerFlow design system: "Placa"
+   ServiTrack design system: "Placa"
    El verde de la tarjeta de circuito es la marca y el menú; el dorado de la
    soldadura marca solo lo activo y el foco. Superficies frías y claras para
    leer con la luz del mostrador.
@@ -797,4 +797,3 @@ button:not(:disabled), a, summary, label[for], select { cursor: pointer; }
 .tf-legal ul { padding-left: 1.25rem; list-style: disc; }
 .tf-legal li + li { margin-top: 0.25rem; }
 .tf-legal a { color: var(--tf-link); text-decoration: underline; }
-.tf-plan-soon { display: inline-block; margin-left: 0.375rem; padding: 0 0.375rem; border-radius: 999px; background: var(--tf-surface-sunken); color: var(--tf-text-subtle); font-size: 0.6875rem; font-weight: 600; vertical-align: 0.0625rem; }

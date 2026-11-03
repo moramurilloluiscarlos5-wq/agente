@@ -1,4 +1,4 @@
-// Temas de TallerFlow. El claro (por defecto) es el mostrador de día y el oscuro la placa de noche.
+// Temas de ServiTrack. El claro (por defecto) es el mostrador de día y el oscuro la placa de noche.
 // Cinco colores de placa: cambian el menú, los botones y los enlaces; la soldadura dorada no cambia.
 // Las llaves y los valores válidos son los mismos de public/theme-init.js.
 

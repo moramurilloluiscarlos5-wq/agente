@@ -46,7 +46,7 @@ export function sectionTitle(pathname) {
   // Los equipos se abren desde la ficha del cliente o la búsqueda; ya no están en el menú.
   if (pathname.startsWith('/dispositivos')) return 'Equipos'
   const item = NAV_ITEMS.find((entry) => entry.path !== '/' && pathname.startsWith(entry.path))
-  return item?.title ?? item?.label ?? 'TallerFlow'
+  return item?.title ?? item?.label ?? 'ServiTrack'
 }
 
 // Estados oficiales del flujo de reparación con estilos ya resueltos para Tailwind (evita clases dinámicas).
@@ -98,4 +98,4 @@ export const WRITE_ROLES = {
 
 // Contacto público de soporte: aparece en las páginas legales, el pie de inicio de sesión y los avisos de error.
 export const SUPPORT_EMAIL = 'luiscarlosmoramurill063@gmail.com'
-export const supportMailto = (subject = 'Soporte TallerFlow') => `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}`
+export const supportMailto = (subject = 'Soporte ServiTrack') => `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}`

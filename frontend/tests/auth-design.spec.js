@@ -39,7 +39,7 @@ for (const [width, height] of [[1920, 1080], [1440, 900], [1366, 768], [768, 102
     await page.setViewportSize({ width, height })
     for (const [path, heading, submit] of [
       ['/login', 'Iniciar sesión', 'Iniciar sesión'],
-      ['/registro?plan=pro_monthly', 'Crea tu taller en TallerFlow', 'Crear mi taller y continuar al pago'],
+      ['/registro?plan=pro_monthly', 'Crea tu taller en ServiTrack', 'Crear mi taller y continuar al pago'],
     ]) {
       await page.goto(path)
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible()
