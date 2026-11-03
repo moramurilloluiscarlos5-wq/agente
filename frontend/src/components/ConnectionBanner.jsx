@@ -44,7 +44,7 @@ export default function ConnectionBanner() {
       {apiStatus === API_STATUS.ONLINE && <CheckCircle2 size={16} className="shrink-0" aria-hidden="true" />}
       <span>
         {offline && 'Sin conexión con el servidor. Tus cambios no se guardarán hasta que vuelva; seguimos reintentando.'}
-        {checking && 'Comprobando conexión con TallerFlow…'}
+        {checking && 'Comprobando conexión con ServiTrack…'}
         {apiStatus === API_STATUS.ONLINE && 'Conexión restablecida.'}
       </span>
       {offline && (

@@ -10,6 +10,7 @@ import RecordPicker from '../components/ui/RecordPicker.jsx'
 import { Alert, Button, Card, DraftNotice, EmptyState, ErrorAlert } from '../components/ui/DesignSystem.jsx'
 import { customerName, deviceName, repairFormPayload, repairFormValues } from '../components/repairs/repairForm.js'
 import { focusFirstInvalid } from '../utils/forms.js'
+import { formatPhone } from '../utils/formatters.js'
 import { ShieldAlert } from 'lucide-react'
 
 const CREATE_ROLES = ['OWNER', 'ADMINISTRADOR', 'RECEPCION', 'SUPER_ADMIN']
@@ -135,7 +136,7 @@ export default function NewRepair() {
             <div className="min-w-0 space-y-2">
               <RecordPicker label="Cliente" required value={customer} error={errors.customer} disabled={saving} onChange={selectCustomer}
                 path={(q) => `/customers?limit=6${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-                renderLabel={customerName} renderMeta={(record) => record.phone || ''} placeholder="María López o 612 123 4567"
+                renderLabel={customerName} renderMeta={(record) => formatPhone(record.phone) || ''} placeholder="María López o 612 123 4567"
                 emptyText="No hay clientes con ese dato. Regístralo con el enlace de abajo." />
               <Link to={`/clientes/nuevo?${returnParam}`} className="tf-link inline-flex min-h-8 items-center gap-1 text-sm"><Plus size={16} aria-hidden="true" />Registrar cliente nuevo</Link>
             </div>

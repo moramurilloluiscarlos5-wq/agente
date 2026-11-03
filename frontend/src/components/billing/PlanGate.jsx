@@ -1,16 +1,18 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { Lock } from 'lucide-react'
 import PageHeader from '../ui/PageHeader.jsx'
 import { EmptyState } from '../ui/DesignSystem.jsx'
 import { useAuth } from '../../hooks/useAuth.js'
 import { sectionTitle } from '../../utils/constants.js'
-import { FEATURE_LABELS, FEATURE_MIN_TIER, TIER_NAMES, planIncludes } from '../../utils/billing.js'
+import { FEATURE_LABELS, FEATURE_MIN_TIER, TIER_NAMES, featureAvailable, planIncludes } from '../../utils/billing.js'
 
 // Muestra la sección solo si el plan del taller la incluye; si no, explica en qué plan está.
 // El servidor aplica el mismo límite: esto evita que la persona llegue a un error.
 export default function PlanGate({ feature, children }) {
   const { profile } = useAuth()
   const { pathname } = useLocation()
+  // Función sin configurar en el servidor: la sección no existe para el taller.
+  if (!featureAvailable(profile, feature)) return <Navigate to="/" replace />
   if (planIncludes(profile, feature)) return children
 
   const tier = TIER_NAMES[FEATURE_MIN_TIER[feature]] ?? 'superior'

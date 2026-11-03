@@ -9,12 +9,12 @@ export default function RequireAuth() {
   const { pathname } = useLocation()
   if (status === 'loading') return <div role="status" className="flex min-h-screen items-center justify-center bg-[var(--tf-surface-sunken)] text-[var(--tf-text-muted)]">Cargando sesión…</div>
   // API inalcanzable pero con sesión preservada: NO redirigir a /login.
-  // Mostrar el fallo real (servidor de TallerFlow) y permitir reintentar.
+  // Mostrar el fallo real (servidor de ServiTrack) y permitir reintentar.
   if (status === 'offline') {
     return (
       <div role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--tf-surface-sunken)] px-6 text-center text-[var(--tf-text)]">
         <CloudOff size={36} className="text-[var(--tf-warning-ink)]" />
-        <h1 className="text-xl font-semibold">TallerFlow no pudo conectarse con el servidor.</h1>
+        <h1 className="text-xl font-semibold">ServiTrack no pudo conectarse con el servidor.</h1>
         <p className="max-w-md text-sm leading-6 text-[var(--tf-text-muted)]">
           Tu sesión está a salvo. Revisa tu conexión; en cuanto el servidor responda podrás continuar.
         </p>

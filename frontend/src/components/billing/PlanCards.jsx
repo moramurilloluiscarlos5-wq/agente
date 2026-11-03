@@ -6,13 +6,13 @@ import { BASE_FEATURES, FEATURE_LABELS, TIER_NAMES, formatPrice, usersLabel } fr
 const TAGLINES = {
   plus: 'Para empezar a ordenar tu taller.',
   pro: 'Para talleres con equipo de trabajo.',
-  max: 'Todo TallerFlow, sin límites.',
+  max: 'Todo ServiTrack, sin límites.',
 }
 const PREVIOUS = { pro: 'plus', max: 'pro' }
 
 // Planes Plus, Pro y Max con cobro mensual o anual. `actionFor(plan)` decide el botón de cada
 // tarjeta: { label, onClick, disabled, busy, current }. `comingSoon` lista las funciones que el
-// servidor aún no tiene configuradas; se muestran con la etiqueta "Próximamente".
+// servidor aún no tiene configuradas; no se anuncian hasta que funcionen.
 export default function PlanCards({ plans, actionFor, trialDays = 0, initialInterval = 'month', comingSoon = [] }) {
   const intervals = [...new Set(plans.map((plan) => plan.interval))]
   const [cycle, setCycle] = useState(intervals.includes(initialInterval) ? initialInterval : intervals[0])
@@ -46,8 +46,8 @@ export default function PlanCards({ plans, actionFor, trialDays = 0, initialInte
               <p className="tf-plan-users">{usersLabel(plan.max_users)}</p>
               <ul className="tf-plan-features">
                 {PREVIOUS[plan.tier] && <li className="tf-plan-includes">Todo lo de {TIER_NAMES[PREVIOUS[plan.tier]]}, más:</li>}
-                {(PREVIOUS[plan.tier] ? newFeatures(plans, plan) : BASE_FEATURES).map((feature) => (
-                  <li key={feature}><Check size={15} strokeWidth={2.4} aria-hidden="true" /><span>{FEATURE_LABELS[feature] ?? feature}{comingSoon.includes(feature) && <span className="tf-plan-soon">Próximamente</span>}</span></li>
+                {(PREVIOUS[plan.tier] ? newFeatures(plans, plan) : BASE_FEATURES).filter((feature) => !comingSoon.includes(feature)).map((feature) => (
+                  <li key={feature}><Check size={15} strokeWidth={2.4} aria-hidden="true" /><span>{FEATURE_LABELS[feature] ?? feature}</span></li>
                 ))}
               </ul>
               <button type="button" className={`ct-btn ${plan.tier === 'pro' && !action.current ? 'ct-btn-primary' : 'ct-btn-secondary'} w-full justify-center`} disabled={action.disabled} aria-busy={action.busy || undefined} onClick={action.onClick}>

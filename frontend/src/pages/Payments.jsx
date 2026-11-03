@@ -13,7 +13,7 @@ import { useToast } from '../hooks/useToast.js'
 import { api } from '../services/api.js'
 import { PAYMENT_METHODS, PAYMENT_STATUSES, WRITE_ROLES } from '../utils/constants.js'
 import { friendlyError } from '../utils/errors.js'
-import { formatCurrency, formatDate } from '../utils/formatters.js'
+import { formatCurrency, formatDate, formatPhone } from '../utils/formatters.js'
 import { customerName } from '../components/repairs/repairForm.js'
 
 function todayInput() {
@@ -21,22 +21,23 @@ function todayInput() {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 }
 
-function emptyPayment() {
-  return { customer: null, amount: '', method: 'efectivo', status: 'pagado', reference: '', payment_date: todayInput() }
+function emptyPayment(prefill = {}) {
+  return { customer: prefill.customer ?? null, repair: prefill.repair ?? null, amount: prefill.amount ? String(prefill.amount) : '', method: 'efectivo', status: 'pagado', reference: '', payment_date: todayInput() }
 }
 
 function fromRecord(record) {
   return {
     customer: record.customer ? { id: record.customer_id, ...record.customer } : null,
+    repair: record.repair ? { id: record.repair_order_id, ...record.repair } : null,
     amount: String(record.amount ?? ''), method: record.method ?? 'efectivo', status: record.status ?? 'pagado',
     reference: record.reference ?? '', payment_date: record.payment_date?.slice(0, 10) ?? todayInput(),
   }
 }
 
-function PaymentForm({ initial, onDone }) {
+function PaymentForm({ initial, prefill, onDone }) {
   const toast = useToast()
   const editing = Boolean(initial?.id)
-  const [form, setForm, draft] = useDraft(editing ? null : 'payment-new', editing ? fromRecord(initial) : emptyPayment())
+  const [form, setForm, draft] = useDraft(editing ? null : 'payment-new', editing ? fromRecord(initial) : emptyPayment(prefill))
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState(null)
@@ -51,6 +52,7 @@ function PaymentForm({ initial, onDone }) {
     if (Object.keys(nextErrors).length) { setErrors(nextErrors); focusFirstInvalid('payment-form'); return }
     setSaving(true); setFormError(null)
     const body = { customer_id: form.customer.id, amount: Math.round(amount * 100) / 100, method: form.method, status: form.status, reference: form.reference.trim() || null }
+    if (form.repair) body.repair_order_id = form.repair.id
     if (form.payment_date) body.payment_date = new Date(`${form.payment_date}T12:00:00`).toISOString()
     try {
       if (editing) await api.patch(`/payments/${initial.id}`, body)
@@ -72,12 +74,19 @@ function PaymentForm({ initial, onDone }) {
       <form id="payment-form" onSubmit={submit} noValidate className="tf-form-grid">
         <div className="tf-span-2">
           <RecordPicker label="Cliente" required value={form.customer} error={errors.customer} disabled={editing}
-            onChange={(customer) => { setForm((current) => ({ ...current, customer })); setErrors((current) => ({ ...current, customer: null })) }}
+            onChange={(customer) => { setForm((current) => ({ ...current, customer, repair: null })); setErrors((current) => ({ ...current, customer: null })) }}
             path={(q) => `/customers?limit=6${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-            renderLabel={customerName} renderMeta={(customer) => customer.phone || customer.email || ''} placeholder="María López o 612 123 4567"
+            renderLabel={customerName} renderMeta={(customer) => formatPhone(customer.phone) || customer.email || ''} placeholder="María López o 612 123 4567"
             hint={editing ? 'El cliente de un pago registrado no se cambia.' : undefined}
             emptyText="No hay clientes con ese nombre. Regístralo primero en Clientes." />
         </div>
+        {form.customer && <div className="tf-span-2">
+          <RecordPicker label="Orden de reparación (opcional)" value={form.repair} onChange={(repair) => setForm((current) => ({ ...current, repair }))}
+            path={(q) => `/repairs?limit=6&customer_id=${form.customer.id}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+            renderLabel={(repair) => `${repair.order_number}, ${[repair.brand, repair.model].filter(Boolean).join(' ')}`} renderMeta={(repair) => repair.reported_problem}
+            placeholder="Número de orden o modelo del equipo" emptyText="Este cliente no tiene órdenes que coincidan."
+            hint="Ligado a una orden, el pago se descuenta del saldo de esa reparación." />
+        </div>}
         <Input label="Monto (MXN)" required type="number" inputMode="decimal" min="0.01" step="0.01" value={form.amount} onChange={set('amount')} error={errors.amount} placeholder="350.00" />
         <Input label="Fecha del pago" type="date" value={form.payment_date} onChange={set('payment_date')} />
         <Select label="Método" value={form.method} onChange={set('method')}>
@@ -101,7 +110,7 @@ export function PaymentFormPage() {
   const done = () => navigate('/pagos')
   if (id && loading) return <div className="tf-form-page"><Alert tone="info">Cargando el pago…</Alert></div>
   if (id && (error || !record?.id)) return <div className="tf-form-page space-y-4"><Link to="/pagos" className="tf-form-page-back">Volver a Pagos</Link><ErrorAlert error={error ?? { status: 404 }} action="cargar el pago" onRetry={reload} /></div>
-  return <PaymentForm key={record?.id ?? 'new'} initial={id ? record : null} onDone={done} />
+  return <PaymentForm key={record?.id ?? 'new'} initial={id ? record : null} prefill={location.state?.prefill} onDone={location.state?.back ? () => navigate(location.state.back) : done} />
 }
 
 export default function Payments() {
@@ -156,7 +165,7 @@ export default function Payments() {
               : (
                 <div className="ct-table-shell" aria-busy={list.loading}>
                   <table className="ct-table min-w-[44rem]">
-                    <thead><tr><th scope="col">Cliente</th><th scope="col" className="tf-cell-num">Monto</th><th scope="col">Método</th><th scope="col">Referencia</th><th scope="col">Estado</th><th scope="col">Fecha</th>{(canEdit || canDelete) && <th scope="col"><span className="sr-only">Acciones</span></th>}</tr></thead>
+                    <thead><tr><th scope="col">Cliente</th><th scope="col" className="tf-cell-num">Monto</th><th scope="col">Método</th><th scope="col">Orden</th><th scope="col">Referencia</th><th scope="col">Estado</th><th scope="col">Fecha</th>{(canEdit || canDelete) && <th scope="col"><span className="sr-only">Acciones</span></th>}</tr></thead>
                     <tbody>
                       {list.rows.map((payment) => {
                         const meta = PAYMENT_STATUSES[payment.status]
@@ -166,6 +175,7 @@ export default function Payments() {
                             <td className="tf-cell-strong">{who}</td>
                             <td className="tf-cell-num text-[var(--tf-text)]">{formatCurrency(payment.amount)}</td>
                             <td>{PAYMENT_METHODS[payment.method] ?? payment.method}</td>
+                            <td className="whitespace-nowrap">{payment.repair?.order_number ? <Link to={`/reparaciones/${encodeURIComponent(payment.repair.order_number)}`} className="tf-link tf-num">{payment.repair.order_number}</Link> : '—'}</td>
                             <td className="max-w-[14rem] truncate">{payment.reference || '—'}</td>
                             <td><Badge tone={meta?.tone}>{meta?.label ?? payment.status}</Badge></td>
                             <td className="whitespace-nowrap">{formatDate(payment.payment_date)}</td>

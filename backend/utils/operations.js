@@ -20,7 +20,8 @@ export function uuid(value, label = 'Identificador') {
 }
 
 export function orderNumber(value) {
-  if (typeof value !== 'string' || !/^CAR-\d{4}-\d{4,12}$/.test(value)) fail('Número de orden no válido')
+  // CAR- son las órdenes anteriores al cambio de marca; las nuevas usan ST- (migración 021).
+  if (typeof value !== 'string' || !/^(CAR|ST)-\d{4}-\d{4,12}$/.test(value)) fail('Número de orden no válido')
   return value
 }
 

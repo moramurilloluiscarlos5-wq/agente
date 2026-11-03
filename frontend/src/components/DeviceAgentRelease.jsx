@@ -55,7 +55,7 @@ export default function DeviceAgentRelease({ installedVersion }) {
   const updateAvailable = release && isNewerAgentVersion(release.version, installedVersion)
 
   return <section className="ct-surface-raised p-5" aria-label="Descarga y actualizaciones del agente">
-    <h2 className="text-lg font-semibold">TallerFlow Device Agent</h2>
+    <h2 className="text-lg font-semibold">ServiTrack Device Agent</h2>
     <p className="mt-1 text-sm text-[var(--tf-text-muted)]">Windows 10 / Windows 11 · x64{installedVersion ? ` · Versión instalada: ${installedVersion}` : ''}</p>
     {loading && !release && <p role="status" className="mt-4 flex items-center gap-2 text-sm text-[var(--tf-text-muted)]"><LoaderCircle size={16} className="animate-spin" /> Consultando versión oficial…</p>}
     {error && <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -63,13 +63,13 @@ export default function DeviceAgentRelease({ installedVersion }) {
       <button className="ct-btn ct-btn-secondary" disabled={loading} onClick={() => setRetry((value) => value + 1)}><RefreshCw size={16} /> Reintentar descarga</button>
     </div>}
     {release && <>
-      {release.source === 'external' && <p className="mt-4 rounded-lg border border-[rgb(var(--tf-warning-rgb)/.3)] bg-[var(--tf-warning-soft)] p-3 text-xs text-[var(--tf-warning-ink)]">Descarga de prueba externa. MediaFire no es una release oficial verificada por GitHub.</p>}
+
       {updateAvailable && <div role="status" className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--tf-accent)] bg-[var(--tf-accent-soft)] p-4">
         <p className="text-sm text-[var(--tf-link)]">Nueva versión disponible: {release.version}</p>
         <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Actualizar</a>
       </div>}
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Descargar TallerFlow Device Agent</a>
+        <a className="ct-btn ct-btn-primary" href={release.downloadUrl}><Download size={16} /> Descargar ServiTrack Device Agent</a>
         <a className="text-sm text-[var(--tf-link)] underline underline-offset-4" href={release.releaseUrl} target="_blank" rel="noreferrer">{release.source === 'external' ? 'Abrir página de descarga' : `Ver release v${release.version}`}</a>
       </div>
     </>}

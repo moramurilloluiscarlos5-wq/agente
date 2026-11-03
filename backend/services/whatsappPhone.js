@@ -7,8 +7,3 @@ export function normalizeWhatsAppPhone(value, defaultCountry = '52') {
   if (digits.length >= 11 && digits.length <= 15) return digits
   throw new Error('El teléfono de WhatsApp debe incluir un número válido')
 }
-
-export function displayWhatsAppPhone(value) {
-  const normalized = normalizeWhatsAppPhone(value)
-  return `+${normalized}`
-}

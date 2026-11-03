@@ -13,7 +13,7 @@ import { useToast } from '../hooks/useToast.js'
 import { api } from '../services/api.js'
 import { friendlyError } from '../utils/errors.js'
 import { focusFirstInvalid } from '../utils/forms.js'
-import { formatDate } from '../utils/formatters.js'
+import { formatDate, formatPhone } from '../utils/formatters.js'
 
 const FIELDS = ['brand', 'model', 'color', 'imei', 'serial_number', 'os', 'physical_condition', 'accessories_received', 'notes']
 const EDIT_ROLES = ['OWNER', 'ADMINISTRADOR', 'RECEPCION', 'SUPER_ADMIN']
@@ -69,7 +69,7 @@ function DeviceForm({ initial, presetCustomer }) {
           <RecordPicker label="Cliente" required value={form.customer} error={errors.customer}
             onChange={(customer) => { setForm((current) => ({ ...current, customer })); setErrors((current) => ({ ...current, customer: null })) }}
             path={(q) => `/customers?limit=6${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-            renderLabel={customerLabel} renderMeta={(customer) => customer.phone || ''} placeholder="María López o 612 123 4567"
+            renderLabel={customerLabel} renderMeta={(customer) => formatPhone(customer.phone) || ''} placeholder="María López o 612 123 4567"
             emptyText="No hay clientes con ese nombre. Regístralo primero en Clientes." />
         </div>
         <Input label="Marca" required value={form.brand} onChange={set('brand')} error={errors.brand} maxLength={100} placeholder="Samsung" />
@@ -216,7 +216,7 @@ export default function Devices() {
             <RecordPicker label="Cliente" value={customer && customer.id === customerId ? customer : null}
               onChange={(record) => setParams(record ? { customer_id: record.id } : {})}
               path={(q) => `/customers?limit=6${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-              renderLabel={customerLabel} renderMeta={(record) => record.phone || ''} placeholder="Todos los clientes" />
+              renderLabel={customerLabel} renderMeta={(record) => formatPhone(record.phone) || ''} placeholder="Todos los clientes" />
           </div>
           {filtered && <Button variant="ghost" onClick={clearFilters}>Quitar filtros</Button>}
         </>}

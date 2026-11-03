@@ -45,7 +45,7 @@ export default function RegisterWorkshop() {
 
   useEffect(() => {
     const previousTitle = document.title
-    document.title = 'Crea tu taller · TallerFlow'
+    document.title = 'Crea tu taller · ServiTrack'
     return () => { document.title = previousTitle }
   }, [])
 
@@ -160,7 +160,7 @@ export default function RegisterWorkshop() {
         <>
           {!existingUser && planCode && <BuySteps current={1} />}
           <header className="ct-auth-heading">
-            <h1>Crea tu taller en TallerFlow</h1>
+            <h1>Crea tu taller en ServiTrack</h1>
             <p>{existingUser
               ? 'Tu cuenta está lista. Completa los datos del taller para entrar a tu espacio de trabajo.'
               : 'Configura tu espacio de trabajo y comienza a gestionar reparaciones, clientes y equipos.'}</p>

@@ -87,10 +87,11 @@ export default function RepairTrackingPanel({ orderNumber }) {
 
   async function regenerate() {
     setBusy('regenerate')
+    const hadLink = Boolean(active)
     try {
       const response = await api.post(`/repairs/${encodeURIComponent(orderNumber)}/tracking/regenerate`, {})
       setState({ key, data: { ...data, ...response.data }, error: null })
-      toast.success('Enlace nuevo listo. El anterior ya no funciona.')
+      toast.success(hadLink ? 'Enlace nuevo listo. El anterior ya no funciona.' : 'Enlace listo. Compártelo con tu cliente para que siga su reparación.')
     } catch (error) {
       toast.error(friendlyError(error, 'generar el enlace'))
     } finally {

@@ -21,12 +21,12 @@ function LegalPage({ title, children }) {
   )
 }
 
-const Email = () => <a href={supportMailto('Datos personales TallerFlow')}>{SUPPORT_EMAIL}</a>
+const Email = () => <a href={supportMailto('Datos personales ServiTrack')}>{SUPPORT_EMAIL}</a>
 
 export function PrivacyNotice() {
   return (
     <LegalPage title="Aviso de privacidad">
-      <p>TallerFlow (en adelante, “TallerFlow”), con operación en México y contacto en <Email />, es responsable del tratamiento de los datos personales de las personas que crean una cuenta en la plataforma, conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares.</p>
+      <p>ServiTrack (en adelante, “ServiTrack”), con operación en México y contacto en <Email />, es responsable del tratamiento de los datos personales de las personas que crean una cuenta en la plataforma, conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares.</p>
 
       <h2>Datos que recabamos</h2>
       <ul>
@@ -34,7 +34,7 @@ export function PrivacyNotice() {
         <li><strong>De los clientes del taller:</strong> nombre, teléfono, correo y los datos de sus equipos y reparaciones que el taller registra.</li>
         <li><strong>De uso:</strong> registros técnicos como fecha de acceso, dirección IP y acciones realizadas, para seguridad y auditoría.</li>
       </ul>
-      <p>No recabamos datos personales sensibles. Los pagos se procesan en Mercado Pago: TallerFlow no recibe ni guarda los números de tarjeta.</p>
+      <p>No recabamos datos personales sensibles. Los pagos se procesan en Mercado Pago: ServiTrack no recibe ni guarda los números de tarjeta.</p>
 
       <h2>Para qué los usamos</h2>
       <ul>
@@ -45,7 +45,7 @@ export function PrivacyNotice() {
       <p>No vendemos datos personales ni los usamos para publicidad de terceros.</p>
 
       <h2>Datos de los clientes del taller</h2>
-      <p>Cada taller decide qué datos de sus clientes registra y es responsable de ellos frente a sus clientes; TallerFlow solo los trata por cuenta del taller para dar el servicio. Cada taller ve únicamente su propia información.</p>
+      <p>Cada taller decide qué datos de sus clientes registra y es responsable de ellos frente a sus clientes; ServiTrack solo los trata por cuenta del taller para dar el servicio. Cada taller ve únicamente su propia información.</p>
 
       <h2>Con quién se comparten</h2>
       <p>Solo con los proveedores necesarios para operar el servicio, que los tratan por nuestra cuenta: alojamiento y base de datos (Railway y Supabase) y cobro de suscripciones (Mercado Pago). También cuando lo exija una autoridad competente.</p>
@@ -68,7 +68,7 @@ export function PrivacyNotice() {
 export function Terms() {
   return (
     <LegalPage title="Términos y condiciones">
-      <p>Estos términos regulan el uso de TallerFlow, una plataforma en línea para administrar talleres de reparación. Al crear una cuenta o contratar un plan aceptas estos términos y el <Link to="/privacidad">aviso de privacidad</Link>.</p>
+      <p>Estos términos regulan el uso de ServiTrack, una plataforma en línea para administrar talleres de reparación. Al crear una cuenta o contratar un plan aceptas estos términos y el <Link to="/privacidad">aviso de privacidad</Link>.</p>
 
       <h2>La cuenta</h2>
       <ul>
@@ -82,12 +82,12 @@ export function Terms() {
         <li>Los planes se cobran por adelantado, cada mes o cada año, en pesos mexicanos, mediante Mercado Pago, y se renuevan solos hasta que los canceles.</li>
         <li>Puedes cancelar cuando quieras desde “Mi plan”: conservas el acceso hasta el final del periodo pagado y no se hacen más cobros. No hay reembolsos por periodos ya iniciados, salvo lo que establezca la ley.</li>
         <li>Si un cobro falla, Mercado Pago lo reintenta; si no se logra en el plazo de gracia, el acceso se pausa hasta regularizar el pago. Tu información se conserva.</li>
-        <li>Las funciones marcadas como “Próximamente” todavía no están disponibles y no forman parte de lo que se cobra hasta que se activen.</li>
+        <li>Solo se cobra por las funciones que el sistema muestra como disponibles en tu plan.</li>
         <li>Podemos cambiar los precios avisando con al menos 30 días de anticipación; el cambio aplica desde la siguiente renovación.</li>
       </ul>
 
       <h2>Uso permitido</h2>
-      <p>No puedes usar TallerFlow para actividades ilegales, para enviar mensajes no solicitados, para intentar acceder a información de otros talleres ni para afectar el funcionamiento del servicio. Podemos suspender una cuenta que incumpla estos términos.</p>
+      <p>No puedes usar ServiTrack para actividades ilegales, para enviar mensajes no solicitados, para intentar acceder a información de otros talleres ni para afectar el funcionamiento del servicio. Podemos suspender una cuenta que incumpla estos términos.</p>
 
       <h2>Tu información</h2>
       <p>La información que registras es tuya. Tú respondes por tener permiso de tus clientes para registrar y usar sus datos, incluido enviarles avisos. Si cancelas, puedes pedirnos una copia de tu información escribiendo a soporte.</p>

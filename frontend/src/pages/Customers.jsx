@@ -8,11 +8,12 @@ import { usePagedResource } from '../hooks/usePagedResource.js'
 import { useDirectoryRecords } from '../hooks/useDirectoryRecords.js'
 import { useDraft } from '../hooks/useDraft.js'
 import { useAuth } from '../hooks/useAuth.js'
+import { featureAvailable } from '../utils/billing.js'
 import { useToast } from '../hooks/useToast.js'
 import { api } from '../services/api.js'
 import { friendlyError } from '../utils/errors.js'
 import { focusFirstInvalid } from '../utils/forms.js'
-import { formatDate } from '../utils/formatters.js'
+import { formatDate, formatPhone } from '../utils/formatters.js'
 
 const WHATSAPP_STATUS = { queued: 'En cola', sent: 'Enviado', delivered: 'Entregado', read: 'Leído', failed: 'No se entregó', simulated: 'Simulado' }
 const EMPTY_CUSTOMER = { first_name: '', last_name: '', phone: '', whatsapp: '', whatsapp_opt_in: false, email: '', notes: '' }
@@ -27,6 +28,8 @@ function CustomerForm({ initial }) {
   const [params] = useSearchParams()
   const toRepair = params.get('volver') === 'reparacion'
   const toast = useToast()
+  const { profile } = useAuth()
+  const whatsappReady = featureAvailable(profile, 'whatsapp')
   const editing = Boolean(initial?.id)
   const start = Object.fromEntries(Object.keys(EMPTY_CUSTOMER).map((key) => [key, initial?.[key] ?? EMPTY_CUSTOMER[key]]))
   const [form, setForm, draft] = useDraft(editing ? null : 'customer-new', start)
@@ -69,10 +72,10 @@ function CustomerForm({ initial }) {
         <Input label="Apellidos" required value={form.last_name} onChange={set('last_name')} error={errors.last_name} maxLength={100} autoComplete="family-name" placeholder="López García" />
         <Input label="Teléfono" required type="tel" value={form.phone} onChange={set('phone')} error={errors.phone} maxLength={30} autoComplete="tel" placeholder="612 123 4567" />
         <Input label="WhatsApp (opcional)" type="tel" value={form.whatsapp} onChange={set('whatsapp')} error={errors.whatsapp} maxLength={30} placeholder="612 123 4567" hint="Déjalo vacío si es el mismo teléfono." />
-        <label className="tf-span-2 flex items-start gap-3 rounded-[var(--tf-radius-control)] border border-[var(--tf-border)] bg-[var(--tf-surface-sunken)] p-4 text-sm text-[var(--tf-text-muted)]">
+        {whatsappReady && <label className="tf-span-2 flex items-start gap-3 rounded-[var(--tf-radius-control)] border border-[var(--tf-border)] bg-[var(--tf-surface-sunken)] p-4 text-sm text-[var(--tf-text-muted)]">
           <input type="checkbox" checked={Boolean(form.whatsapp_opt_in)} onChange={(event) => { const { checked } = event.target; setForm((current) => ({ ...current, whatsapp_opt_in: checked })) }} className="mt-0.5 h-4 w-4 accent-[var(--tf-primary)]" />
           <span>El cliente acepta recibir avisos de su reparación por WhatsApp.</span>
-        </label>
+        </label>}
         <Input fieldClassName="tf-span-2" label="Correo electrónico (opcional)" type="email" value={form.email} onChange={set('email')} maxLength={254} autoComplete="email" placeholder="nombre@correo.com" />
         <Textarea fieldClassName="tf-span-2" label="Notas (opcional)" value={form.notes} onChange={set('notes')} maxLength={5000} placeholder="Prefiere que le llamen después de las 4 p. m." />
         {formError && <div className="tf-span-2"><ErrorAlert error={formError} action="guardar el cliente" /></div>}
@@ -130,7 +133,7 @@ export function CustomerDetailPage() {
 
   const facts = [
     ['Teléfono', customer.phone], ['WhatsApp', customer.whatsapp_e164 || customer.whatsapp],
-    ['Avisos por WhatsApp', customer.whatsapp_opt_in ? 'Autorizados' : 'Sin autorizar'], ['Correo electrónico', customer.email],
+    ...(featureAvailable(profile, 'whatsapp') ? [['Avisos por WhatsApp', customer.whatsapp_opt_in ? 'Autorizados' : 'Sin autorizar']] : []), ['Correo electrónico', customer.email],
     ['Cliente desde', formatDate(customer.created_at)], ['Notas', customer.notes],
   ]
 
@@ -141,7 +144,7 @@ export function CustomerDetailPage() {
         <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="ct-page-title">{fullName(customer)}</h1>
-            <p className="ct-page-description tf-num">{customer.phone}{customer.email ? `, ${customer.email}` : ''}</p>
+            <p className="ct-page-description tf-num">{formatPhone(customer.phone)}{customer.email ? `, ${customer.email}` : ''}</p>
           </div>
           {canEdit && <div className="flex flex-wrap gap-2">
             {isAdmin && <Button variant="ghost" icon={Archive} onClick={() => setConfirmArchive(true)}>Archivar cliente</Button>}
@@ -185,7 +188,7 @@ export function CustomerDetailPage() {
           </table></div>}
       </Card>
 
-      <Card title="Mensajes de WhatsApp" bodyClassName={null}>
+      {featureAvailable(profile, 'whatsapp') && <Card title="Mensajes de WhatsApp" bodyClassName={null}>
         {messages.loading ? <TableSkeleton rows={2} columns={3} />
           : messages.error ? <div className="p-4"><Alert tone="error" action={<Button size="sm" onClick={messages.reload}>Reintentar</Button>}>{messages.error}</Alert></div>
             : !messages.payload?.data?.length ? <EmptyState icon={MessageCircle} title="Sin mensajes enviados" description="Los avisos de reparación y cotizaciones enviados a este cliente aparecerán aquí." className="!py-8" />
@@ -194,7 +197,7 @@ export function CustomerDetailPage() {
                   <p className="min-w-0 text-sm text-[var(--tf-text-muted)]">{message.message}</p>
                   <span className="flex shrink-0 flex-col items-end gap-1"><Badge tone={message.status === 'failed' ? 'danger' : message.status === 'read' || message.status === 'delivered' ? 'success' : 'neutral'}>{WHATSAPP_STATUS[message.status] ?? message.status}</Badge><span className="text-xs text-[var(--tf-text-subtle)]">{formatDate(message.created_at)}</span></span>
                 </li>))}</ul>}
-      </Card>
+      </Card>}
 
       <ConfirmDialog open={confirmArchive} busy={archiving} confirmLabel="Archivar cliente"
         title={`¿Archivar a ${fullName(customer)}?`}
@@ -240,7 +243,7 @@ export default function Customers() {
                       {list.rows.map((record) => (
                         <tr key={record.id}>
                           <td><Link to={`/clientes/${record.id}`} className="tf-link font-medium">{fullName(record)}</Link></td>
-                          <td className="tf-num whitespace-nowrap">{record.phone}</td>
+                          <td className="tf-num whitespace-nowrap">{formatPhone(record.phone)}</td>
                           <td className="max-w-[16rem] truncate">{record.email || <span className="text-[var(--tf-text-subtle)]">Sin correo</span>}</td>
                           <td className="whitespace-nowrap">{formatDate(record.created_at)}</td>
                           {canEdit && <td className="text-right"><IconButton label={`Editar a ${fullName(record)}`} icon={Pencil} onClick={() => navigate(`/clientes/${record.id}/editar`)} /></td>}

@@ -135,9 +135,3 @@ export function retryApiNow() {
   runMonitorCycle()
 }
 
-export function stopApiMonitorForTests() {
-  clearTimeout(monitorTimer)
-  monitorTimer = null
-  monitorStarted = false
-  attempt = 0
-}

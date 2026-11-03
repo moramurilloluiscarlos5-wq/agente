@@ -19,11 +19,11 @@ export default class ErrorBoundary extends Component {
   render() {
     const { error, reloading } = this.state
     if (!error) return this.props.children
-    if (reloading) return <p role="status" className="py-16 text-center text-sm text-[var(--tf-text-muted)]">Actualizando TallerFlow…</p>
+    if (reloading) return <p role="status" className="py-16 text-center text-sm text-[var(--tf-text-muted)]">Actualizando ServiTrack…</p>
     const outdated = isChunkLoadError(error)
     const notice = (
       <section role="alert" className="ct-surface-raised w-full max-w-md rounded-xl border border-[var(--tf-border)] p-6 text-center">
-        <h2 className="text-lg font-semibold text-[var(--tf-text)]">{outdated ? 'Hay una versión nueva de TallerFlow' : 'No pudimos mostrar esta pantalla'}</h2>
+        <h2 className="text-lg font-semibold text-[var(--tf-text)]">{outdated ? 'Hay una versión nueva de ServiTrack' : 'No pudimos mostrar esta pantalla'}</h2>
         <p className="mt-2 text-sm text-[var(--tf-text-muted)]">{outdated ? 'Actualizamos la aplicación mientras la tenías abierta. Recarga la página para continuar.' : 'Ocurrió un error inesperado. Puedes reintentar o recargar la página.'}</p>
         <div className="mt-5 flex justify-center gap-3">
           {!outdated && <button type="button" className="ct-btn ct-btn-secondary" onClick={() => this.setState({ error: null })}>Reintentar</button>}

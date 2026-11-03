@@ -38,7 +38,7 @@ export const MODULE_HELP = {
   '/herramientas-dispositivo': {
     description: 'Lee la información técnica de un teléfono Android conectado por USB y ejecuta comandos ADB y Fastboot.',
     when: 'Cuando necesitas datos reales del equipo o reiniciarlo en un modo especial.',
-    tasks: ['Instala y vincula el agente de TallerFlow en la computadora del técnico.', 'Conecta el teléfono por USB y acepta la autorización en su pantalla.', 'Ejecuta la acción; las delicadas piden confirmación antes de correr.'],
+    tasks: ['Instala y vincula el agente de ServiTrack en la computadora del técnico.', 'Conecta el teléfono por USB y acepta la autorización en su pantalla.', 'Ejecuta la acción; las delicadas piden confirmación antes de correr.'],
   },
   '/cotizaciones': {
     description: 'Presupuestos con el costo de la reparación para que el cliente lo apruebe antes de empezar.',
@@ -86,7 +86,7 @@ export const MODULE_HELP = {
     tasks: ['Filtra por tipo de acción o busca por texto.', 'Revisa quién hizo cada cambio y a qué hora.', 'Usa el registro para aclarar dudas con tu equipo.'],
   },
   '/facturacion': {
-    description: 'Tu licencia de TallerFlow: plan contratado (Plus, Pro o Max), próximo cobro y pagos con Mercado Pago.',
+    description: 'Tu licencia de ServiTrack: plan contratado (Plus, Pro o Max), próximo cobro y pagos con Mercado Pago.',
     when: 'Para contratar, cambiar o cancelar tu plan.',
     tasks: ['Revisa si tu licencia está activa, hasta cuándo y cuántos usuarios usas.', 'Contrata o cambia de plan; pagas con tarjeta en Mercado Pago.', 'Cancela cuando quieras: conservas el acceso hasta el último día pagado.'],
   },
@@ -96,9 +96,9 @@ export const MODULE_HELP = {
 // Los tonos son los mismos del flujo del panel de control.
 export const JOURNEY = [
   { title: 'Recibir', text: 'Registra al cliente, su equipo y la falla que reporta. La orden queda lista para darle seguimiento.', paths: ['/reparaciones', '/clientes'], tone: 'received' },
-  { title: 'Diagnosticar', text: 'Revisa el equipo para encontrar la falla. La IA y las herramientas ADB ayudan en los casos difíciles.', paths: ['/diagnostico-ia', '/herramientas-dispositivo'], tone: 'diagnosis' },
+  { title: 'Diagnosticar', text: 'Revisa el equipo para encontrar la falla. Las herramientas ADB ayudan en los casos difíciles.', paths: ['/diagnostico-ia', '/herramientas-dispositivo'], tone: 'diagnosis' },
   { title: 'Cotizar', text: 'Comparte el costo con el cliente y espera su autorización antes de reparar.', paths: ['/cotizaciones'], tone: 'parts' },
-  { title: 'Reparar', text: 'Avanza el estado de la orden y registra las refacciones que uses. El cliente recibe avisos por WhatsApp.', paths: ['/reparaciones', '/inventario', '/comunicaciones'], tone: 'repair' },
+  { title: 'Reparar', text: 'Avanza el estado de la orden y registra las refacciones que uses. El cliente ve el avance con su enlace de seguimiento.', paths: ['/reparaciones', '/inventario', '/comunicaciones'], tone: 'repair' },
   { title: 'Cobrar y entregar', text: 'Registra el anticipo y la liquidación, y marca la orden como entregada.', paths: ['/pagos', '/reparaciones'], tone: 'ready' },
   { title: 'Dar garantía', text: 'Deja registrada la cobertura para atender cualquier reclamo con fechas claras.', paths: ['/garantias'], tone: 'delivered' },
 ]

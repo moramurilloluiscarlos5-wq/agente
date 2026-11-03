@@ -1,7 +1,3 @@
-export const repairInputClass = 'ct-input'
-export const repairButtonClass = 'ct-btn ct-btn-primary'
-export const repairSecondaryClass = 'ct-btn ct-btn-secondary'
-
 export function customerName(customer) {
   return [customer?.first_name, customer?.last_name].filter(Boolean).join(' ') || 'Cliente no disponible'
 }

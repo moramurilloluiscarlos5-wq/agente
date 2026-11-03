@@ -69,7 +69,6 @@ export const TRACKING_STATUS_META = {
   },
 }
 
-export const TRACKING_HISTORY_PUBLIC_ROLES = new Set(['ADMINISTRADOR', 'OWNER', 'SUPER_ADMIN', 'TECNICO', 'RECEPCION'])
 export const TRACKING_REGENERATE_ROLES = new Set(['ADMINISTRADOR', 'OWNER', 'SUPER_ADMIN'])
 export const TRACKING_TOGGLE_ROLES = new Set(['ADMINISTRADOR', 'OWNER', 'SUPER_ADMIN'])
 
@@ -129,9 +128,22 @@ export function buildTrackingTimeline(history) {
   })
 }
 
-export function serializeTrackingPayload({ order, history, warranty }) {
+// Camino que ve el cliente: los pasos de siempre más los opcionales que sí ocurrieron.
+// "Cancelado" nunca aparece como un paso por venir.
+const MAIN_PATH = new Set(['recibido', 'diagnostico', 'en_reparacion', 'listo_para_entregar', 'entregado'])
+
+function publicTimeline(steps, status) {
+  if (status === 'cancelado') return steps.filter((step) => step.reached)
+  const visible = steps.filter((step) => step.reached || MAIN_PATH.has(step.status))
+  // Si el taller saltó una etapa (de Diagnóstico a Listo), las anteriores al último paso
+  // alcanzado se muestran cumplidas en lugar de pendientes en medio del camino.
+  const lastReached = visible.map((step) => step.reached).lastIndexOf(true)
+  return visible.map((step, index) => (index < lastReached && !step.reached ? { ...step, reached: true } : step))
+}
+
+export function serializeTrackingPayload({ order, history, warranty, workshop = null }) {
   const meta = trackingStatusMeta(order.status)
-  const steps = buildTrackingTimeline(history)
+  const steps = publicTimeline(buildTrackingTimeline(history), order.status)
   const current = [...steps].reverse().find((step) => step.current) ?? steps.find((step) => step.status === order.status) ?? null
 
   return {
@@ -153,6 +165,8 @@ export function serializeTrackingPayload({ order, history, warranty }) {
     customer: {
       name: [order.customer?.first_name, order.customer?.last_name].filter(Boolean).join(' '),
     },
+    // Solo datos de contacto públicos del taller, para que el cliente sepa a quién llamar.
+    workshop: workshop ? { name: workshop.name ?? '', phone: workshop.phone ?? '' } : null,
     timeline: steps,
     current,
     deliveredAt: order.status === 'entregado' ? order.updated_at : null,

@@ -39,10 +39,10 @@
         <!-- Datos demostrativos: sin personas reales. -->
         <div id="dash-card" class="dash-card">
           <div class="dash-top">
-            <svg class="dash-mark" viewBox="0 0 100 100" fill="none" aria-hidden="true"><rect x="1" y="1" width="98" height="98" rx="24" fill="#111827" stroke="#1f2a3d" stroke-width="2" /><path d="M19.2 29h57.4L71 41.7H53.5v36.9H39.4V41.7H19.2V29Z" fill="#f8fafc" /><path d="M19.2 45.6h14.6v4.5h-7.3l-7.3-4.5Z" fill="#38bdf8" /><path d="M60.6 48.2h22.8l-5.6 9.5h-7.7v7.7h8.5l-4.5 10.1H60.6V48.2Z" fill="#2563eb" /></svg>
+            <svg class="dash-mark" viewBox="0 0 100 100" fill="none" aria-hidden="true"><rect x="1" y="1" width="98" height="98" rx="24" fill="#111827" stroke="#1f2a3d" stroke-width="2" /><path d="M67 33C59 25 35 25 34 38C33 50 67 47 66 61C65 75 41 76 32 67" stroke="#f8fafc" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" /><circle cx="73" cy="72" r="7" fill="#38bdf8" /></svg>
             <span class="dash-title">Panel de control</span>
             <div class="dash-search"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>Buscar orden o equipo</div>
-            <span class="dash-avatar">TF</span>
+            <span class="dash-avatar">ST</span>
           </div>
           <div class="dash-body">
             <div class="dash-rail" aria-hidden="true">
@@ -63,10 +63,10 @@
               <div class="dash-row">
                 <div class="dash-panel">
                   <h3>Órdenes recientes</h3>
-                  <div class="dash-order"><span id="dash-focus" class="dash-focus"></span><span class="dash-order-id">TF-0142</span><span class="dash-order-dev">iPhone 13 · Pantalla</span><span class="pill pill-blue">En reparación</span></div>
-                  <div class="dash-order"><span class="dash-order-id">TF-0141</span><span class="dash-order-dev">Galaxy A54 · Batería</span><span class="pill pill-green">Listo</span></div>
-                  <div class="dash-order"><span class="dash-order-id">TF-0140</span><span class="dash-order-dev">Pixel 7 · Sin encender</span><span class="pill pill-amber">Diagnóstico</span></div>
-                  <div class="dash-order"><span class="dash-order-id">TF-0139</span><span class="dash-order-dev">Moto G84 · Puerto de carga</span><span class="pill pill-cyan">Recibido</span></div>
+                  <div class="dash-order"><span id="dash-focus" class="dash-focus"></span><span class="dash-order-id">ST-0142</span><span class="dash-order-dev">iPhone 13 · Pantalla</span><span class="pill pill-blue">En reparación</span></div>
+                  <div class="dash-order"><span class="dash-order-id">ST-0141</span><span class="dash-order-dev">Galaxy A54 · Batería</span><span class="pill pill-green">Listo</span></div>
+                  <div class="dash-order"><span class="dash-order-id">ST-0140</span><span class="dash-order-dev">Pixel 7 · Sin encender</span><span class="pill pill-amber">Diagnóstico</span></div>
+                  <div class="dash-order"><span class="dash-order-id">ST-0139</span><span class="dash-order-dev">Moto G84 · Puerto de carga</span><span class="pill pill-cyan">Recibido</span></div>
                 </div>
                 <div class="dash-panel">
                   <h3>Carga semanal</h3>
@@ -93,7 +93,7 @@
           .fromTo("#dash-card .dash-kpi-bar i", { scaleX: 0 }, { scaleX: 1, duration: 0.9, ease: out, stagger: 0.08 }, 0.85)
           .fromTo("#dash-card .dash-order", { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.5, ease: out, stagger: 0.09 }, 1.05)
           .fromTo("#dash-card .dash-bar i", { scaleY: 0 }, { scaleY: 1, duration: 0.8, ease: out, stagger: 0.06 }, 1.2)
-          // La orden TF-0142 se destaca: es la que sigue la escena 03.
+          // La orden ST-0142 se destaca: es la que sigue la escena 03.
           .fromTo("#dash-focus", { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: 0.5, ease: out }, 3.5)
           .to("#dash-card", { opacity: 0, scale: 1.06, y: -20, filter: "blur(4px)", duration: 0.5, ease: "power2.in" }, 4.3);
         // Contadores: el valor depende solo del progreso del tween, así que es seguro al buscar cualquier cuadro.

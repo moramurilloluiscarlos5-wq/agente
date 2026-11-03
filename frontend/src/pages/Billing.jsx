@@ -126,7 +126,7 @@ export default function Billing() {
     <div className="space-y-6" data-mp-subscriptions-page="without-plan-pending">
       {/* Paso 3 de la compra: llega aquí con el plan elegido y sin licencia activa. */}
       {!paid && params.get('plan') && <BuySteps current={2} />}
-      <PageHeader title="Mi plan" description="Tu plan de TallerFlow, su estado y los pagos con Mercado Pago." />
+      <PageHeader title="Mi plan" description="Tu plan de ServiTrack, su estado y los pagos con Mercado Pago." />
       {message && <div role="alert" className="tf-alert tf-alert-warning max-w-3xl">{message}</div>}
       {success && subscription && <Alert tone={pending ? 'info' : 'success'} className="max-w-3xl">{!pending ? 'Listo, tu licencia está activa.' : waiting ? 'Estamos confirmando tu pago con Mercado Pago…' : 'Mercado Pago todavía no confirma tu pago. Si ya pagaste, tu licencia se activa en unos minutos: recarga esta página. Si no terminaste el pago, elige tu plan otra vez.'}</Alert>}
       {error && <ErrorAlert error={error.err} action={error.action} className="max-w-3xl" />}
@@ -141,12 +141,12 @@ export default function Billing() {
               <h2 className="text-lg font-semibold text-[var(--tf-text)]">{paid ? 'Cambiar de plan' : 'Elige tu plan'}</h2>
               <p className="mt-1 text-sm text-[var(--tf-text-muted)]">{paid ? (isOwner ? 'El cambio entre planes con el mismo cobro es inmediato; el nuevo monto se cobra desde tu próximo pago.' : 'Solo el dueño del taller puede cambiar o cancelar el plan.') : 'Pagas con tarjeta en Mercado Pago y la licencia se activa en cuanto se confirma el pago.'}</p>
             </div>
-            <p className="flex items-center gap-2 text-xs text-[var(--tf-text-subtle)]"><ShieldCheck size={14} aria-hidden="true" />TallerFlow no guarda los datos de tu tarjeta.</p>
+            <p className="flex items-center gap-2 text-xs text-[var(--tf-text-subtle)]"><ShieldCheck size={14} aria-hidden="true" />ServiTrack no guarda los datos de tu tarjeta.</p>
           </div>
           <PlanCards plans={plans} actionFor={actionFor} initialInterval={currentPlan?.interval ?? 'month'} comingSoon={comingSoon} />
           {paid && isOwner && (
             <div className="tf-card flex flex-wrap items-center justify-between gap-3 p-4">
-              <p className="text-sm text-[var(--tf-text-muted)]">¿Ya no necesitas TallerFlow? Al cancelar conservas el acceso hasta {nextCharge ? `el ${nextCharge}` : 'el final del periodo pagado'}.</p>
+              <p className="text-sm text-[var(--tf-text-muted)]">¿Ya no necesitas ServiTrack? Al cancelar conservas el acceso hasta {nextCharge ? `el ${nextCharge}` : 'el final del periodo pagado'}.</p>
               <Button variant="danger" onClick={() => setCancelOpen(true)}>Cancelar suscripción</Button>
             </div>
           )}
@@ -172,12 +172,12 @@ export default function Billing() {
               {overSeats && <li>Tienes {activeUsers} usuarios activos y {TIER_NAMES[dialogPlan.tier]} permite {dialogPlan.max_users}. Seguirán entrando, pero no podrás dar acceso a nadie más hasta quedar en {dialogPlan.max_users}.</li>}
             </ul>
           </Alert>}
-          {opensCheckout && <Input label="Correo de tu cuenta de Mercado Pago" type="email" autoComplete="email" value={payerEmail} onChange={(event) => setPayerEmail(event.target.value)} hint="Usa el correo con el que entras a Mercado Pago. Si lo dejas vacío usamos el de tu cuenta de TallerFlow." />}
+          {opensCheckout && <Input label="Correo de tu cuenta de Mercado Pago" type="email" autoComplete="email" value={payerEmail} onChange={(event) => setPayerEmail(event.target.value)} hint="Usa el correo con el que entras a Mercado Pago. Si lo dejas vacío usamos el de tu cuenta de ServiTrack." />}
         </div>}
       </Dialog>
 
       <ConfirmDialog open={cancelOpen} title={`¿Cancelar la suscripción de ${profile?.workshop?.name ?? 'tu taller'}?`}
-        description={`Mercado Pago dejará de cobrarte. Conservas el acceso hasta ${nextCharge ? `el ${nextCharge}` : 'el final del periodo pagado'}; después el taller no podrá usar TallerFlow hasta contratar de nuevo.`}
+        description={`Mercado Pago dejará de cobrarte. Conservas el acceso hasta ${nextCharge ? `el ${nextCharge}` : 'el final del periodo pagado'}; después el taller no podrá usar ServiTrack hasta contratar de nuevo.`}
         confirmLabel="Cancelar suscripción" cancelLabel="Mantener mi plan" busy={busy} onConfirm={cancelSubscription} onCancel={() => setCancelOpen(false)} />
     </div>
   )

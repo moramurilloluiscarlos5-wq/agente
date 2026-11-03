@@ -25,7 +25,9 @@ const STAFF = ['ADMINISTRADOR', 'RECEPCION', 'TECNICO', 'CAJERO', 'OWNER', 'SUPE
 const asyncRoute = (handler) => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next)
 
 export function appBaseUrl() {
-  return (process.env.APP_URL || process.env.FRONTEND_URL || '').trim().replace(/\/+$/, '')
+  // APP_PUBLIC_URL es la que usa producción (también la de Mercado Pago); sin dirección completa el
+  // enlace, el QR y el comprobante quedarían relativos y no abrirían desde el celular del cliente.
+  return (process.env.APP_PUBLIC_URL || process.env.APP_URL || process.env.FRONTEND_URL || '').trim().replace(/\/+$/, '')
 }
 
 export function trackingUrlFor(token) {
@@ -77,10 +79,10 @@ export async function trackedActiveWarranty(db, repairId) {
   return data
 }
 
-export async function trackedRepairIdByToken(db, token) {
-  const { data, error } = await db.from('repair_orders').select('id').eq('tracking_token', token).is('deleted_at', null).maybeSingle()
-  databaseError(error)
-  if (!data) fail('Seguimiento no encontrado.', 404)
+async function trackedWorkshopContact(db, workshopId) {
+  if (!workshopId) return null
+  const { data, error } = await db.from('workshops').select('name,phone').eq('id', workshopId).maybeSingle()
+  if (error) return null
   return data
 }
 
@@ -95,7 +97,7 @@ export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requi
 
     const { data: order, error } = await db
       .from('repair_orders')
-      .select('id,order_number,status,received_at,updated_at,estimated_delivery_at,brand,model,tracking_enabled,customer:customers(first_name,last_name),device:devices(brand,model,color,imei,serial_number)')
+      .select('id,workshop_id,order_number,status,received_at,updated_at,estimated_delivery_at,brand,model,tracking_enabled,customer:customers(first_name,last_name),device:devices(brand,model,color,imei,serial_number)')
       .eq('tracking_token', token)
       .is('deleted_at', null)
       .maybeSingle()
@@ -106,7 +108,8 @@ export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requi
 
     const history = await trackedRepairHistory(db, order.id).catch(() => [])
     const warranty = await trackedActiveWarranty(db, order.id).catch(() => null)
-    return res.json({ data: serializeTrackingPayload({ order, history, warranty }) })
+    const workshop = await trackedWorkshopContact(db, order.workshop_id).catch(() => null)
+    return res.json({ data: serializeTrackingPayload({ order, history, warranty, workshop }) })
   }))
 
   // Este router se monta en /api: la autenticación se aplica SOLO a sus propias
@@ -144,8 +147,10 @@ export function createTrackingRouter({ db = supabaseAdmin, authenticate = [requi
     const order = await trackedRepairByOrderNumber(db, req.params.orderNumber, req.profile)
     const history = await trackedRepairHistory(db, order.id)
     const qrPng = order.tracking_token ? await generateRepairQrPng(trackingUrlFor(order.tracking_token)) : null
+    const workshop = await trackedWorkshopContact(db, order.workshop_id).catch(() => null)
     const pdf = await generateRepairReceiptPdf({
-      workshopName: req.profile.workshop_id === order.workshop_id ? (req.profile.workshop?.name || 'Taller técnico') : 'Taller técnico',
+      workshopName: workshop?.name || (req.profile.workshop_id === order.workshop_id ? (req.profile.workshop?.name || 'Taller técnico') : 'Taller técnico'),
+      workshopPhone: workshop?.phone ?? '',
       order,
       history,
       qrPng,

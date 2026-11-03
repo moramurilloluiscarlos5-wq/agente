@@ -6,7 +6,7 @@ import { Button, DataCard, EmptyState, ErrorAlert, FilterSelect, Pagination, Sea
 import { api } from '../services/api.js'
 import { useAuth } from '../hooks/useAuth.js'
 import { REPAIR_STATUSES } from '../utils/constants.js'
-import { formatCurrency, formatDate } from '../utils/formatters.js'
+import { formatCurrency, formatDate, formatPhone } from '../utils/formatters.js'
 import StatusBadge from '../components/ui/StatusBadge.jsx'
 import { customerName, deviceName } from '../components/repairs/repairForm.js'
 
@@ -59,7 +59,7 @@ export default function Repairs() {
 
       <DataCard
         toolbar={<>
-          <SearchField label="Buscar reparaciones" value={query} onChange={(value) => updateFilter('q', value)} placeholder="CAR-0042, María o iPhone" />
+          <SearchField label="Buscar reparaciones" value={query} onChange={(value) => updateFilter('q', value)} placeholder="ST-2026-0042, María o iPhone" />
           <FilterSelect label="Estado" ariaLabel="Filtrar por estado" value={status} onChange={(value) => updateFilter('status', value)}>
             <option value="">Todos</option>
             {Object.entries(REPAIR_STATUSES).map(([value, config]) => <option key={value} value={value}>{config.label}</option>)}
@@ -84,7 +84,7 @@ export default function Repairs() {
                         return (
                           <tr key={repair.id}>
                             <td><Link className="tf-link tf-num" to={`/reparaciones/${encodeURIComponent(repair.order_number)}`}>{repair.order_number}</Link><p className="mt-1 text-xs text-[var(--tf-text-subtle)]">{formatDate(repair.received_at)}</p></td>
-                            <td><p className="text-[var(--tf-text)]">{customerName(repair.customer)}</p><p className="mt-1 text-xs text-[var(--tf-text-subtle)]">{repair.customer?.phone || '—'}</p></td>
+                            <td><p className="text-[var(--tf-text)]">{customerName(repair.customer)}</p><p className="mt-1 text-xs text-[var(--tf-text-subtle)]">{formatPhone(repair.customer?.phone) || '—'}</p></td>
                             <td className="max-w-[16rem]"><p className="text-[var(--tf-text)]">{deviceName(repair.device ?? repair)}</p><p className="mt-1 truncate text-xs text-[var(--tf-text-subtle)]">{repair.reported_problem}</p></td>
                             <td><StatusBadge status={repair.status} /></td>
                             <td>{repair.technician?.full_name || <span className="text-[var(--tf-text-subtle)]">Sin asignar</span>}</td>

@@ -20,7 +20,7 @@ export default function MainLayout() {
   }, [])
 
   useEffect(() => {
-    document.title = `${sectionTitle(pathname)} | TallerFlow`
+    document.title = `${sectionTitle(pathname)} | ServiTrack`
     mainRef.current?.scrollTo?.({ top: 0 })
   }, [pathname])
 

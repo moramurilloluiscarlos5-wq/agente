@@ -276,10 +276,13 @@ export function TableSkeleton({ rows = 5, columns = 4 }) {
   )
 }
 
+// "1 artículo", no "1 artículos".
+const SINGULAR = { artículos: 'artículo', clientes: 'cliente', cotizaciones: 'cotización', equipos: 'equipo', eventos: 'evento', garantías: 'garantía', pagos: 'pago', órdenes: 'orden', registros: 'registro' }
+
 export function Pagination({ page, limit, count, onPage, label = 'registros' }) {
   const total = Number(count) || 0
   const pages = Math.max(1, Math.ceil(total / limit))
-  if (total <= limit) return total ? <div className="tf-pagination"><span className="tf-num">{total} {label}</span></div> : null
+  if (total <= limit) return total ? <div className="tf-pagination"><span className="tf-num">{total} {total === 1 ? SINGULAR[label] ?? label : label}</span></div> : null
   const from = (page - 1) * limit + 1
   const to = Math.min(total, page * limit)
   return (

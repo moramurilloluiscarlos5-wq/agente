@@ -52,3 +52,12 @@ export function formatRelative(value) {
   if (days < 7) return `hace ${days} días`
   return formatDate(date)
 }
+
+// Teléfono legible: "6120000000" se muestra como "612 000 0000" (México); otros formatos quedan igual.
+export function formatPhone(value) {
+  if (!value) return value
+  const digits = String(value).replace(/\D/g, '')
+  if (digits.length === 10) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
+  if (digits.length === 12 && digits.startsWith('52')) return `+52 ${digits.slice(2, 5)} ${digits.slice(5, 8)} ${digits.slice(8)}`
+  return String(value)
+}

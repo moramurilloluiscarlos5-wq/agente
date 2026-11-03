@@ -109,7 +109,7 @@ app.use(errorHandler)
 
 let whatsappWorker = null
 const server = app.listen(PORT, HOST, () => {
-  console.log(`TallerFlow backend escuchando en http://${HOST}:${PORT}`)
+  console.log(`ServiTrack backend escuchando en http://${HOST}:${PORT}`)
   whatsappWorker = startWhatsAppWorker(supabaseAdmin)
 })
 // Se instala después de arrancar: un fallo de configuración al iniciar debe seguir tumbando el proceso.

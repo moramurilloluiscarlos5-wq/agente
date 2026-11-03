@@ -58,7 +58,7 @@ export default function AuthLayout({ children, variant = 'login' }) {
     <div className={`ct-auth-shell ct-auth-shell--${variant}`}>
       <a className="ct-auth-skip" href="#auth-content">Ir al formulario</a>
 
-      <aside ref={scene} className="ct-auth-aside" aria-label="Sobre TallerFlow">
+      <aside ref={scene} className="ct-auth-aside" aria-label="Sobre ServiTrack">
         {/* Hero hecho con HyperFrames (media/hyperframes/hero-licencia): panel en vivo, aviso al cliente y licencia activada. */}
         <video className="ct-auth-hero" src="/branding/hero-licencia.mp4" poster="/branding/hero-licencia.jpg"
           autoPlay={!still} loop muted playsInline preload="auto" aria-hidden="true" />

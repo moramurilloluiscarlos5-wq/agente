@@ -23,21 +23,26 @@ export function createPaymentsRouter({ db = supabaseAdmin, authenticate = [requi
     return data
   }
 
+  // La orden o la cotización ligadas deben ser del mismo taller y del mismo cliente del pago.
   async function validateLinks(values, req) {
-    for (const [table, field] of [['customers', 'customer_id'], ['repair_orders', 'repair_order_id'], ['quotes', 'quote_id']]) {
+    for (const [table, field, columns] of [['customers', 'customer_id', 'id,workshop_id'], ['repair_orders', 'repair_order_id', 'id,customer_id,workshop_id'], ['quotes', 'quote_id', 'id,customer_id,workshop_id']]) {
       if (!values[field]) continue
-      const { data, error } = await scopeToWorkshop(db.from(table).select('id,workshop_id').eq('id', values[field]).is('deleted_at', null), req).maybeSingle()
+      const { data, error } = await scopeToWorkshop(db.from(table).select(columns).eq('id', values[field]).is('deleted_at', null), req).maybeSingle()
       databaseError(error)
       assertSameWorkshop(data, req, 'Registro relacionado no encontrado')
+      if (table !== 'customers' && values.customer_id && data.customer_id && data.customer_id !== values.customer_id) {
+        fail(table === 'repair_orders' ? 'La orden elegida es de otro cliente.' : 'La cotización elegida es de otro cliente.', 400)
+      }
     }
   }
 
   router.get('/', requirePermission('payments.view'), asyncRoute(async (req, res) => {
     const { page, limit, from, to } = pageParams(req.query)
     const q = searchTerm(req.query.q)
-    let query = scopeToWorkshop(db.from('payments').select('*,customer:customers(id,first_name,last_name)', { count: 'exact' }).is('deleted_at', null), req)
+    let query = scopeToWorkshop(db.from('payments').select('*,customer:customers(id,first_name,last_name),repair:repair_orders(id,order_number)', { count: 'exact' }).is('deleted_at', null), req)
     if (q) query = query.or(`reference.ilike.%${q}%`)
     if (req.query.customer_id) query = query.eq('customer_id', uuid(req.query.customer_id))
+    if (req.query.repair_order_id) query = query.eq('repair_order_id', uuid(req.query.repair_order_id))
     if (req.query.status) query = query.eq('status', req.query.status)
     const { data, count, error } = await query.order('payment_date', { ascending: false }).range(from, to)
     databaseError(error)
@@ -64,7 +69,7 @@ export function createPaymentsRouter({ db = supabaseAdmin, authenticate = [requi
   router.patch('/:id', writers, requirePermission('payments.update'), asyncRoute(async (req, res) => {
     const existing = await activePayment(uuid(req.params.id), req)
     const values = validatePaymentPayload(req.body, { partial: true })
-    await validateLinks(values, req)
+    await validateLinks({ ...values, customer_id: values.customer_id ?? existing.customer_id }, req)
     let update = db.from('payments').update(values).eq('id', existing.id).is('deleted_at', null)
     if (req.profile.role !== 'SUPER_ADMIN') update = update.eq('workshop_id', workshopScope(req))
     const { data, error } = await update.select('*').maybeSingle()

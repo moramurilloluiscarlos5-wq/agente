@@ -61,10 +61,10 @@ export function evaluateLicense(subscription, { now = Date.now(), graceDays = 10
 
 export const LICENSE_MESSAGES = {
   no_subscription: 'Tu taller no tiene una licencia activa. Elige un plan para continuar.',
-  trial_expired: 'Tu periodo de prueba terminó. Elige un plan para seguir usando TallerFlow.',
+  trial_expired: 'Tu periodo de prueba terminó. Elige un plan para seguir usando ServiTrack.',
   period_ended: 'Tu licencia venció. Contrata un plan para continuar.',
   past_due_expired: 'Mercado Pago no pudo cobrar tu suscripción y el periodo de gracia terminó. Contrata de nuevo con otra tarjeta para continuar.',
-  canceled: 'Tu suscripción terminó. Elige un plan para volver a usar TallerFlow.',
+  canceled: 'Tu suscripción terminó. Elige un plan para volver a usar ServiTrack.',
   unpaid: 'Tu suscripción tiene pagos pendientes. Contrata de nuevo con otra tarjeta para continuar.',
   incomplete: 'Tu pago aún no se ha completado. Termina el pago en Mercado Pago para activar tu licencia.',
 }
@@ -82,7 +82,7 @@ export const monthsFor = (interval) => (interval === 'year' ? 12 : 1)
 
 export function preapprovalRequest({ plan, workshopId, payerEmail, appPublicUrl }) {
   return {
-    reason: `TallerFlow ${plan.name}`,
+    reason: `ServiTrack ${plan.name}`,
     external_reference: workshopId,
     payer_email: payerEmail,
     auto_recurring: { frequency: monthsFor(plan.interval), frequency_type: 'months', transaction_amount: plan.price_cents / 100, currency_id: plan.currency.toUpperCase() },

@@ -22,12 +22,17 @@ export function createQuotesRouter({ db = supabaseAdmin, authenticate = [require
     return data
   }
 
+  // La tabla customers no tiene customer_id: pedirlo ahí rompía toda cotización con cliente (500).
+  // La orden y el equipo, si vienen, deben ser del mismo taller y del mismo cliente.
   async function validateLinks(values, req) {
-    for (const [table, field] of [['customers', 'customer_id'], ['repair_orders', 'repair_order_id'], ['devices', 'device_id']]) {
+    for (const [table, field, columns] of [['customers', 'customer_id', 'id,workshop_id'], ['repair_orders', 'repair_order_id', 'id,customer_id,workshop_id'], ['devices', 'device_id', 'id,customer_id,workshop_id']]) {
       if (!values[field]) continue
-      const { data, error } = await scopeToWorkshop(db.from(table).select('id,customer_id,workshop_id').eq('id', values[field]).is('deleted_at', null), req).maybeSingle()
+      const { data, error } = await scopeToWorkshop(db.from(table).select(columns).eq('id', values[field]).is('deleted_at', null), req).maybeSingle()
       databaseError(error)
       assertSameWorkshop(data, req, 'Registro relacionado no encontrado')
+      if (table !== 'customers' && values.customer_id && data.customer_id && data.customer_id !== values.customer_id) {
+        fail(table === 'repair_orders' ? 'La orden elegida es de otro cliente.' : 'El equipo elegido es de otro cliente.', 400)
+      }
     }
   }
 
@@ -82,7 +87,7 @@ export function createQuotesRouter({ db = supabaseAdmin, authenticate = [require
     const existing = await activeQuote(uuid(req.params.id), req)
     const values = validateQuotePayload(req.body, { partial: true })
     const summary = summarizeQuote({ ...existing, ...values })
-    await validateLinks(values, req)
+    await validateLinks({ ...values, customer_id: values.customer_id ?? existing.customer_id }, req)
     // Se envían solo las columnas comerciales y los campos realmente editados: así no se
     // reescribe la fila completa (quote_number, created_by, created_at) ni se pisan
     // cambios concurrentes de otros usuarios.

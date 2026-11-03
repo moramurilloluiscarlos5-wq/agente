@@ -40,7 +40,7 @@ export default function PublicTracking() {
           </section>
         ) : <>
           <section className="tf-card p-6" aria-labelledby="tracking-headline">
-            <p className="tf-num text-sm text-[var(--tf-text-subtle)]">Orden {data.orderNumber}</p>
+            <p className="tf-num text-sm text-[var(--tf-text-subtle)]">{data.workshop?.name ? `${data.workshop.name} · ` : ''}Orden {data.orderNumber}</p>
             <h1 id="tracking-headline" className="mt-2 text-2xl font-semibold tracking-tight">{data.statusHeadline || data.statusLabel}</h1>
             {data.statusMessage && <p className="mt-2 text-base leading-relaxed text-[var(--tf-text-muted)]">{data.statusMessage}</p>}
             <dl className="mt-6 grid gap-4 border-t border-[var(--tf-border)] pt-4 text-sm sm:grid-cols-2">
@@ -84,7 +84,10 @@ export default function PublicTracking() {
             </section>
           )}
 
-          <p className="text-center text-sm text-[var(--tf-text-subtle)]">¿Dudas? Comunícate con el taller y menciona tu orden {data.orderNumber}.</p>
+          <p className="text-center text-sm text-[var(--tf-text-subtle)]">
+            ¿Dudas? Comunícate con {data.workshop?.name || 'el taller'}
+            {data.workshop?.phone && <> al <a className="tf-link tf-num" href={`tel:${data.workshop.phone.replace(/[^\d+]/g, '')}`}>{data.workshop.phone}</a></>} y menciona tu orden {data.orderNumber}.
+          </p>
         </>}
       </div>
     </main>

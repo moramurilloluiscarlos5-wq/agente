@@ -12,6 +12,7 @@ import { databaseError } from '../utils/operations.js'
 import { countActiveUsers, ensureTrialSubscription, loadWorkshopAccess, loadWorkshopEntitlements } from '../services/billingService.js'
 import { graceDaysFromEnv, licensingEnabled, trialDaysFromEnv } from '../config/billing.js'
 import { entitlementsFor } from '../config/plans.js'
+import { comingSoonFeatures } from './billing.routes.js'
 
 export function createAuthRouter({ db = supabaseAdmin, authenticate = requireAuth, profileLoader = loadProfile, sessionLoader = loadProfileForSession, configured = requireSupabase } = {}) {
 const router = Router()
@@ -119,7 +120,8 @@ router.get('/me', authenticate, sessionLoader, asyncHandler(async (req, res) => 
   if (req.profile.role !== 'SUPER_ADMIN' && req.profile.workshop_id) {
     try { access = await loadWorkshopAccess({ db, workshopId: req.profile.workshop_id, enabled: licensingEnabled(), graceDays: graceDaysFromEnv() }) } catch { access = { entitlements: null, license: null } }
   }
-  res.json({ id: req.profile.id, role: req.profile.role, profile: { ...req.profile, ...access }, workshop: req.profile.workshop ?? null, workspace_access: req.profile.workspace_access })
+  // Funciones sin credenciales en el servidor (IA, WhatsApp): la interfaz las oculta hasta que se configuren.
+  res.json({ id: req.profile.id, role: req.profile.role, profile: { ...req.profile, ...access, unavailable_features: comingSoonFeatures(process.env) }, workshop: req.profile.workshop ?? null, workspace_access: req.profile.workspace_access })
 }))
 
 async function provisionWorkshop({ userId, ownerName, businessName, workshopPhone = null, workshopCity = null }) {
